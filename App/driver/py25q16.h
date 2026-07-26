@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#define SECTOR_SIZE 0x1000
 
 void PY25Q16_Init();
 void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size);

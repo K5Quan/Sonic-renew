@@ -35,7 +35,7 @@
 
 #define CS_PIN GPIO_MAKE_PIN(GPIOA, LL_GPIO_PIN_3)
 
-#define SECTOR_SIZE 0x1000
+
 #define PAGE_SIZE 0x100
 
 static uint32_t SectorCacheAddr = 0x1000000;

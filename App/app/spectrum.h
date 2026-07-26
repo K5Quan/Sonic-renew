@@ -41,7 +41,7 @@
 #define ADRESS_STATE   0xC000
 #define ADRESS_VERSION 0xC010
 #define ADRESS_PARAMS  0xC020
-#define ADRESS_HISTORY 0xC200
+#define ADRESS_HISTORY 0xD000
 
 
 typedef enum {

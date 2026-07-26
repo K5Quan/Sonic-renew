@@ -54,13 +54,14 @@ static volatile uint8_t gRequestedSpectrumState = 0;
 // SECTION: HISTORY
 // ============================================================
 uint8_t code = 0;
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t    HFreqs;
     uint8_t     HBlacklisted;
+    uint8_t     code; // 0=None, 1-50=CTCSS, 100+=DCS
     uint16_t    HTimeS;
 } HistoryStruct;
 
-#define HISTORY_SIZE 200
+#define HISTORY_SIZE 100
 
 static uint16_t historyListIndex = 0;
 static int historyScrollOffset = 0;
@@ -88,7 +89,7 @@ static uint32_t RangeStop = 11000000;
 static uint16_t SpectrumSleepMs = 0;  
 static uint8_t  Noislvl_OFF = NoisLvl;
 static uint8_t  Noislvl_ON = NoisLvl - NoiseHysteresis;
-static uint16_t osdPopupSetting = 500;      
+static uint16_t osdPopupSetting = 600;      
 static uint16_t UOO_trigger = 15;
 static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
 static uint8_t  GlitchMax = 20;             
@@ -139,7 +140,7 @@ static const uint16_t   DelayRssiValues[] = {600  ,750   ,900  ,1000 ,2000 ,3000
 
 static bool     Backlight_On = 1;
 uint8_t osdPopupIndex = 3;
-static const int osdPopupTimes[] = {0, 200, 500, 1000, 2000, 3000};
+static const int osdPopupTimes[] = {0, 200, 500, 1000, 3000, 5000};
 #ifdef ENABLE_BENCH
     static uint32_t benchTickMs = 0;      
     static uint16_t benchStepsThisSec = 0;
@@ -244,9 +245,10 @@ typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 /***************************BIG RAM******************************************/
 static uint32_t         *ScanFrequencies = NULL;
 static bandparameters   *BParams = NULL;
-static uint32_t         HFreqs[HISTORY_SIZE];
-static bool             HBlacklisted[HISTORY_SIZE];
-static uint16_t         HTimeS[HISTORY_SIZE];  
+static uint32_t         HFreqs[HISTORY_SIZE];           //4
+static uint8_t          HCode[HISTORY_SIZE];            //1
+static bool             HBlacklisted[HISTORY_SIZE];     //1
+static uint16_t         HTimeS[HISTORY_SIZE];           //2 Total 8 bytes
 static uint32_t         MonitorFreqs[MONITOR_SIZE];
 /****************************************************************************/
 
@@ -794,12 +796,14 @@ static void DeleteHistoryItem(void) {
     for (uint16_t i = indexToDelete; i < indexFs - 1; i++) {
         HFreqs[i]       = HFreqs[i + 1];
         HBlacklisted[i] = HBlacklisted[i + 1];
+        HCode[i]        = HCode[i + 1];
         HTimeS[i]       = HTimeS[i + 1];
     }
     indexFs--;
     
     HFreqs[indexFs]         = 0;
     HBlacklisted[indexFs]   = 0xFF;
+    HCode[indexFs]          = 0;
     HTimeS[indexFs]         = 0;
     if (historyListIndex >= indexFs && indexFs > 0) {
         historyListIndex = indexFs - 1;
@@ -860,6 +864,7 @@ void LoadHistory(void) {
     HistoryStruct History = {0};
     memset(HFreqs, 0, sizeof(HFreqs));
     memset(HBlacklisted, 0, sizeof(HBlacklisted));
+    memset(HCode, 0, sizeof(HCode));
     memset(HTimeS, 0, sizeof(HTimeS));
     indexFs = 0;
 
@@ -873,6 +878,7 @@ void LoadHistory(void) {
       if (History.HFreqs){
         HFreqs[position]        = History.HFreqs;
         HBlacklisted[position]  = History.HBlacklisted;
+        HCode[position]         = History.code;
         HTimeS[position]        = History.HTimeS;
         indexFs                 = position + 1;
       }
@@ -888,6 +894,7 @@ static void CompactHistory(void) {
         if (w != r) {
             HFreqs[w]       = HFreqs[r];
             HBlacklisted[w] = HBlacklisted[r];
+            HCode[w]        = HCode[r];
             HTimeS[w]       = HTimeS[r];
         }
         w++;
@@ -896,6 +903,7 @@ static void CompactHistory(void) {
     for (uint16_t i = w; i < limit; i++) {
         HFreqs[i]       = 0;
         HBlacklisted[i] = 0;
+        HCode[i]        = 0;
         HTimeS[i]       = 0;
     }
 
@@ -911,23 +919,36 @@ static void CompactHistory(void) {
     }
 }
 
+
 void SaveHistory(void) {
-    HistoryStruct History = {0};
-    CompactHistory();
-    for (uint16_t position = 0; position < indexFs; position++) {
-        History.HFreqs          = HFreqs[position];
-        History.HBlacklisted    = HBlacklisted[position];
-        History.HTimeS          = HTimeS[position];
-        PY25Q16_WriteBuffer(ADRESS_HISTORY + position * sizeof(HistoryStruct),
-                           (uint8_t *)&History, sizeof(HistoryStruct), 0);
+    uint32_t totalSize = indexFs * sizeof(HistoryStruct);
+    uint32_t startAddr = ADRESS_HISTORY;
+    uint32_t endAddr   = ADRESS_HISTORY + totalSize;
+
+    for (uint32_t addr = startAddr; addr < endAddr; addr += SECTOR_SIZE) {
+        PY25Q16_SectorErase(addr);
     }
 
-    History.HFreqs = 0;
-    History.HBlacklisted = 0xFF;
-    History.HTimeS    = 0;
+    HistoryStruct historyItem;
+
+    for (uint16_t position = 0; position < indexFs; position++) {
+        historyItem.HFreqs       = HFreqs[position];
+        historyItem.HBlacklisted = HBlacklisted[position];
+        historyItem.code         = HCode[position];
+        historyItem.HTimeS       = HTimeS[position];
+        PY25Q16_WriteBuffer(ADRESS_HISTORY + position * sizeof(HistoryStruct),
+                            (uint8_t *)&historyItem, 
+                            sizeof(HistoryStruct), 
+                            false);
+    }
+
+    historyItem.HFreqs = 0;
+    historyItem.HBlacklisted = 0xFF;
+    historyItem.code        = 0;
+    historyItem.HTimeS    = 0;
     
     PY25Q16_WriteBuffer(ADRESS_HISTORY + indexFs * sizeof(HistoryStruct),
-                       (uint8_t *)&History, sizeof(HistoryStruct), 0);
+                       (uint8_t *)&historyItem, sizeof(HistoryStruct), 0);
     
     ShowOSDPopup("HISTORY SAVED");
 }
@@ -1029,8 +1050,46 @@ static uint16_t CountValidHistoryItems() {
     return (indexFs > HISTORY_SIZE) ? HISTORY_SIZE : indexFs;
 }
 
-static void FillfreqHistory()
+// ------------------ CSS detection ------------------
+
+static void UpdateCssDetection(void) {
+    static uint8_t LCode = 0;
+    if (CodeFreq == peak.f && (code != 0xFF)) return; // déjà un code valide pour cette fréquence
+
+    BK4819_WriteRegister(BK4819_REG_51,
+        BK4819_REG_51_ENABLE_CxCSS |
+        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
+        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
+        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
+
+    BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
+
+    if (scanResult == BK4819_CSS_RESULT_CDCSS) {
+        LCode = DCS_GetCdcssCode(cdcssFreq);
+        if (LCode != 0xFF) {
+            CodeFreq = peak.f;
+            snprintf(StringCode, sizeof(StringCode), " D%03oN ", DCS_Options[LCode]);
+            code = LCode + 100;
+            gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_DIGITAL;
+            gCurrentVfo->freq_config_TX.Code     = LCode;
+            return;
+        }
+    } else if (scanResult == BK4819_CSS_RESULT_CTCSS) {
+        LCode = DCS_GetCtcssCode(ctcssFreq);
+        if (LCode != 0xFF) {
+            CodeFreq = peak.f;
+            snprintf(StringCode, sizeof(StringCode), " %u.%uHz ", CTCSS_Options[LCode] / 10, CTCSS_Options[LCode] % 10);
+            code = LCode;
+            gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_CONTINUOUS_TONE;
+            gCurrentVfo->freq_config_TX.Code     = LCode;
+            return;
+        }
+    }
+}
+
+static void FillfreqHistory(void)
 {   
+    UpdateCssDetection();
     lastHistoryScrollOffset = -1;
     uint32_t f = peak.f;
     if (f == 0 || f < 1400000 || f > 130000000) return;
@@ -1038,45 +1097,64 @@ static void FillfreqHistory()
     uint16_t foundIndex = 0xFFFF;
     uint16_t foundTime = 0;
     bool foundBlacklisted = false;
+    uint8_t foundCode = 0xFF;
     
+    // Recherche si la fréquence existe déjà dans l'historique
     for (uint16_t i = 0; i < indexFs; i++) {
         if (HFreqs[i] == f) {
             foundIndex = i;
             foundTime = HTimeS[i];
             foundBlacklisted = HBlacklisted[i];
+            foundCode = HCode[i]; // On conserve le code déjà enregistré
             break;
         }
     }
+
+    // Si un nouveau code a été détecté à l'instant, il remplace l'ancien
+    if (CodeFreq == f && code != 0xFF) {
+        foundCode = code;
+    }
+
     bool freezeOrder = historyListActive && (SpectrumMonitor || gHistoryScan);
     if (freezeOrder) {
-            if (foundIndex != 0xFFFF) { HTimeS[foundIndex] = foundTime; }
-            lastReceivingFreq = f;
-            return;
+        if (foundIndex != 0xFFFF) { 
+            HTimeS[foundIndex] = foundTime;
+            HCode[foundIndex]  = foundCode;
         }
+        lastReceivingFreq = f;
+        return;
+    }
 
+    // Supprimer l'ancienne position pour la remettre en haut
     if (foundIndex != 0xFFFF) {
         for (uint16_t i = foundIndex; i + 1 < indexFs; i++) {
             HFreqs[i]       = HFreqs[i + 1];
             HBlacklisted[i] = HBlacklisted[i + 1];
-            HTimeS[i] = HTimeS[i + 1];
+            HCode[i]        = HCode[i + 1];
+            HTimeS[i]       = HTimeS[i + 1];
         }
         if (indexFs > 0) indexFs--;
     }
 
+    // Décaler le tableau vers la droite
     uint16_t limit = (indexFs < HISTORY_SIZE) ? indexFs : (HISTORY_SIZE - 1);
     for (int i = limit; i > 0; i--) {
         HFreqs[i]       = HFreqs[i - 1];
         HBlacklisted[i] = HBlacklisted[i - 1];
+        HCode[i]        = HCode[i - 1];
         HTimeS[i]       = HTimeS[i - 1];
     }
 
-    HFreqs[0] = f;
+    // Insertion en position 0
+    HFreqs[0]       = f;
     HBlacklisted[0] = foundBlacklisted;
-    HTimeS[0] = foundTime;
+    HCode[0]        = foundCode; // Le code est préservé ou mis à jour correctement
+    HTimeS[0]       = foundTime;
+
     if (indexFs < HISTORY_SIZE) indexFs++;
     historyListIndex = 0;
     lastReceivingFreq = f;
-} 
+}
 
 static void ToggleRX(bool on) {
     if (SPECTRUM_PAUSED || settings.rssiTriggerLevelUp == 50) return;
@@ -1642,43 +1720,6 @@ switch(SpectrumMonitor) {
 static void FormatFrequency(uint32_t f, char *buf, size_t buflen) {
     snprintf(buf, buflen, "%u.%05u", f / 100000, f % 100000);
 
-}
-
-// ------------------ CSS detection ------------------
-
-
-static void UpdateCssDetection(void) {
-    static uint8_t LCode = 0;
-    if (CodeFreq == peak.f) return; //we already have a code for this freq
-    BK4819_WriteRegister(BK4819_REG_51,
-        BK4819_REG_51_ENABLE_CxCSS |
-        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
-        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
-        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
-
-    BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
-
-    if (scanResult == BK4819_CSS_RESULT_CDCSS) {
-        LCode = DCS_GetCdcssCode(cdcssFreq);
-        if (LCode != 0xFF) {
-            CodeFreq = peak.f;
-            snprintf(StringCode, sizeof(StringCode), " D%03oN ", DCS_Options[LCode]);
-            code = LCode += 100;
-            gCurrentVfo->freq_config_TX.CodeType  = CODE_TYPE_DIGITAL ;
-            gCurrentVfo->freq_config_TX.Code  = LCode ;
-            return;
-        }
-    } else if (scanResult == BK4819_CSS_RESULT_CTCSS) {
-        LCode = DCS_GetCtcssCode(ctcssFreq);
-        if (LCode != 0xFF) {
-            CodeFreq = peak.f;
-            snprintf(StringCode, sizeof(StringCode), " %u.%uHz ", CTCSS_Options[LCode] / 10, CTCSS_Options[LCode] % 10);
-            code = LCode;
-            gCurrentVfo->freq_config_TX.CodeType  = CODE_TYPE_CONTINUOUS_TONE;
-            gCurrentVfo->freq_config_TX.Code  = LCode ;
-            return;
-        }
-    }
 }
 
 static void ScanProgress_DrawGaugeLine(uint8_t line)
@@ -3398,6 +3439,14 @@ static void Tick() {
         gNextTimeslice_10ms = 0;
         HandleUserInput();
         BACKLIGHT_Update();
+        if (osdPopupTimer) {
+            osdPopupTimer -= 20; 
+            if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
+            UI_DisplayPopup(osdPopupText);
+            ST7565_BlitLine(2);
+            ST7565_BlitLine(3);
+            return;
+            }
 #ifdef ENABLE_BENCH
         if (!isListening && !SPECTRUM_PAUSED && !SpectrumMonitor && !WaitSpectrum) {
             benchTickMs += 10;
@@ -3410,13 +3459,7 @@ static void Tick() {
         }
 #endif
         if(SpectrumPauseCount) SpectrumPauseCount--;
-        if (osdPopupTimer) {
-            osdPopupTimer -= 10; 
-            if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
-            UI_DisplayPopup(osdPopupText);
-            BlitFullScreen();
-            return;
-            }
+
     }
     
     if (gNextTimeslice_500ms) {
@@ -3428,6 +3471,7 @@ static void Tick() {
         if (AUTO_KEYLOCK && !gKeylockCountdown) {
             if (!gIsKeylocked) ShowOSDPopup("Locked"); 
             gIsKeylocked = true;
+
 	    }
     }
 
@@ -3453,6 +3497,7 @@ static void Tick() {
     if (!isListening && currentState == SPECTRUM) {UpdateScan();}
     if (gNextTimeslice_listening){
         gNextTimeslice_listening = 0;
+
         if (isListening || SpectrumMonitor || WaitSpectrum) UpdateListening();
     }
     if (gNextTimeslice_display) {
@@ -3751,12 +3796,14 @@ static void ClearHistory(uint8_t mode) {
     if (mode == 0) {
         memset(HFreqs, 0, sizeof(HFreqs));
         memset(HBlacklisted, 0, sizeof(HBlacklisted));
+        memset(HCode, 0, sizeof(HCode));
         memset(HTimeS, 0, sizeof(HTimeS));
     } 
     if (mode == 1) {
         for (int i = 0; i < HISTORY_SIZE; i++) {
             if (!HBlacklisted[i]) {
                 HFreqs[i] = 0;
+                HCode[i] = 0;
                 HTimeS[i] = 0;
             }
         }
@@ -3766,6 +3813,7 @@ static void ClearHistory(uint8_t mode) {
             if (HBlacklisted[i]) {
                 HFreqs[i] = 0;
                 HBlacklisted[i] = 0;
+                HCode[i] = 0;
                 HTimeS[i] = 0;
             }
         }
@@ -4028,8 +4076,6 @@ static void GetHistoryRow(uint16_t index, ListRow *row) {
     
         uint16_t ch = 0xFFFF;
         bool foundInCache = false;
-
-        // 1. Chercher d'abord si l'index est déjà présent dans le mini-cache
         for (uint8_t i = 0; i < 6; i++) {
             if (cachedAbsoluteIdx[i] == index) {
                 ch = cachedChannels[i];
@@ -4037,32 +4083,31 @@ static void GetHistoryRow(uint16_t index, ListRow *row) {
                 break;
             }
         }
-
-        // 2. Si non trouvé (hors-cadre suite au scroll rapide), chercher à la volée 
-        //    et l'insérer dans le cache circulaire
         if (!foundInCache) {
             ch = BOARD_gMR_fetchChannel(f); // Recherche unique
-            
-            // Écriture dans le cache circulaire
             cachedAbsoluteIdx[cacheWriteHead] = index;
             cachedChannels[cacheWriteHead] = ch;
             cacheWriteHead = (cacheWriteHead + 1) % 6; // Avance la tête de 0 à 5
         }
-
-        // 3. Récupérer le nom si le canal est valide
         if (ch != 0xFFFF) {
             SETTINGS_FetchChannelName(Name, ch);
             Name[10] = '\0';
         }
     
-    
     const char *prefix = HBlacklisted[index] ? "#" : "";
     if (HTimeS[index] > 59)
         snprintf(timeStr, sizeof(timeStr), " %02d:%02d", HTimeS[index] / 60, HTimeS[index] % 60);
-    else 
-        snprintf(timeStr, sizeof(timeStr), " %02d", HTimeS[index]);
-        
-    snprintf(row->right, sizeof(row->right), "%s", timeStr);
+    else snprintf(timeStr, sizeof(timeStr), " %02d", HTimeS[index]);
+
+    if (HCode[index] != 0XFF) {
+        if (HCode[index] < 50) {
+            snprintf(row->right, sizeof(row->right), "CT:%u.%uHz %s", CTCSS_Options[HCode[index]] / 10, CTCSS_Options[HCode[index]] % 10,timeStr);
+        } 
+        if (HCode[index] > 100) {
+            snprintf(row->right, sizeof(row->right), "DC:D%03oN %s", DCS_Options[HCode[index]-100],timeStr);
+        }
+    }
+    else snprintf(row->right, sizeof(row->right), "%s", timeStr);
     snprintf(row->left, sizeof(row->left), "%s%s %s", prefix, freqStr, Name);
 }
 
