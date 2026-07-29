@@ -1054,7 +1054,8 @@ static uint16_t CountValidHistoryItems() {
 
 static void UpdateCssDetection(void) {
     static uint8_t LCode = 0;
-    if (CodeFreq == peak.f && (code != 0xFF)) return; // déjà un code valide pour cette fréquence
+    if (CodeFreq == peak.f && (code != 0xFF)) return;
+    if (settings.modulationType != MODULATION_FM) return;
 
     BK4819_WriteRegister(BK4819_REG_51,
         BK4819_REG_51_ENABLE_CxCSS |
