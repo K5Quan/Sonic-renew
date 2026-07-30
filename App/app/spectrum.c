@@ -3212,11 +3212,9 @@ BlitFullScreen();
 }
 
 static void HandleUserInput(void) {
-    // 1. Mise à jour standard de kbd (inchangée)
     kbd.prev = kbd.current;
     kbd.current = GetKey();
 
-    // ---- Variables statiques pour mémoriser l'état entre les appels ----
     static uint16_t press_duration = 0;
     static bool long_press_dispatched = false;
     static KEY_Code_t last_active_key = KEY_INVALID;
@@ -3224,67 +3222,54 @@ static void HandleUserInput(void) {
     KEY_Event_t event = EV_NONE;
     KEY_Code_t key_to_process = KEY_INVALID;
 
-    // ---- Machine à états locale ----
     if (kbd.current != KEY_INVALID) {
-        // Une touche est enfoncée
-        if (kbd.current == kbd.prev) {
-            press_duration++;
-            last_active_key = kbd.current;
-
-            // Détection Appui Long (ex: ~500ms si la fonction est appelée toutes les 10ms)
-            if (press_duration >= 50 && !long_press_dispatched) {
-                event = EV_LONG_PRESS;
-                key_to_process = kbd.current;
-                long_press_dispatched = true; // On verrouille pour ne le déclencher qu'une fois
-            }
-            // Détection Auto-repeat (après l'appui long, toutes les 10 boucles)
-            else if (press_duration > 80 && (press_duration % 10 == 0)) {
-                event = EV_REPEAT;
-                key_to_process = kbd.current;
-            }
-        } else {
-            // Transition d'une touche à une autre sans relâchement
+        if (kbd.current != kbd.prev) {
             press_duration = 0;
             long_press_dispatched = false;
             last_active_key = kbd.current;
+
+            if (kbd.current == KEY_PTT) {
+                event = EV_SHORT_PRESS;
+                key_to_process = kbd.current;
+            }
+        } else {
+            press_duration++;
+            last_active_key = kbd.current;
+
+            if (kbd.current != KEY_PTT) {
+            if (press_duration >= 50 && !long_press_dispatched) {
+                event = EV_LONG_PRESS;
+                key_to_process = kbd.current;
+                long_press_dispatched = true;
+                } else if (press_duration > 80 && (press_duration % 10 == 0)) {
+                event = EV_REPEAT;
+                key_to_process = kbd.current;
+            }
+            }
         }
-        
-        // On synchronise kbd.counter pour que le reste du firmware (si besoin) 
-        // ne soit pas perturbé par notre logique interne.
         kbd.counter = press_duration; 
-    } 
-    else {
-        // Aucune touche n'est enfoncée (relâchement ou repos)
-        if (last_active_key != KEY_INVALID) {
-            // L'utilisateur vient de relâcher la touche.
-            // Si la durée était supérieure à l'anti-rebond (ex: 2) mais inférieure 
-            // au seuil d'appui long, et qu'aucun appui long n'a été envoyé : c'est un APPUI COURT.
+    } else {
+        if (last_active_key != KEY_INVALID && last_active_key != KEY_PTT) {
             if (press_duration >= 2 && press_duration < 50 && !long_press_dispatched) {
                 event = EV_SHORT_PRESS;
                 key_to_process = last_active_key;
             }
         }
-        // Reset des états locaux pour le prochain appui
         press_duration = 0;
         long_press_dispatched = false;
         last_active_key = KEY_INVALID;
-        
         kbd.counter = 0;
     }
 
-    // ---- Traitement de l'événement qualifié ----
     if (event != EV_NONE && key_to_process != KEY_INVALID) {
-        
-        // Gestion du rétroéclairage
+       
         if (Backlight_On) {
             if (!backlightOn && gEeprom.BACKLIGHT_TIME) {
                 BACKLIGHT_TurnOn();
-                return; // Consomme l'appui pour allumer l'écran
+                return;
             }
             BACKLIGHT_TurnOn();
         }
-
-        // Distribution de la touche et de son type d'événement
         switch (currentState) {
             case SPECTRUM:
             case BAND_LIST_SELECT:
