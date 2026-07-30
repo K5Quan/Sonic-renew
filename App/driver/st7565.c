@@ -24,7 +24,6 @@
 #include "driver/st7565.h"
 #include "driver/system.h"
 #include "misc.h"
-#include "screenshot.h"
 
 #define SPIx SPI1
 

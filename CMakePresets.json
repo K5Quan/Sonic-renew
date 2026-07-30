@@ -18,8 +18,6 @@
                 "ENABLE_PERSIST": false,
                 "ENABLE_BENCH": true,
                 "ENABLE_VERSION": false,
-                "ENABLE_AIRCOPY": false,
-                "ENABLE_NOAA": false,
                 "ENABLE_ALARM": false,
                 "ENABLE_FLASHLIGHT": true,
                 "ENABLE_SPECTRUM": true,

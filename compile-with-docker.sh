@@ -2,17 +2,6 @@
 clear
 set -euo pipefail
 
-# ---------------------------------------------
-# Usage:
-#   ./compile-with-docker.sh [Preset] [CMake options...]
-# Examples:
-#   ./compile-with-docker.sh Custom
-#   ./compile-with-docker.sh Bandscope -DENABLE_SPECTRUM=ON
-#   ./compile-with-docker.sh Broadcast -DENABLE_FEAT_F4HWN_GAME=ON -DENABLE_NOAA=ON
-#   ./compile-with-docker.sh All
-# Default preset: "Custom"
-# ---------------------------------------------
-
 IMAGE=uvk1-uvk5v3
 
 # Initialisation des variables par défaut
@@ -40,6 +29,7 @@ done
 
 # Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
 PRESET=${PRESET:-USB}
+
 # ---------------------------------------------
 # Nettoyage si l'option est activée
 # ---------------------------------------------
@@ -65,15 +55,8 @@ if [[ "$(docker images -q $IMAGE)" == "" ]]; then
   docker build -t "$IMAGE" .
 fi
 
-# ---------------------------------------------
-# Clean existing CMake cache to ensure toolchain reload
-# ---------------------------------------------
-# rm -rf build
 export MSYS_NO_PATHCONV=1
 
-# ---------------------------------------------
-# Function to build one preset
-# ---------------------------------------------
 # ---------------------------------------------
 # Function to build one preset
 # ---------------------------------------------
@@ -92,9 +75,26 @@ build_preset() {
   echo "✅ Done: ${preset}"
 }
 
+# ---------------------------------------------
+# Function to flash one preset
+# ---------------------------------------------
+flash_preset() {
+  local preset="$1"
+  local ifile="./build/${preset}/SONIC.${preset}.V43.bin"
+
+  echo -e "\n⚡ Flashing ${preset} firmware on COM14..."
+
+  if [[ -f "$ifile" ]]; then
+      python flash.py "$ifile" -p COM14
+      echo "✅ Flash ${preset} terminé avec succès !"
+  else
+      echo "❌ Erreur : Le fichier binaire est introuvable : $ifile"
+      exit 1
+  fi
+}
 
 # ---------------------------------------------
-# Handle 'All' preset
+# Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
   PRESETS=(USB RS232)
@@ -103,23 +103,10 @@ if [[ "$PRESET" == "All" ]]; then
   done
   echo ""
   echo "🎉 All presets built successfully!"
+
+  # Si 'All' est compilé, on flashe uniquement le preset USB
+  flash_preset "USB"
 else
   build_preset "$PRESET"
-fi
-
-# ---------------------------------------------
-# Automatic flash
-# ---------------------------------------------
-
-echo "⚡ Flashing USB firmware on COM14..."
-
-# Vérification de l'existence du fichier avant de flasher
-IFILE="./build/USB/SONIC.USB.V43.bin"
-
-if [[ -f "$IFILE" ]]; then
-    python flash.py "$IFILE" -p COM14
-    echo "✅ Flash terminé avec succès !"
-else
-    echo "❌ Erreur : Le fichier binaire est introuvable : $IFILE"
-    exit 1
+  flash_preset "$PRESET"
 fi

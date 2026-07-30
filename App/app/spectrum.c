@@ -61,7 +61,11 @@ typedef struct __attribute__((packed)) {
     uint16_t    HTimeS;
 } HistoryStruct;
 
-#define HISTORY_SIZE 100
+#if defined(ENABLE_USB)
+    #define HISTORY_SIZE 100
+#elif defined(ENABLE_UART)
+    #define HISTORY_SIZE 200
+#endif
 
 static uint16_t historyListIndex = 0;
 static int historyScrollOffset = 0;
