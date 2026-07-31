@@ -213,26 +213,16 @@ void ACTION_FM(void)
             FM_TurnOff();
             gFlagReconfigureVfos  = true;
             gRequestDisplayScreen = DISPLAY_MAIN;
-
             return;
         }
-
         gMonitor = false;
-
         RADIO_SelectVfos();
         RADIO_SetupRegisters(true);
-
         FM_Start();
-
         gRequestDisplayScreen = DISPLAY_FM;
     }
 }
-
 #endif
-
-
-
-
 
 #ifdef ENABLE_FEAT_F4HWN
 void ACTION_Update(void)

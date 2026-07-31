@@ -331,7 +331,6 @@ void APP_StartListening(FUNCTION_Type_t function)
 
 #ifdef ENABLE_FMRADIO
     if (gFmRadioMode && !gFM_Mute) {
-        // Глушим BK1080 только если не идёт FM_Start (избегаем двойного I2C при 250ms init)
         if (gFM_RestoreCountdown_10ms == 0)
             BK1080_Init0();
     }
@@ -979,8 +978,6 @@ void APP_TimeSlice10ms(void)
     if (gUpdateStatusCurrent) {
         UI_DisplayStatus();
     }
-
-    // Skipping authentic device checks
 
 #ifdef ENABLE_FMRADIO
     if (gFmRadioMode && gFmRadioCountdown_500ms > 0)   // 1of11

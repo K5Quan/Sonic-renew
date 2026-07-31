@@ -38,6 +38,7 @@ void UI_DisplayFM(void)
         GUI_DisplaySmallestDark("* MANUAL", 72, 5, false, true);
     else
         GUI_DisplaySmallestDark("* AUTO", 80, 5, false, true);
+    if (!gFM_No_Rx) GUI_DisplaySmallestDark("RX MON", 86, 38, false, true);
     GUI_DisplaySmallestDark("SONIC", 86, 45, false, true);
 
     // ── 6 ячеек памяти частот ───────────────────────────────────────────

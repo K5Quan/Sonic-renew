@@ -30,6 +30,7 @@ enum {
 
 extern uint16_t          gFM_Channels[20];
 extern bool              gFmRadioMode;
+extern bool              gFM_No_Rx;
 extern uint8_t           gFmRadioCountdown_500ms;
 extern volatile uint16_t gFmPlayCountdown_10ms;
 extern volatile int8_t   gFM_ScanState;

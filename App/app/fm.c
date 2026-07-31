@@ -14,11 +14,9 @@
 
 #include <string.h>
 #include "nav_invert.h"
-
 #include "app/action.h"
 #include "app/fm.h"
 #include "app/generic.h"
-
 #include "driver/bk1080.h"
 #include "driver/bk4819.h"
 #include "driver/eeprom.h"
@@ -49,6 +47,7 @@ bool              gFM_FoundFrequency;
 uint16_t          gFM_RestoreCountdown_10ms;
 bool              gFM_ManualMode = false;
 bool              gFM_Mute       = false;
+bool              gFM_No_Rx      = false;
 
 // ── FM 6-слотовая память ────────────────────────────────────────────────
 // 0 = пусто, иначе — частота (875..1080)
@@ -339,6 +338,17 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         case KEY_PTT:
             GENERIC_Key_PTT(bKeyPressed);
             break;
+        case KEY_0:
+            if (state == BUTTON_EVENT_SHORT) {
+                gFM_No_Rx = !gFM_No_Rx;
+                if (gFM_No_Rx) {
+                    BK4819_Sleep(); //Locks Radio Rx in FM Radio
+                } else {        
+                    BK4819_RX_TurnOn(); //Wake up
+                    SYSTEM_DelayMs(10);
+                }
+            }
+            break;
         default:
             break;
     }
@@ -353,15 +363,11 @@ void FM_TurnOff(void)
     gFM_RestoreCountdown_10ms = 0;
     gFM_Mute                  = false;
     gFM_ManualMode            = false;
-
     BK1080_Init0();
     BK4819_PickRXFilterPathBasedOnFrequency(gRxVfo->freq_config_RX.Frequency);
-
     GPIO_EnableAudioPath();
     gEnableSpeaker = true;
-
     gUpdateStatus = true;
-
     #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
         gEeprom.CURRENT_STATE = 0;
         SETTINGS_WriteCurrentState();
@@ -378,9 +384,10 @@ void FM_Start(void)
     gFM_ChannelPosition       = 0;
     gFM_ManualMode            = false;
     gFM_Mute                  = false;
-
     gEeprom.FM_Band     = FM_BAND;
     gEeprom.FM_IsMrMode = false;
+
+    
 
     // Ensure FrequencyPlaying is valid before passing to BK1080_Init.
     // After a hard reset the RAM field may be 0 (or stale), which causes

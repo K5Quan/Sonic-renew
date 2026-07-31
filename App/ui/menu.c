@@ -256,7 +256,6 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
 #endif
     {"POWER",           ACTION_OPT_POWER},
     {"MONITOR",         ACTION_OPT_MONITOR},
-    {"SCAN",            ACTION_OPT_SCAN},
 #ifdef ENABLE_FMRADIO
     {"FM RADIO",        ACTION_OPT_FM},
 #endif
@@ -269,7 +268,6 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT TOGGLE",      ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
-      
     {"MUTE",            ACTION_OPT_MUTE},
       
 #endif
