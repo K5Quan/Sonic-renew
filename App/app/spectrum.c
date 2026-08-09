@@ -139,8 +139,8 @@ uint16_t GetMaxVisualRows(void) {
 ////////////////////////////////////////////////////////////////////
 
 static uint8_t IndexDelayRssi = 3;
-static const char       *DelayRssiText[]  = {"0.6",".75" ,".9" ,"1"  ,"2"  ,"3"};
-static const uint16_t   DelayRssiValues[] = {600  ,750   ,900  ,1000 ,2000 ,3000}; //in ms
+static const char       *DelayRssiText[]  = {".75" ,".9" ,"1"  ,"2", "6", "12"};
+static const uint16_t   DelayRssiValues[] = {750, 900, 1000, 2000, 6000, 12000}; //in ms
 
 static bool     Backlight_On = 1;
 uint8_t osdPopupIndex = 3;
@@ -1315,12 +1315,12 @@ static void UpdateScanInfo() {
     scanInfo.rssiMin = scanInfo.rssi;
   }
 }
-static void UpdateGlitch() {
+/* static void UpdateGlitch() {
     if (!GlitchMax) return;
     uint8_t glitch = BK4819_GetGlitchIndicator();
     if (glitch > GlitchMax) {gIsPeak = false;} 
     else {gIsPeak = true;}// if glitch is too high, receiving stopped
-}
+} */
 
 static void Measure() {
     static int16_t previousRssi = 0;
@@ -1351,11 +1351,12 @@ static void Measure() {
                     if (settings.rssiTriggerLevelUp < 50) {
                         gIsPeak = true;
                         UpdateNoiseOff();
-                        UpdateGlitch();
+                        //UpdateGlitch();
                     }
                 }
             
-            scanInfo.rssi = GetRssi();
+            //scanInfo.rssi = GetRssi();
+            scanInfo.rssi = rssi2;
             }
     } 
     if (!gIsPeak || !isListening) previousRssi = rssi;
@@ -3384,7 +3385,7 @@ static void UpdateListening(void) {
     UpdateNoiseOff();
     if (!isListening) {
         UpdateNoiseOn();
-        UpdateGlitch();
+        //UpdateGlitch();
     }
     spectrumElapsedCount += 200; 
     if (peak.f >= 1400000 && peak.f <= 130000000 && gNextTimeslice_HTimeS) {
