@@ -96,7 +96,7 @@ static uint8_t  Noislvl_ON = NoisLvl - NoiseHysteresis;
 static uint16_t osdPopupSetting = 600;      
 static uint16_t UOO_trigger = 15;
 static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
-static uint8_t  GlitchMax = 20;             
+static uint8_t  GlitchMax = 0;             
 static bool     SoundBoost = 0;             
 static uint8_t  PttEmission = 0;            
 static bool     gMonitorScan = true;       
@@ -139,8 +139,8 @@ uint16_t GetMaxVisualRows(void) {
 ////////////////////////////////////////////////////////////////////
 
 static uint8_t IndexDelayRssi = 3;
-static const char       *DelayRssiText[]  = {".75" ,".9" ,"1"  ,"2", "6", "12"};
-static const uint16_t   DelayRssiValues[] = {750, 900, 1000, 2000, 6000, 12000}; //in ms
+static const char       *DelayRssiText[]  = {".75", "1.5", "3"};
+static const uint16_t   DelayRssiValues[] = {750, 1500, 3000}; //in ms
 
 static bool     Backlight_On = 1;
 uint8_t osdPopupIndex = 3;
@@ -1315,12 +1315,12 @@ static void UpdateScanInfo() {
     scanInfo.rssiMin = scanInfo.rssi;
   }
 }
-/* static void UpdateGlitch() {
+static void UpdateGlitch() {
     if (!GlitchMax) return;
     uint8_t glitch = BK4819_GetGlitchIndicator();
     if (glitch > GlitchMax) {gIsPeak = false;} 
     else {gIsPeak = true;}// if glitch is too high, receiving stopped
-} */
+}
 
 static void Measure() {
     static int16_t previousRssi = 0;
@@ -1351,7 +1351,7 @@ static void Measure() {
                     if (settings.rssiTriggerLevelUp < 50) {
                         gIsPeak = true;
                         UpdateNoiseOff();
-                        //UpdateGlitch();
+                        UpdateGlitch();
                     }
                 }
             
@@ -2168,8 +2168,8 @@ static void HandleKeyParameters(uint8_t key) {
             switch (realIndex) {
                 case PARAM_RSSI_DELAY:
                     IndexDelayRssi = isKey3 ?
-                                 (IndexDelayRssi >= 5 ? 0 : IndexDelayRssi + 1) :
-                                 (IndexDelayRssi == 0 ? 5 : IndexDelayRssi - 1);
+                                 (IndexDelayRssi >= 2 ? 0 : IndexDelayRssi + 1) :
+                                 (IndexDelayRssi == 0 ? 2 : IndexDelayRssi - 1);
                     DelayRssi = DelayRssiValues[IndexDelayRssi];
                     break;
                 case PARAM_SPECTRUM_DELAY:
@@ -3385,7 +3385,7 @@ static void UpdateListening(void) {
     UpdateNoiseOff();
     if (!isListening) {
         UpdateNoiseOn();
-        //UpdateGlitch();
+        UpdateGlitch();
     }
     spectrumElapsedCount += 200; 
     if (peak.f >= 1400000 && peak.f <= 130000000 && gNextTimeslice_HTimeS) {
@@ -3750,7 +3750,6 @@ static void SaveSettings()
     eepromData.Noislvl_OFF = Noislvl_OFF;
     eepromData.UOO_trigger = UOO_trigger;
     eepromData.osdPopupIndex = osdPopupIndex;
-    eepromData.GlitchMax = 20;
     eepromData.GlitchMax  = GlitchMax;   
     eepromData.Spectrum_state = Spectrum_state;    
     eepromData.SoundBoost = SoundBoost;
@@ -3838,7 +3837,7 @@ void ClearSettings()
     UOO_trigger = 5;
     osdPopupIndex = 3;
     osdPopupSetting = osdPopupTimes[osdPopupIndex];
-    GlitchMax = 10;  
+    GlitchMax = 0;  
     Spectrum_state = 1; 
     SoundBoost = 0;
     gMonitorScan = false;
