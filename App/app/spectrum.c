@@ -84,8 +84,7 @@ static uint32_t SpectrumRangeStop = 110000000;
 #define MONITOR_SIZE 20
 
 /////////////////////////////Parameters://///////////////////////////
-static bool     Light_Mode = true;   
-static uint16_t DelayRssi = 2000;     
+static uint16_t DelayRssi = 1500;     
 static uint16_t SpectrumDelay = 0;    
 static uint16_t MaxListenTime = 0;    
 static uint32_t RangeStart = 1400000; 
@@ -96,51 +95,35 @@ static uint8_t  Noislvl_ON = NoisLvl - NoiseHysteresis;
 static uint16_t osdPopupSetting = 600;      
 static uint16_t UOO_trigger = 15;
 static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
-static uint8_t  GlitchMax = 0;             
 static bool     SoundBoost = 0;             
 static uint8_t  PttEmission = 0;            
 static bool     gMonitorScan = true;       
 static bool     LowNoise = false;       
 
 // Configuration des index du menu des paramètres
-#define PARAM_LIGHT_MODE       0
-#define PARAM_RSSI_DELAY       1
-#define PARAM_SPECTRUM_DELAY   2
-#define PARAM_MAX_LISTEN_TIME  3
-#define PARAM_RANGE_START      4
-#define PARAM_RANGE_STOP       5
-#define PARAM_SCAN_STEP        6
-#define PARAM_LISTEN_BW        7
-#define PARAM_MODULATION       8
-#define PARAM_POWER_SAVE       9
-#define PARAM_AUTO_KEYLOCK     10
-#define PARAM_NOISE_LEVEL_OFF  11
-#define PARAM_GLITCH_MAX       12
-#define PARAM_OSD_POPUP        13
-#define PARAM_RECORD_TRIGGER   14
-#define PARAM_SOUND_BOOST      15
-#define PARAM_PTT_EMISSION     16
-#define PARAM_MONITOR_SCAN     17
-#define PARAM_RESET_DEFAULT    18
+#define PARAM_SPECTRUM_DELAY    0
+#define PARAM_MAX_LISTEN_TIME   1
+#define PARAM_RANGE_START       2
+#define PARAM_RANGE_STOP        3
+#define PARAM_SCAN_STEP         4
+#define PARAM_LISTEN_BW         5
+#define PARAM_MODULATION        6
+#define PARAM_POWER_SAVE        7
+#define PARAM_AUTO_KEYLOCK      8
+#define PARAM_NOISE_LEVEL_OFF   9
+#define PARAM_OSD_POPUP         10
+#define PARAM_RECORD_TRIGGER    11
+#define PARAM_SOUND_BOOST       12
+#define PARAM_PTT_EMISSION      13
+#define PARAM_MONITOR_SCAN      14
+#define PARAM_RESET_DEFAULT     15
 
-static const uint8_t lightModeMenuMapping[] = {
-    PARAM_LIGHT_MODE,
-    PARAM_SPECTRUM_DELAY,
-    PARAM_MAX_LISTEN_TIME,
-    PARAM_RANGE_START,
-    PARAM_RANGE_STOP,
-    PARAM_SCAN_STEP
-};
-
-uint16_t GetMaxVisualRows(void) {
-    return (Light_Mode) ? 6 : 19; 
-}
+uint16_t GetMaxVisualRows(void) {return PARAM_RESET_DEFAULT+1;}
 
 ////////////////////////////////////////////////////////////////////
 
-static uint8_t IndexDelayRssi = 3;
-static const char       *DelayRssiText[]  = {".75", "1.5", "3"};
-static const uint16_t   DelayRssiValues[] = {750, 1500, 3000}; //in ms
+static uint8_t          IndexDelayRssi = 1;
+static const uint16_t   DelayRssiValues[] = {750, 1500}; //in ms
 
 static bool     Backlight_On = 1;
 uint8_t osdPopupIndex = 3;
@@ -1315,12 +1298,6 @@ static void UpdateScanInfo() {
     scanInfo.rssiMin = scanInfo.rssi;
   }
 }
-static void UpdateGlitch() {
-    if (!GlitchMax) return;
-    uint8_t glitch = BK4819_GetGlitchIndicator();
-    if (glitch > GlitchMax) {gIsPeak = false;} 
-    else {gIsPeak = true;}// if glitch is too high, receiving stopped
-}
 
 static void Measure() {
     static int16_t previousRssi = 0;
@@ -1351,7 +1328,6 @@ static void Measure() {
                     if (settings.rssiTriggerLevelUp < 50) {
                         gIsPeak = true;
                         UpdateNoiseOff();
-                        UpdateGlitch();
                     }
                 }
             
@@ -1697,7 +1673,7 @@ switch(SpectrumMonitor) {
   } 
   
   
-  len = sprintf(&String[pos],"%sms %s BW%s ", DelayRssiText[IndexDelayRssi], gModulationStr[settings.modulationType],bwNames[settings.listenBw]);
+  len = sprintf(&String[pos],"%s BW%s ", gModulationStr[settings.modulationType],bwNames[settings.listenBw]);
   pos += len;
     if(isListening) {
         int16_t afcVal = BK4819_GetAFCValue();
@@ -1731,7 +1707,6 @@ static void FormatFrequency(uint32_t f, char *buf, size_t buflen) {
 static void ScanProgress_DrawGaugeLine(uint8_t line)
 {
     if (line >= 8) return; 
-    
     static uint32_t total = 0;
     static uint16_t current_index = 0;
     static uint32_t globalStepOffset = 0;
@@ -1755,6 +1730,7 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
         total = GetStepsCount();
         current_index = scanInfo.i;
     }
+    if (!isListening && total <= 200) {return;}
     const uint8_t fill_start = 4;
     const uint8_t fill_cols  = 121;
 
@@ -2162,16 +2138,7 @@ static void HandleKeyParameters(uint8_t key) {
         case KEY_3: {
             bool isKey3 = (key == KEY_3);
             uint16_t realIndex = parametersSelectedIndex;
-            if (Light_Mode) {
-                realIndex = lightModeMenuMapping[parametersSelectedIndex];
-            }
             switch (realIndex) {
-                case PARAM_RSSI_DELAY:
-                    IndexDelayRssi = isKey3 ?
-                                 (IndexDelayRssi >= 2 ? 0 : IndexDelayRssi + 1) :
-                                 (IndexDelayRssi == 0 ? 2 : IndexDelayRssi - 1);
-                    DelayRssi = DelayRssiValues[IndexDelayRssi];
-                    break;
                 case PARAM_SPECTRUM_DELAY:
                     if (isKey3) {
                           if (SpectrumDelay < 61000)
@@ -2238,10 +2205,6 @@ static void HandleKeyParameters(uint8_t key) {
                                  (AUTO_KEYLOCK <= 0 ? 3 : AUTO_KEYLOCK - 1);
                       gKeylockCountdown = durations[AUTO_KEYLOCK];
                       break;
-                case PARAM_GLITCH_MAX:
-                    if (isKey3) { if (GlitchMax < 75) GlitchMax += 5; }
-                    else        { if (GlitchMax >= 5) GlitchMax -= 5; }
-                      break;
                 case PARAM_SOUND_BOOST:
                       SoundBoost = !SoundBoost;
                       break;
@@ -2256,11 +2219,6 @@ static void HandleKeyParameters(uint8_t key) {
                 case PARAM_RESET_DEFAULT:
                       if (isKey3) ClearSettings();
                       break;
-                case PARAM_LIGHT_MODE:
-                    Light_Mode = !Light_Mode;
-                    parametersSelectedIndex = 0;
-                    parametersScrollOffset = 0;
-                    break;
             }
             break;
             }
@@ -2375,12 +2333,13 @@ static void HandleKeySpectrum(uint8_t key, KEY_Event_t event) {
         case KEY_8:
             if (historyListActive) {SaveHistory();
             } else {
-                if(event == EV_LONG_PRESS) {LowNoise = !LowNoise;break;}
+                if(event == EV_LONG_PRESS || event == EV_REPEAT) {LowNoise = !LowNoise;break;}
                 else {ShowLines++;}
                 if (ShowLines > 3 || ShowLines < 1) ShowLines = 1;
                 const char *viewName           = "SPECTRUM";
-				if (ShowLines == 2) viewName   = "SCAN";
+				if (ShowLines == 2) viewName   = "FAST SCAN";
 				if (ShowLines == 3) viewName   = "SMOOTH SPECTRUM";
+                DelayRssi = (ShowLines == 2)?750:1500;
                 ShowOSDPopup(viewName);
                 spectrumElapsedCount = 0;
             }
@@ -2698,7 +2657,7 @@ static void OnKeyDownStill(KEY_Code_t key) {
             stillRegSelected--;
           }
       break;
-      case KEY_8: // przewijanie w dół po liście rejestrów
+      case KEY_8:
           if (stillEditRegs && stillRegSelected < ARRAY_SIZE(allRegisterSpecs)-1) {
             stillRegSelected++;
           }
@@ -3385,7 +3344,6 @@ static void UpdateListening(void) {
     UpdateNoiseOff();
     if (!isListening) {
         UpdateNoiseOn();
-        UpdateGlitch();
     }
     spectrumElapsedCount += 200; 
     if (peak.f >= 1400000 && peak.f <= 130000000 && gNextTimeslice_HTimeS) {
@@ -3652,12 +3610,10 @@ typedef struct {
     uint8_t Noislvl_OFF;
     uint16_t UOO_trigger;
     uint8_t osdPopupIndex;
-    uint8_t GlitchMax;  
     uint8_t Spectrum_state;  
     bool Backlight_On;
     bool SoundBoost;  
     bool gMonitorScan;
-    bool Light_Mode;
     bool LowNoise;
 } SettingsEEPROM;
 
@@ -3705,11 +3661,9 @@ void LoadSettings()
     osdPopupIndex = eepromData.osdPopupIndex;
     osdPopupSetting = osdPopupTimes[osdPopupIndex];
     Backlight_On = eepromData.Backlight_On;
-    GlitchMax = eepromData.GlitchMax;    
     Spectrum_state = eepromData.Spectrum_state;    
     SoundBoost = eepromData.SoundBoost;
-    gMonitorScan = eepromData.gMonitorScan;    
-    Light_Mode = eepromData.Light_Mode;   
+    gMonitorScan = eepromData.gMonitorScan;   
 
     #ifdef ENABLE_SAVE_REGISTERS
         BK4819_WriteRegister(BK4819_REG_40, eepromData.R40);
@@ -3750,11 +3704,9 @@ static void SaveSettings()
     eepromData.Noislvl_OFF = Noislvl_OFF;
     eepromData.UOO_trigger = UOO_trigger;
     eepromData.osdPopupIndex = osdPopupIndex;
-    eepromData.GlitchMax  = GlitchMax;   
     eepromData.Spectrum_state = Spectrum_state;    
     eepromData.SoundBoost = SoundBoost;
     eepromData.gMonitorScan = gMonitorScan;
-    eepromData.Light_Mode = Light_Mode;
     for (int i = 0; i < MAX_BANDS; i++) { 
       if (settings.bandEnabled[i]) {
           eepromData.bandListFlags |= ((uint64_t)1 << i);
@@ -3821,8 +3773,8 @@ void ClearSettings()
     settings.listenBw = 0;
     RangeStart = 43000000;
     RangeStop  = 44000000;
-    DelayRssi = 1000;
-    IndexDelayRssi = 2;
+    DelayRssi = 1500;
+    IndexDelayRssi = 1;
     PttEmission = 2;
     settings.scanStepIndex = STEP_10kHz;
     ShowLines = 1;
@@ -3837,11 +3789,9 @@ void ClearSettings()
     UOO_trigger = 5;
     osdPopupIndex = 3;
     osdPopupSetting = osdPopupTimes[osdPopupIndex];
-    GlitchMax = 0;  
     Spectrum_state = 1; 
     SoundBoost = 0;
     gMonitorScan = false;
-    Light_Mode = false;
     settings.bandEnabled[0] = 1;
     for (int i = 1; i < MAX_BANDS; i++) {settings.bandEnabled[i] = 0;}
     
@@ -4124,13 +4074,7 @@ static void GetBandRow(uint16_t index, ListRow *row) {
 static void GetParametersRow(uint16_t index, ListRow *row) {
     row->right[0] = '\0';
     uint16_t realIndex = index;
-    if (Light_Mode) {realIndex = lightModeMenuMapping[index];
-}
     switch (realIndex) {
-        case PARAM_RSSI_DELAY:
-            snprintf(row->left,  sizeof(row->left),  "RSSI Delay:");
-            snprintf(row->right, sizeof(row->right), "%sms", DelayRssiText[IndexDelayRssi]);
-            break;
         case PARAM_SPECTRUM_DELAY:
             snprintf(row->left, sizeof(row->left), "Spectrum Delay:");
             if (SpectrumDelay < 65000)
@@ -4205,10 +4149,6 @@ static void GetParametersRow(uint16_t index, ListRow *row) {
                 snprintf(row->left, sizeof(row->left), "Key Unlocked");
             }
             break;
-        case PARAM_GLITCH_MAX:
-            snprintf(row->left,  sizeof(row->left),  "GlitchMax:");
-            snprintf(row->right, sizeof(row->right), "%d", GlitchMax);
-            break;
         case PARAM_SOUND_BOOST:
             snprintf(row->left, sizeof(row->left), "SoundBoost:");
             strncpy(row->right, SoundBoost ? "ON" : "OFF", sizeof(row->right) - 1);
@@ -4259,9 +4199,6 @@ static void GetParametersRow(uint16_t index, ListRow *row) {
         case PARAM_RESET_DEFAULT:
             snprintf(row->left, sizeof(row->left), "Reset Default");
             strncpy(row->right, ">", sizeof(row->right) - 1);
-            break;
-        case PARAM_LIGHT_MODE:
-            strncpy(row->left, Light_Mode ? "Advanced Menu" : "Light Menu", sizeof(row->left) - 1);
             break;
         default:
             row->left[0] = '\0';

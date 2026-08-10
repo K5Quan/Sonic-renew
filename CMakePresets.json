@@ -16,7 +16,7 @@
                 "ENABLE_SAVE_REGISTERS": false,
                 "ENABLE_ADVANCED_SPECTRUM":false,
                 "ENABLE_PERSIST": false,
-                "ENABLE_BENCH": true,
+                "ENABLE_BENCH": false,
                 "ENABLE_VERSION": false,
                 "ENABLE_ALARM": false,
                 "ENABLE_FLASHLIGHT": true,
