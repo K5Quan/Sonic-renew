@@ -92,7 +92,7 @@ static uint32_t RangeStop = 11000000;
 static uint16_t SpectrumSleepMs = 0;  
 static uint8_t  Noislvl_OFF = NoisLvl;
 static uint8_t  Noislvl_ON = NoisLvl - NoiseHysteresis;
-static uint16_t osdPopupSetting = 600;      
+static uint16_t osdPopupSetting = 200;      
 static uint16_t UOO_trigger = 15;
 static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
 static bool     SoundBoost = 0;             
@@ -126,7 +126,7 @@ static uint8_t          IndexDelayRssi = 1;
 static const uint16_t   DelayRssiValues[] = {750, 1500}; //in ms
 
 static bool     Backlight_On = 1;
-uint8_t osdPopupIndex = 3;
+uint8_t osdPopupIndex = 1;
 static const int osdPopupTimes[] = {0, 200, 500, 1000, 3000, 5000};
 #ifdef ENABLE_BENCH
     static uint32_t benchTickMs = 0;      
@@ -1744,25 +1744,28 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
 }
 
 static void DrawNums() {
-if (appMode==CHANNEL_MODE) 
-{
-  uint8_t selectedCount = 0;
-  for (uint8_t i = 0; i < validScanListCount; i++) {
-      if (settings.scanListEnabled[validScanListIndices[i]]) selectedCount++;
-  }
-  sprintf(String, "SL:%u/%u", selectedCount, validScanListCount);
-  GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
-  
-  sprintf(String, "CH:%u", scanChannelsCount);
-  GUI_DisplaySmallest(String, 101, Bottom_print, false, true);
+if (appMode==CHANNEL_MODE) {
+    uint8_t selectedCount = 0;
+    if (!validScanListCount) {
+        BuildValidScanListIndices();
+    }
 
-  return;
-}
+    if (!selectedCount) {
+        for (uint8_t i = 0; i < validScanListCount; i++) {
+            if (settings.scanListEnabled[validScanListIndices[i]]) selectedCount++;
+        }
+    }
 
-if(appMode!=CHANNEL_MODE){
+    sprintf(String, "SL:%u/%u", selectedCount, validScanListCount);
+    GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
+    sprintf(String, "CH:%u", scanChannelsCount);
+    GUI_DisplaySmallest(String, 101, Bottom_print, false, true);
+    return;
+    }
+
+if(appMode!=CHANNEL_MODE) {
     sprintf(String, "%u.%05u", SpectrumRangeStart / 100000, SpectrumRangeStart % 100000);
     GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
- 
     sprintf(String, "%u.%05u", SpectrumRangeStop / 100000, SpectrumRangeStop % 100000);
     GUI_DisplaySmallest(String, 90, Bottom_print, false, true);
     }
@@ -1840,18 +1843,26 @@ static void DrawF(uint32_t f) {
     } else ArrowLine = 2;
     static char Text[20]="";
     if (LowNoise) UI_PrintStringSmallbackground("LN", 112, 127, 1, 0);
+    DrawNums();
+    if(f < 100000000) {
+        UI_PrintStringSmallBold(line1 + 7, 87, 0, 1);
+        line1[7] = 0;
+        UI_DisplayFrequency(line1, 3, 0, 1);
+    } else {
+        UI_PrintStringSmallBold(line1 + 8, 100, 0, 1);
+        line1[8] = 0;
+        UI_DisplayFrequency(line1, 3, 0, 1);
+    }
     switch(ShowLines) {
             case 1:
             case 3:
                 {           //SPECTRUM
-                DrawNums();
                 if(isListening) { sprintf(Text, "%d dBm", Rssi2DBm(scanInfo.rssi)); }
                 else { 
                     if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) {
                         snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
                     }
                 }
-                UI_DisplayFrequency(line1, 3, 0, 1);  
                 UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
                 GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
                 ArrowLine = 3;
@@ -1890,7 +1901,6 @@ static void DrawF(uint32_t f) {
                 snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
 #endif
                 }
-                UI_DisplayFrequency(line1, 3, 0, 1);
                 UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
                 ScanProgress_DrawGaugeLine(3);
                 if(isListening) DrawMeter(4);
@@ -3029,11 +3039,9 @@ static void RenderSpectrum()
 #ifdef ENABLE_PERSIST
         uint8_t topY[128];
         BuildCurrentSpectrumTopY(topY);
-        //DrawNums();
         UpdateDBMaxAuto();
         DrawSpectrumCurve(topY);
 #else
-        //DrawNums();
         UpdateDBMaxAuto();
         if (ShowLines == 1) DrawSpectrum();
         else DrawSpectrumSmooth();
@@ -3787,7 +3795,7 @@ void ClearSettings()
     Noislvl_OFF = NoisLvl; 
     Noislvl_ON = NoisLvl - NoiseHysteresis;  
     UOO_trigger = 5;
-    osdPopupIndex = 3;
+    osdPopupIndex = 1;
     osdPopupSetting = osdPopupTimes[osdPopupIndex];
     Spectrum_state = 1; 
     SoundBoost = 0;
