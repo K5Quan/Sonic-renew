@@ -98,7 +98,6 @@ static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
 static bool     SoundBoost = 0;             
 static uint8_t  PttEmission = 0;            
 static bool     gMonitorScan = true;       
-static bool     LowNoise = false;       
 
 // Configuration des index du menu des paramètres
 #define PARAM_SPECTRUM_DELAY    0
@@ -252,6 +251,12 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
                              scanListEnabled: {0},
                              bandEnabled: {0}
                             };
+
+// 3 Band presets
+uint64_t bandPreset1Flags = 0;
+uint64_t bandPreset2Flags = 0;
+uint64_t bandPreset3Flags = 0;
+static uint8_t currentBandPreset = 0;  // 0-2 for presets 1-3
 
 static uint32_t currentFreq, tempFreq;
 static uint8_t rssiHistory[128];
@@ -1772,17 +1777,17 @@ if(appMode!=CHANNEL_MODE) {
 }
 
 static void BlitLine(unsigned line) {
-    if (isListening && LowNoise && spectrumElapsedCount > 200) return; //No refresh in low noise mode
+    if (isListening && spectrumElapsedCount > 200) return; //No refresh in low noise mode
     ST7565_BlitLine(line);
 }
 
 static void BlitFullScreen(void) {
-    if (isListening && LowNoise && spectrumElapsedCount > 200) return; //No refresh in low noise mode
+    if (isListening && spectrumElapsedCount > 200) return; //No refresh in low noise mode
     ST7565_BlitFullScreen();
 }
 
 static void BlitStatusLine(void) {
-    if (isListening && LowNoise && spectrumElapsedCount > 200) return; //No refresh in low noise mode
+    if (isListening && spectrumElapsedCount > 200) return; //No refresh in low noise mode
     ST7565_BlitStatusLine();
 }
 
@@ -1842,16 +1847,15 @@ static void DrawF(uint32_t f) {
         }
     } else ArrowLine = 2;
     static char Text[20]="";
-    if (LowNoise) UI_PrintStringSmallbackground("LN", 112, 127, 1, 0);
     DrawNums();
     if(f < 100000000) {
-        UI_PrintStringSmallBold(line1 + 7, 87, 0, 1);
+        UI_PrintStringSmallBold(line1 + 7, 100, 0, 1);
         line1[7] = 0;
-        UI_DisplayFrequency(line1, 3, 0, 1);
+        UI_DisplayFrequency(line1, 16, 0, 1);
     } else {
-        UI_PrintStringSmallBold(line1 + 8, 100, 0, 1);
+        UI_PrintStringSmallBold(line1 + 8, 110, 0, 1);
         line1[8] = 0;
-        UI_DisplayFrequency(line1, 3, 0, 1);
+        UI_DisplayFrequency(line1, 13, 0, 1);
     }
     UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
     switch(ShowLines) {
@@ -2049,6 +2053,30 @@ static void HandleKeyBandList(uint8_t key) {
                     bandListSelectedIndex = 0;
                 }
                 break;
+            case KEY_1: /* Load band preset 1 */
+                    bandListSelectedIndex = 0;
+                    for (int i = 0; i < MAX_BANDS; i++) {
+                        settings.bandEnabled[i] = (bandPreset1Flags & ((uint64_t)1 << i)) != 0;
+                    }
+                    currentBandPreset = 0;
+                    //ShowOSDPopup("Preset 1");
+                    break;
+            case KEY_2: /* Load band preset 2 */
+                    bandListSelectedIndex = 0;
+                    for (int i = 0; i < MAX_BANDS; i++) {
+                        settings.bandEnabled[i] = (bandPreset2Flags & ((uint64_t)1 << i)) != 0;
+                    }
+                    currentBandPreset = 1;
+                    //ShowOSDPopup("Preset 2");
+                    break;
+            case KEY_3: /* Load band preset 3 */
+                   bandListSelectedIndex = 0;
+                    for (int i = 0; i < MAX_BANDS; i++) {
+                        settings.bandEnabled[i] = (bandPreset3Flags & ((uint64_t)1 << i)) != 0;
+                    }
+                    currentBandPreset = 2;
+                    //ShowOSDPopup("Preset 3");
+                break;
             case KEY_4: /* toggle selected band */
                 if (bandListSelectedIndex < bandCount) {
                     settings.bandEnabled[bandListSelectedIndex] = !settings.bandEnabled[bandListSelectedIndex]; 
@@ -2061,6 +2089,23 @@ static void HandleKeyBandList(uint8_t key) {
                     memset(settings.bandEnabled, 0, sizeof(settings.bandEnabled));
                     settings.bandEnabled[bandListSelectedIndex] = true;
                     nextBandToScanIndex = bandListSelectedIndex; 
+                }
+                break;
+            case KEY_7:
+                {
+                uint64_t newFlags = 0;
+                for (int i = 0; i < MAX_BANDS; i++) {
+                    if (settings.bandEnabled[i]) newFlags |= ((uint64_t)1 << i);
+                }
+                switch (currentBandPreset) {
+                    case 0: bandPreset1Flags = newFlags; break;
+                    case 1: bandPreset2Flags = newFlags; break;
+                    case 2: bandPreset3Flags = newFlags; break;
+                }
+                SaveSettings();
+                char msg[32];
+                sprintf(msg, "Saved Preset %d", currentBandPreset + 1);
+                ShowOSDPopup(msg);
                 }
                 break;
             case KEY_MENU:
@@ -2246,15 +2291,8 @@ static void HandleKeyParameters(uint8_t key) {
       }
 }
 
-typedef enum {
-    EV_NONE,
-    EV_SHORT_PRESS,
-    EV_LONG_PRESS,
-    EV_REPEAT
-} KEY_Event_t;
-
 /* --- SPECTRUM state: main spectrum view keys, including list entry shortcuts --- */
-static void HandleKeySpectrum(uint8_t key, KEY_Event_t event) {
+static void HandleKeySpectrum(uint8_t key) {
 
     switch (key) {
         case KEY_5: {
@@ -2343,8 +2381,7 @@ static void HandleKeySpectrum(uint8_t key, KEY_Event_t event) {
         case KEY_8:
             if (historyListActive) {SaveHistory();
             } else {
-                if(event == EV_LONG_PRESS || event == EV_REPEAT) {LowNoise = !LowNoise;break;}
-                else {ShowLines++;}
+                ShowLines++;
                 if (ShowLines > 3 || ShowLines < 1) ShowLines = 1;
                 const char *viewName           = "SPECTRUM";
 				if (ShowLines == 2) viewName   = "FAST SCAN";
@@ -2563,7 +2600,7 @@ static void HandleKeySpectrum(uint8_t key, KEY_Event_t event) {
 // SECTION: Main keyboard dispatcher
 // ============================================================
 
-static void OnKeyDown(uint8_t key, KEY_Event_t event) {
+static void OnKeyDown(uint8_t key) {
     /* Key-lock guard: only KEY_F unlocks */
     if (gIsKeylocked) {
         if (key == KEY_F) {
@@ -2582,7 +2619,7 @@ static void OnKeyDown(uint8_t key, KEY_Event_t event) {
         case BAND_LIST_SELECT:  HandleKeyBandList(key);         break;
         case SCANLIST_SELECT:   HandleKeyScanList(key);         break;
         case PARAMETERS_SELECT: HandleKeyParameters(key);       break;
-        default:                HandleKeySpectrum(key,event);         break;
+        default:                HandleKeySpectrum(key);         break;
     }
 }
 
@@ -3151,7 +3188,6 @@ static void Render() {
             else {
                     if (SpectrumMonitor) DrawF(lastReceivingFreq);
                     else DrawF(scanInfo.f);
-                    BlitFullScreen();
             }
 
             if (spectrumElapsedCount < 500) {
@@ -3167,7 +3203,6 @@ static void Render() {
             break;
         case STILL:
             RenderStill();
-            BlitFullScreen();
             break;
         case BAND_LIST_SELECT:
             RenderBandSelect();
@@ -3182,7 +3217,7 @@ static void Render() {
             ST7565_BlitFullScreen();
             return;
     }
-
+BlitFullScreen();
 }
 
 static void HandleUserInput(void) {
@@ -3192,8 +3227,6 @@ static void HandleUserInput(void) {
     static uint16_t press_duration = 0;
     static bool long_press_dispatched = false;
     static KEY_Code_t last_active_key = KEY_INVALID;
-
-    KEY_Event_t event = EV_NONE;
     KEY_Code_t key_to_process = KEY_INVALID;
 
     if (kbd.current != KEY_INVALID) {
@@ -3203,7 +3236,6 @@ static void HandleUserInput(void) {
             last_active_key = kbd.current;
 
             if (kbd.current == KEY_PTT) {
-                event = EV_SHORT_PRESS;
                 key_to_process = kbd.current;
             }
         } else {
@@ -3211,12 +3243,7 @@ static void HandleUserInput(void) {
             last_active_key = kbd.current;
 
             if (kbd.current != KEY_PTT) {
-            if (press_duration >= 50 && !long_press_dispatched) {
-                event = EV_LONG_PRESS;
-                key_to_process = kbd.current;
-                long_press_dispatched = true;
-                } else if (press_duration > 80 && (press_duration % 10 == 0)) {
-                event = EV_REPEAT;
+            if (press_duration > 80 && (press_duration % 10 == 0)) {
                 key_to_process = kbd.current;
             }
             }
@@ -3225,7 +3252,6 @@ static void HandleUserInput(void) {
     } else {
         if (last_active_key != KEY_INVALID && last_active_key != KEY_PTT) {
             if (press_duration >= 2 && press_duration < 50 && !long_press_dispatched) {
-                event = EV_SHORT_PRESS;
                 key_to_process = last_active_key;
             }
         }
@@ -3235,7 +3261,7 @@ static void HandleUserInput(void) {
         kbd.counter = 0;
     }
 
-    if (event != EV_NONE && key_to_process != KEY_INVALID) {
+    if (key_to_process != KEY_INVALID) {
        
         if (Backlight_On) {
             if (!backlightOn && gEeprom.BACKLIGHT_TIME) {
@@ -3249,7 +3275,7 @@ static void HandleUserInput(void) {
             case BAND_LIST_SELECT:
             case SCANLIST_SELECT:
             case PARAMETERS_SELECT:
-                OnKeyDown(key_to_process, event);
+                OnKeyDown(key_to_process);
                 break;
             case FREQ_INPUT:
                 OnKeyDownFreqInput(key_to_process);
@@ -3599,6 +3625,10 @@ typedef struct {
     uint8_t PttEmission; 
     uint8_t listenBw;
 	uint64_t bandListFlags;            // Bits 0-63: bandEnabled[0..63]
+    uint64_t bandPreset1Flags;         // Band preset 1
+    uint64_t bandPreset2Flags;         // Band preset 2
+    uint64_t bandPreset3Flags;         // Band preset 3
+    uint8_t currentBandPreset;         // Active preset (0-2)
     uint32_t scanListFlags;            // Bits 0-31: scanListEnabled[0..31]
     int16_t Trigger;
     uint32_t RangeStart;
@@ -3628,7 +3658,6 @@ typedef struct {
     bool Backlight_On;
     bool SoundBoost;  
     bool gMonitorScan;
-    bool LowNoise;
 } SettingsEEPROM;
 
 
@@ -3658,12 +3687,18 @@ void LoadSettings()
     for (int i = 0; i < MAX_BANDS; i++) {
       settings.bandEnabled[i] = (eepromData.bandListFlags & ((uint64_t)1 << i)) != 0;
       }
+    
+    bandPreset1Flags = eepromData.bandPreset1Flags;
+    bandPreset2Flags = eepromData.bandPreset2Flags;
+    bandPreset3Flags = eepromData.bandPreset3Flags;
+    currentBandPreset = eepromData.currentBandPreset;
+    if (currentBandPreset > 2) currentBandPreset = 0;
+    
     IndexDelayRssi = eepromData.IndexDelayRssi;
     DelayRssi = DelayRssiValues[eepromData.IndexDelayRssi];
     PttEmission = eepromData.PttEmission;
     validScanListCount = 0;
     ShowLines = eepromData.ShowLines;
-    LowNoise = eepromData.LowNoise;
     SpectrumDelay = eepromData.SpectrumDelay;
     IndexMaxLT = eepromData.IndexMaxLT;
     MaxListenTime = listenSteps[IndexMaxLT];
@@ -3710,7 +3745,6 @@ static void SaveSettings()
     eepromData.PttEmission = PttEmission;
     eepromData.scanStepIndex = settings.scanStepIndex;
     eepromData.ShowLines = ShowLines;
-    eepromData.LowNoise = LowNoise;
     eepromData.SpectrumDelay = SpectrumDelay;
     eepromData.IndexMaxLT = IndexMaxLT;
     eepromData.IndexPS = IndexPS;
@@ -3726,6 +3760,11 @@ static void SaveSettings()
           eepromData.bandListFlags |= ((uint64_t)1 << i);
       }
     }
+
+    eepromData.bandPreset1Flags = bandPreset1Flags;
+    eepromData.bandPreset2Flags = bandPreset2Flags;
+    eepromData.bandPreset3Flags = bandPreset3Flags;
+    eepromData.currentBandPreset = currentBandPreset;
 
     #ifdef ENABLE_SAVE_REGISTERS
         eepromData.R40 = BK4819_ReadRegister(BK4819_REG_40);
@@ -3792,7 +3831,6 @@ void ClearSettings()
     PttEmission = 2;
     settings.scanStepIndex = STEP_10kHz;
     ShowLines = 1;
-    LowNoise = 0;
     SpectrumDelay = 0;
     MaxListenTime = 0;
     IndexMaxLT = 0;
@@ -3948,11 +3986,7 @@ static void RenderUnifiedList(
             }
         }
     }
-    
-
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
-
-    /* Header */
     if (useMeter && historyListActive && SpectrumMonitor > 0)
         DrawMeter(0);
     else if (title)
@@ -3982,7 +4016,7 @@ static void RenderUnifiedList(
         }
         currentLine += itemHeight;
     }
-    BlitFullScreen();
+    ST7565_BlitFullScreen();
 }
 
 // === Effectue un unique balayage pour les 6 lignes visibles au départ ===
@@ -4245,7 +4279,9 @@ static void RenderParametersSelect() {
 }
 
 void RenderBandSelect() {
-    RenderUnifiedList("BANDS:", false, bandCount, bandListSelectedIndex,
+    char title[24];
+    snprintf(title, sizeof(title), "BANDPRESET %d: %d/%d", currentBandPreset + 1, CountActiveBands(), bandCount);
+    RenderUnifiedList(title, false, bandCount, bandListSelectedIndex,
                       bandListScrollOffset, true, GetBandRow);
 }
 
