@@ -1328,6 +1328,7 @@ static void Measure() {
                     if (settings.rssiTriggerLevelUp < 50) {
                         gIsPeak = true;
                         UpdateNoiseOff();
+                        if (BK4819_GetGlitchIndicator() > 10) {gIsPeak = false;} 
                     }
                 }
             
@@ -3151,6 +3152,7 @@ static void Render() {
             else {
                     if (SpectrumMonitor) DrawF(lastReceivingFreq);
                     else DrawF(scanInfo.f);
+                    BlitFullScreen();
             }
 
             if (spectrumElapsedCount < 500) {
@@ -3162,21 +3164,26 @@ static void Render() {
             break;
         case FREQ_INPUT:
             RenderFreqInput();
+            ST7565_BlitFullScreen();
             break;
         case STILL:
             RenderStill();
+            BlitFullScreen();
             break;
         case BAND_LIST_SELECT:
             RenderBandSelect();
+            ST7565_BlitFullScreen();
             return;
         case SCANLIST_SELECT:
             RenderScanListSelect();
+            ST7565_BlitFullScreen();
             return;
         case PARAMETERS_SELECT:
             RenderParametersSelect();
+            ST7565_BlitFullScreen();
             return;
     }
-BlitFullScreen();
+
 }
 
 static void HandleUserInput(void) {
@@ -3352,6 +3359,7 @@ static void UpdateListening(void) {
     UpdateNoiseOff();
     if (!isListening) {
         UpdateNoiseOn();
+        if (BK4819_GetGlitchIndicator() > 10) {gIsPeak = false;} 
     }
     spectrumElapsedCount += 200; 
     if (peak.f >= 1400000 && peak.f <= 130000000 && gNextTimeslice_HTimeS) {
