@@ -1328,7 +1328,6 @@ static void Measure() {
                     if (settings.rssiTriggerLevelUp < 50) {
                         gIsPeak = true;
                         UpdateNoiseOff();
-                        if (BK4819_GetGlitchIndicator() > 10) {gIsPeak = false;} 
                     }
                 }
             
@@ -1854,6 +1853,7 @@ static void DrawF(uint32_t f) {
         line1[8] = 0;
         UI_DisplayFrequency(line1, 3, 0, 1);
     }
+    UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
     switch(ShowLines) {
             case 1:
             case 3:
@@ -1864,7 +1864,7 @@ static void DrawF(uint32_t f) {
                         snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
                     }
                 }
-                UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
+                
                 GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
                 ArrowLine = 3;
                 break;
@@ -1902,7 +1902,6 @@ static void DrawF(uint32_t f) {
                 snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
 #endif
                 }
-                UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
                 ScanProgress_DrawGaugeLine(3);
                 if(isListening) DrawMeter(4);
                 UI_PrintStringSmallbackground(Text, 0, 127, 5, 0);
@@ -3359,7 +3358,6 @@ static void UpdateListening(void) {
     UpdateNoiseOff();
     if (!isListening) {
         UpdateNoiseOn();
-        if (BK4819_GetGlitchIndicator() > 10) {gIsPeak = false;} 
     }
     spectrumElapsedCount += 200; 
     if (peak.f >= 1400000 && peak.f <= 130000000 && gNextTimeslice_HTimeS) {
