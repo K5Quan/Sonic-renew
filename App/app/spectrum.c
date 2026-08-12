@@ -1047,7 +1047,10 @@ static uint16_t CountValidHistoryItems() {
 static void UpdateCssDetection(void) {
     static uint8_t LCode = 0;
     if (CodeFreq == peak.f && (code != 0xFF)) return;
-    if (settings.modulationType != MODULATION_FM) return;
+    if (settings.modulationType != MODULATION_FM) {
+        code = 0xFF;
+        return;
+    }
 
     BK4819_WriteRegister(BK4819_REG_51,
         BK4819_REG_51_ENABLE_CxCSS |
@@ -1735,7 +1738,12 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
         total = GetStepsCount();
         current_index = scanInfo.i;
     }
-    if (!isListening && total <= 200) {return;}
+    if (!isListening && total <= 200) {
+        char line[19] = "";
+        snprintf(line, sizeof(line), "SCANNING %dch", total);
+        UI_PrintStringSmallNormal(line, 0, 128, 3);
+        return;
+    }
     const uint8_t fill_start = 4;
     const uint8_t fill_cols  = 121;
 
