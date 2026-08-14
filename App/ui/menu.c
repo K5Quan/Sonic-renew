@@ -649,18 +649,38 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_LIST_CH:
-            if (gSubMenuSelection == MR_CHANNELS_LIST + 1)
+            if (gSubMenuSelection == MR_CHANNELS_LIST + 1) {
                 strcpy(String, "ALL");
-            else if (gSubMenuSelection == 0 && m == MENU_LIST_CH)
+            }
+            else if (gSubMenuSelection == 0) {
                 strcpy(String, "OFF");
-            else {
-                const char *name = gListName[gSubMenuSelection - 1];
+            }
+            else if (gSubMenuSelection >= 1 && gSubMenuSelection <= MR_CHANNELS_LIST) {
+                // 1. Nettoyage du nom dans un tampon sécurisé de 11 octets
+                char cleanName[11];
+                const char *rawName = gListName[gSubMenuSelection - 1];
                 
-                // If first character is empty/invalid, display "N/A"
-                if (IsEmptyName(name, sizeof(gListName[0])))
+                uint8_t i;
+                for (i = 0; i < 10; i++) {
+                    char c = rawName[i];
+                    // On s'arrête au premier marqueur de fin (\0 ou 0xFF de la Flash)
+                    if (c == '\0' || (uint8_t)c == 0xFF) {
+                        break;
+                    }
+                    cleanName[i] = c;
+                }
+                cleanName[i] = '\0'; // Garantie absolue de fin de chaîne
+            
+                // 2. Affichage sécurisé
+                if (cleanName[0] == '\0') {
                     sprintf(String, "%02u", gSubMenuSelection);
-                else
-                    sprintf(String, "%02u (%.3s)", gSubMenuSelection, name);
+                } else {
+                    sprintf(String, "%02u\n%s", gSubMenuSelection, cleanName);
+                }
+            }
+            else {
+                // Valeur de secours si gSubMenuSelection est hors bornes
+                strcpy(String, "N/A");
             }
             break;
 
@@ -681,24 +701,24 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_RESET[gSubMenuSelection]);
             break;
 
-case MENU_F_LOCK: // разрешить всё
-    strcpy(String, gSubMenu_F_LOCK[gSubMenuSelection]);
-    break;
+        case MENU_F_LOCK: // разрешить всё
+            strcpy(String, gSubMenu_F_LOCK[gSubMenuSelection]);
+            break;
 
-        #ifdef ENABLE_F_CAL_MENU
-            case MENU_F_CALI:
-                {
-                    const uint32_t value   = 22656 + gSubMenuSelection;
-                    const uint32_t xtal_Hz = (0x4f0000u + value) * 5;
-
-                    writeXtalFreqCal(gSubMenuSelection, false);
-
-                    sprintf(String, "%d\n%u.%06u\nMHz",
-                        gSubMenuSelection,
-                        xtal_Hz / 1000000, xtal_Hz % 1000000);
-                }
-                break;
-        #endif
+                #ifdef ENABLE_F_CAL_MENU
+                    case MENU_F_CALI:
+                        {
+                            const uint32_t value   = 22656 + gSubMenuSelection;
+                            const uint32_t xtal_Hz = (0x4f0000u + value) * 5;
+                        
+                            writeXtalFreqCal(gSubMenuSelection, false);
+                        
+                            sprintf(String, "%d\n%u.%06u\nMHz",
+                                gSubMenuSelection,
+                                xtal_Hz / 1000000, xtal_Hz % 1000000);
+                        }
+                        break;
+                #endif
 
         case MENU_BATCAL:
         {

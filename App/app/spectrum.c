@@ -62,9 +62,9 @@ typedef struct __attribute__((packed)) {
 } HistoryStruct;
 
 #if defined(ENABLE_USB)
-    #define HISTORY_SIZE 100
+    #define HISTORY_SIZE 50
 #elif defined(ENABLE_UART)
-    #define HISTORY_SIZE 200
+    #define HISTORY_SIZE 100
 #endif
 
 static uint16_t historyListIndex = 0;
@@ -229,8 +229,9 @@ typedef struct {
 typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 
 /***************************BIG RAM******************************************/
-static uint32_t         *ScanFrequencies = NULL;
 static bandparameters   *BParams = NULL;
+#define                 MAX_SCAN_CHANNELS 500
+static uint32_t         ScanFrequencies[MAX_SCAN_CHANNELS];
 static uint32_t         HFreqs[HISTORY_SIZE];           //4
 static uint8_t          HCode[HISTORY_SIZE];            //1
 static bool             HBlacklisted[HISTORY_SIZE];     //1
@@ -466,22 +467,25 @@ static void ShowOSDPopup(const char *str)
     spectrumElapsedCount = 0;
 }
 
-//#define MAX_CHANNELS 500
-
 static uint16_t CountValidFrequencies(void) {
     uint16_t count = 0;
     ChannelAttributes_t cache;
-    //for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST && count < MAX_CHANNELS; ch++) {
+
     for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
         MR_LoadChannelAttributesFromFlash(ch, &cache);
         if (cache.scanlist > 0 && cache.scanlist <= MR_CHANNELS_LIST) {
-            if (FetchChannelFrequency(ch).frequency && settings.scanListEnabled[cache.scanlist-1]) count++;
+            if (FetchChannelFrequency(ch).frequency && settings.scanListEnabled[cache.scanlist - 1]) {
+                count++;
+            }
         }
     }
-    if (count > 0) return count; 
-    //for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST && count < MAX_CHANNELS; ch++) {
-    for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
-        if (FetchChannelFrequency(ch).frequency) count++;
+
+    if (count == 0) { 
+        for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
+            if (FetchChannelFrequency(ch).frequency) {
+                count++;
+            }
+        }
     }
     return count;
 }
@@ -497,44 +501,53 @@ uint8_t CountActiveBands(void) {
 }
 
 static void LoadActiveScanFrequencies(void)
-{   if (ScanFrequencies != NULL) { free(ScanFrequencies); ScanFrequencies = NULL; }
-    uint16_t needed = CountValidFrequencies();
-    if (needed > 0) {
-        ScanFrequencies = (uint32_t *)malloc(needed * sizeof(uint32_t));
-        if (!ScanFrequencies) return;
-    }
+{
+    
     char str[32];
-    if(appMode == CHANNEL_MODE) {sprintf(str, "CHANNELS:%d", needed);}
-    if(appMode == SCAN_BAND_MODE) {sprintf(str, "P%d BANDS:%d ", currentBandPreset + 1, CountActiveBands());}
-    if(appMode == FREQUENCY_MODE) {sprintf(str, "FREQUENCY");}
-    if(appMode == SCAN_RANGE_MODE) {sprintf(str, "RANGE");}
-    if (!gComeBack) ShowOSDPopup(str);
-    scanChannelsCount = 0;
-    ChannelAttributes_t cache;
-    for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
-    {
-        MR_LoadChannelAttributesFromFlash(ch, &cache);
-        if (cache.scanlist <= MR_CHANNELS_LIST) {
-            ChannelInfo_t freqs  = FetchChannelFrequency(ch);
-            if (freqs.frequency) {
-                if (settings.scanListEnabled[cache.scanlist-1])
-                    {   ScanFrequencies[scanChannelsCount] = freqs.frequency;
+    if (appMode == FREQUENCY_MODE) { sprintf(str, "FREQUENCY"); }
+    if (appMode == SCAN_RANGE_MODE) { sprintf(str, "RANGE"); }
+    if (appMode == SCAN_BAND_MODE) { sprintf(str, "P%d BANDS:%d ", currentBandPreset + 1, CountActiveBands()); }
+    if (appMode == CHANNEL_MODE) { 
+        uint16_t needed = CountValidFrequencies();
+        if (needed >=500) {
+            sprintf(str, "MAX 500 CH");
+        } else sprintf(str, "CHANNELS:%d", needed);
+        scanChannelsCount = 0;
+        ChannelAttributes_t cache;
+
+        for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
+        {
+            if (scanChannelsCount >= MAX_SCAN_CHANNELS) {
+                break;
+            }
+
+            MR_LoadChannelAttributesFromFlash(ch, &cache);
+            if (cache.scanlist > 0 && cache.scanlist <= MR_CHANNELS_LIST) {
+                ChannelInfo_t freqs = FetchChannelFrequency(ch);
+                if (freqs.frequency) {
+                    if (settings.scanListEnabled[cache.scanlist - 1]) {
+                        ScanFrequencies[scanChannelsCount] = freqs.frequency;
                         scanChannelsCount++;
                     }
                 }
+            }
         }
-    }
-    if (!scanChannelsCount) { //No active scanlist
-    for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
-    {
-        ChannelInfo_t freqs  = FetchChannelFrequency(ch);
-        if (freqs.frequency) {
-                {   ScanFrequencies[scanChannelsCount] = freqs.frequency;
+        if (!scanChannelsCount) {
+            for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
+            {
+                if (scanChannelsCount >= MAX_SCAN_CHANNELS) {
+                    break;
+                }
+
+                ChannelInfo_t freqs = FetchChannelFrequency(ch);
+                if (freqs.frequency) {
+                    ScanFrequencies[scanChannelsCount] = freqs.frequency;
                     scanChannelsCount++;
                 }
             }
+        }
     }
-    }
+    if (!gComeBack) ShowOSDPopup(str);
 }
 
 static void LoadMonitorFrequencies(void)
@@ -3533,6 +3546,7 @@ void APP_RunSpectrumMode(uint8_t mode) {
 
 void APP_RunSpectrum(void) {    
     for (;;) {
+        SpectrumMonitor = 0;
         LoadMonitorFrequencies ();
         Mode mode;
         if (!Key_1_pressed ) LoadSettings();
@@ -3601,7 +3615,6 @@ void APP_RunSpectrum(void) {
             RestoreRegisters();
             break;
         }
-        if (ScanFrequencies) { free(ScanFrequencies); ScanFrequencies = NULL; }
         if (BParams)         { free(BParams);         BParams = NULL; }
         break;
     } 
@@ -3881,37 +3894,28 @@ void ClearSettings()
 // ============================================================
 
 static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
-    char channel_name[12];
-    uint16_t first_channel = 0xFFFF;
-    for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
-        ChannelAttributes_t *att = MR_GetChannelAttributes(ch);
-        if (att->scanlist == (uint8_t)(scanListIndex + 1)) {
-            first_channel = ch;
-            break;
+    if (scanListIndex >= MR_CHANNELS_LIST) return false;
+    char nameOrFreq[11];
+    memset(nameOrFreq, 0, sizeof(nameOrFreq));
+    uint8_t firstChar = (uint8_t)gListName[scanListIndex][0];
+    if (firstChar != '\0' && firstChar != 0xFF) {
+        for (uint8_t i = 0; i < 10; i++) {
+            char c = gListName[scanListIndex][i];
+            if (c == '\0' || (uint8_t)c == 0xFF) {
+                break;
+            }
+            nameOrFreq[i] = c;
         }
+        nameOrFreq[10] = '\0';
+    } 
+    else {
+        return false;
     }
-    if (first_channel == 0xFFFF) return false; 
-    SETTINGS_FetchChannelName(channel_name, first_channel);
-    char nameOrFreq[13];
-    if (channel_name[0] == '\0') {
-        uint32_t freq = 0;
-        PY25Q16_ReadBuffer(0x0000 + (first_channel * 16), (uint8_t *)&freq, 4);
-        if (freq < 1400000) {
-            return false;
-        }
-
-        sprintf(nameOrFreq, "%u.%05u", freq / 100000, freq % 100000);
-    } else {
-        strncpy(nameOrFreq, channel_name, 12);
-        nameOrFreq[12] = '\0';
-    }
-
     if (settings.scanListEnabled[scanListIndex]) {
-      sprintf(bufferOut, "%d:%-11s*", scanListIndex + 1, nameOrFreq);
+        sprintf(bufferOut, "%d:%-10s*", scanListIndex + 1, nameOrFreq);
     } else {
-        sprintf(bufferOut, "%d:%-11s", scanListIndex + 1, nameOrFreq);
+        sprintf(bufferOut, "%d:%-10s", scanListIndex + 1, nameOrFreq);
     }
-
     return true;
 }
 
