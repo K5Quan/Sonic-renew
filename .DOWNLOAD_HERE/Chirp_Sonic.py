@@ -1741,15 +1741,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             if elname == "slDef":
                 _mem.sl.slDef = int(element.value) + 1
 
-            elif elname == "slPriorEnab":
-                _mem.sl.slPriorEnab = int(element.value)
-
-            elif elname == "slPriorCh1":
-                _mem.sl.slPriorCh1 = int(element.value)
-
-            elif elname == "slPriorCh2":
-                _mem.sl.slPriorCh2 = int(element.value)
-
             elif elname.startswith("listname"):
                 idx = int(elname.replace("listname", ""))
                 if 0 <= idx < (MR_CHANNELS_LIST - 1):
@@ -2094,35 +2085,10 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
         # ----------------- Scan Lists
 
-        tmpscanl = list_def(_mem.sl.slDef - 1, SCANLIST_SELECT_LIST, 1)
-        val = RadioSettingValueList(SCANLIST_SELECT_LIST, None, tmpscanl)
-        rs = RadioSetting("slDef", "Default Scan Lists (SList)", val)
-        rs.set_doc('SList: Selects which lists are used by the memory scan\n' + \
-                    '* LIST [1] to LIST [24]\n' + \
-                    '* ALL : All channels (except OFF)\n')
-        scanl.append(rs)
-
-        val = RadioSettingValueBoolean(_mem.sl.slPriorEnab)
-        rs = RadioSetting("slPriorEnab", "List 1 Priority Channel Scan", val)
-        rs.set_doc('List 1 priority: Is this list has priority')
-        scanl.append(rs)
-
         ch_list = []
         for ch in range(1, MR_CHANNELS_MAX + 1):
             ch_list.append("Channel M" + str(ch))
         ch_list.append("None")
-
-        tmpch = list_def(_mem.sl.slPriorCh1, ch_list, 0)
-        val = RadioSettingValueList(ch_list, None, tmpch)
-        rs = RadioSetting("slPriorCh1", "List 1 Priority Channel 1", val)
-        rs.set_doc('List 1 priority channel 1: Select the channel you want for priority')
-        scanl.append(rs)
-
-        tmpch = list_def(_mem.sl.slPriorCh2, ch_list, 0)
-        val = RadioSettingValueList(ch_list, None, tmpch)
-        rs = RadioSetting("slPriorCh2", "List 1 Priority Channel 2", val)
-        rs.set_doc('List 1 priority channel 2: Select the channel you want for priority')
-        scanl.append(rs)
 
         # List names
         for i in range(MR_CHANNELS_LIST - 1):

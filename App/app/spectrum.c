@@ -502,7 +502,6 @@ uint8_t CountActiveBands(void) {
 
 static void LoadActiveScanFrequencies(void)
 {
-    
     char str[32];
     if (appMode == FREQUENCY_MODE) { sprintf(str, "FREQUENCY"); }
     if (appMode == SCAN_RANGE_MODE) { sprintf(str, "RANGE"); }
@@ -2012,7 +2011,7 @@ static void NextScanStep() {
 }
 
 void NextAppMode(void) {
-    if (Spectrum_state == 1 || !scanChannelsCount) {
+    if (Spectrum_state == 1) {
         Spectrum_state = 3;
         appMode = SCAN_BAND_MODE;
     } else {
