@@ -1533,3 +1533,31 @@ void BK4819_Enable_AfDac_DiscMode_TxDsp(void)
     BK4819_WriteRegister(BK4819_REG_30, 0x0000);
     BK4819_WriteRegister(BK4819_REG_30, 0x0302);
 }
+
+void BK4819_SetFrequencyScan(bool enable)
+{
+    // REG_32
+    //
+    // <15:14> 0 frequency scan time
+    //         0 = 0.2 sec
+    //         1 = 0.4 sec
+    //         2 = 0.8 sec
+    //         3 = 1.6 sec
+    //
+    // <13:1>  ???
+    //
+    // <0>     0 frequency scan enable
+    //         1 = enable
+    //         0 = disable
+    //
+    BK4819_WriteRegister(BK4819_REG_32,
+        (  0u << 14) |          // 0 frequency scan Time
+        (290u <<  1) |          // ???
+        (enable ? 1u : 0u));    // frequency scan (1: enable | 0: disable)
+}
+
+void BK4819_StopScan(void)
+{
+    BK4819_SetFrequencyScan(false);
+    BK4819_Disable();
+}

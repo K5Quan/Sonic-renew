@@ -307,7 +307,7 @@ void UI_DisplayMenu(void)
     const unsigned int menu_item_x2    = LCD_WIDTH - 1;
     unsigned int       i;
     char               String[64];  // bigger cuz we can now do multi-line in one string (use '\n' char)
-    const int m = UI_MENU_GetCurrentMenuId();
+    //const int m = UI_MENU_GetCurrentMenuId();
     UI_DisplayClear();
 
 #ifndef ENABLE_CUSTOM_MENU_LAYOUT

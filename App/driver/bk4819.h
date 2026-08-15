@@ -130,17 +130,12 @@ BK4819_CssScanResult_t BK4819_GetCxCSSScanResult(uint32_t *pCdcssFreq, uint16_t 
 void     BK4819_DisableFrequencyScan(void);
 void     BK4819_EnableFrequencyScan(void);
 void     BK4819_SetScanFrequency(uint32_t Frequency);
-
 void     BK4819_Disable(void);
-
 uint8_t  BK4819_GetCDCSSCodeType(void);
 uint8_t  BK4819_GetCTCShift(void);
 uint8_t  BK4819_GetCTCType(void);
-
-
-
 void     BK4819_PlayRoger(uint8_t song);
-
 void     BK4819_Enable_AfDac_DiscMode_TxDsp(void);
-
+void     BK4819_StopScan(void);
+void     BK4819_SetFrequencyScan(bool enable);
 #endif

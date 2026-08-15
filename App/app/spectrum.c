@@ -1215,6 +1215,105 @@ static void ResetBenchStats(void) {
 }
 #endif
 
+uint32_t SCANNER_CustomScanFrequency(uint32_t timeout_ms)
+{
+    uint32_t detectedFrequency = gTxVfo->pRX->Frequency;
+    uint32_t elapsed_ms = 0;
+    uint8_t  hitCount = 0;
+    uint32_t lastFreq = 0;
+
+    // 1. Initialisation matérielle du récepteur
+    gMonitor = false;
+    //BK4819_StopScan();
+    //RADIO_SelectVfos();
+    //RADIO_SetupRegisters(true);
+
+    // Activer le mode Balayage de Fréquence Matériel sur le BK4819
+    BK4819_SetFrequencyScan(true);
+
+    // 2. Boucle de capture brute
+    while (true)
+    {
+        uint32_t resultFreq = 0;
+
+        // Vérifier si le BK4819 a verrouillé/détecté une fréquence
+        if (BK4819_GetFrequencyScanResult(&resultFreq))
+        {
+            // Calcul du delta par rapport à la dernière fréquence accrochée
+            int32_t delta = (int32_t)resultFreq - (int32_t)lastFreq;
+            if (delta < 0) {
+                delta = -delta;
+            }
+
+            lastFreq = resultFreq;
+
+            // Si la fréquence est stable (écart < 1 kHz), on valide une étape
+            if (delta < 100) {
+                hitCount++;
+            } else {
+                hitCount = 0;
+            }
+
+            // Arrêter temporairement le scan matériel pour vérifier la stabilité
+            BK4819_SetFrequencyScan(false);
+
+            // Dès qu'on accroche 3 fois d'affilée la même fréquence, c'est validé
+            if (hitCount >= 3)
+            {
+                // Vérification harmonique VHF (optionnel, évite les fausses réceptions)
+                const uint32_t fundamental = resultFreq / 2;
+                if (resultFreq >= (frequencyBandTable[BAND3_137MHz].lower * 2) &&
+                    resultFreq <  (frequencyBandTable[BAND4_174MHz].lower * 2) &&
+                    fundamental >= frequencyBandTable[BAND3_137MHz].lower &&
+                    fundamental <  frequencyBandTable[BAND4_174MHz].lower)
+                {
+                    // Mesure RSSI du fondamental
+                    BK4819_SetFrequency(fundamental);
+                    BK4819_PickRXFilterPathBasedOnFrequency(fundamental);
+                    BK4819_RX_TurnOn();
+                    SYSTEM_DelayMs(20);
+                    
+                    (void)BK4819_GetRSSI();
+                    uint16_t rssiFundamental = BK4819_GetRSSI();
+
+                    // Mesure RSSI de l'harmonique
+                    BK4819_SetFrequency(resultFreq);
+                    BK4819_PickRXFilterPathBasedOnFrequency(resultFreq);
+                    BK4819_RX_TurnOn();
+                    SYSTEM_DelayMs(20);
+
+                    uint16_t rssiHarmonic = BK4819_GetRSSI();
+
+                    // Si le fondamental est nettement plus fort, c'est la vraie fréquence
+                    if (rssiFundamental > rssiHarmonic && (rssiFundamental - rssiHarmonic) >= 4) {
+                        resultFreq = fundamental;
+                    }
+                }
+
+                detectedFrequency = resultFreq;
+                break; // Fréquence trouvée !
+            }
+
+            // Reprendre le balayage si pas encore assez de confirmation
+            BK4819_SetFrequencyScan(true);
+        }
+
+        // Temporisation de boucle (10ms)
+        SYSTEM_DelayMs(10);
+        elapsed_ms += 10;
+
+        // Timeout de sécurité
+        if (timeout_ms > 0 && elapsed_ms >= timeout_ms) {
+            break;
+        }
+    }
+
+    // 3. Nettoyage matériel après le scan
+    BK4819_StopScan();
+
+    return detectedFrequency;
+}
+
 static void ResetScanStats() {
   scanInfo.rssiMax = scanInfo.rssiMin + 20 ; 
 }
@@ -1258,7 +1357,7 @@ static bool InitScan() {
             break;
 
         case FREQUENCY_MODE:
-            currentFreq = gTxVfo->pRX->Frequency;
+            //currentFreq = gTxVfo->pRX->Frequency;
             scanInfo.scanStep = scanStepValues[gTxVfo->STEP_SETTING];
             settings.scanStepIndex = gTxVfo->STEP_SETTING; 
             SpectrumRangeStart = currentFreq - (GetBW() >> 1);
@@ -3571,7 +3670,8 @@ void APP_RunSpectrum(void) {
         appMode = mode;
         ResetModifiers();
         if (appMode==FREQUENCY_MODE && !Key_1_pressed) {
-            currentFreq = gTxVfo->pRX->Frequency;
+            ShowOSDPopup("SEARCH");
+            currentFreq = SCANNER_CustomScanFrequency(10000);
             SpectrumRangeStart = currentFreq - (GetBW() >> 1);
             SpectrumRangeStop  = currentFreq + (GetBW() >> 1);
         }
@@ -4313,3 +4413,4 @@ static void RenderHistoryList() {
     RenderUnifiedList(title, false, count, historyListIndex,
                       historyScrollOffset, true, GetHistoryRow);
 }
+
