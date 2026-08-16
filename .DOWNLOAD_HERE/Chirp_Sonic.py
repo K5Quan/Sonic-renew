@@ -91,8 +91,8 @@ struct {
 
 #seekto 0x00880E;
 struct {
-    char name[10];
-} listname[24]; // end 0x0088FE (10 octets x 24 = 240 octets)
+    char name[4];
+} listname[24]; //end 886D
 
 // --------------------
 
@@ -1745,15 +1745,14 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                 idx = int(elname.replace("listname", ""))
                 if 0 <= idx < (MR_CHANNELS_LIST - 1):
                     val_str = str(element.value).strip()
-
+                    
                     if val_str:  # Si non vide
-                        # Conserve jusqu'à 9 ou 10 caractères ASCII
-                        val_bytes = val_str.encode('ascii', 'ignore')[:9]
-                        # Remplit le reste avec des octets 0xFF comme attendu par le firmware
-                        val_bytes = val_bytes + b'\xFF' * (10 - len(val_bytes))
-                    else:  # Si vide, remplit entièrement avec 0xFF
-                        val_bytes = b'\xFF' * 10
-
+                        val_bytes = val_str.encode('ascii', 'ignore')[:3]
+                        # Pad avec 0xFF comme le firmware
+                        val_bytes = val_bytes + b'\xFF' * (4 - len(val_bytes))
+                    else:  # Si vide, remplir avec 0xFF
+                        val_bytes = b'\xFF' * 4
+                        
                     _mem.listname[idx].name = val_bytes
 
             # Shortcuts
@@ -2109,7 +2108,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             listname = bytes(valid_bytes).decode('ascii', errors='ignore').strip()
 
             # Create the CHIRP setting object
-            val = RadioSettingValueString(0, 9, listname)
+            val = RadioSettingValueString(0, 3, listname)
             listname_setting = RadioSetting(
                 f"listname{i}", 
                 f"Scan List Name {i+1}", 

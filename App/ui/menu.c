@@ -307,7 +307,7 @@ void UI_DisplayMenu(void)
     const unsigned int menu_item_x2    = LCD_WIDTH - 1;
     unsigned int       i;
     char               String[64];  // bigger cuz we can now do multi-line in one string (use '\n' char)
-    //const int m = UI_MENU_GetCurrentMenuId();
+    const int m = UI_MENU_GetCurrentMenuId();
     UI_DisplayClear();
 
 #ifndef ENABLE_CUSTOM_MENU_LAYOUT
@@ -649,38 +649,16 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_LIST_CH:
-            if (gSubMenuSelection == MR_CHANNELS_LIST + 1) {
+            if (gSubMenuSelection == MR_CHANNELS_LIST + 1)
                 strcpy(String, "ALL");
-            }
-            else if (gSubMenuSelection == 0) {
+            else if (gSubMenuSelection == 0 && m == MENU_LIST_CH)
                 strcpy(String, "OFF");
-            }
-            else if (gSubMenuSelection >= 1 && gSubMenuSelection <= MR_CHANNELS_LIST) {
-                // 1. Nettoyage du nom dans un tampon sécurisé de 11 octets
-                char cleanName[11];
-                const char *rawName = gListName[gSubMenuSelection - 1];
-                
-                uint8_t i;
-                for (i = 0; i < 10; i++) {
-                    char c = rawName[i];
-                    // On s'arrête au premier marqueur de fin (\0 ou 0xFF de la Flash)
-                    if (c == '\0' || (uint8_t)c == 0xFF) {
-                        break;
-                    }
-                    cleanName[i] = c;
-                }
-                cleanName[i] = '\0'; // Garantie absolue de fin de chaîne
-            
-                // 2. Affichage sécurisé
-                if (cleanName[0] == '\0') {
-                    sprintf(String, "%02u", gSubMenuSelection);
-                } else {
-                    sprintf(String, "%02u\n%s", gSubMenuSelection, cleanName);
-                }
-            }
             else {
-                // Valeur de secours si gSubMenuSelection est hors bornes
-                strcpy(String, "N/A");
+                const char *name = gListName[gSubMenuSelection - 1];
+                if (IsEmptyName(name, sizeof(gListName[0])))
+                    sprintf(String, "%02u", gSubMenuSelection);
+                else
+                    sprintf(String, "%02u (%.3s)", gSubMenuSelection, name);
             }
             break;
 

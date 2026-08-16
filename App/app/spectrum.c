@@ -3994,26 +3994,26 @@ void ClearSettings()
 
 static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
     if (scanListIndex >= MR_CHANNELS_LIST) return false;
-    char nameOrFreq[11];
+    char nameOrFreq[4];
     memset(nameOrFreq, 0, sizeof(nameOrFreq));
     uint8_t firstChar = (uint8_t)gListName[scanListIndex][0];
     if (firstChar != '\0' && firstChar != 0xFF) {
-        for (uint8_t i = 0; i < 10; i++) {
+        for (uint8_t i = 0; i < 4; i++) {
             char c = gListName[scanListIndex][i];
             if (c == '\0' || (uint8_t)c == 0xFF) {
                 break;
             }
             nameOrFreq[i] = c;
         }
-        nameOrFreq[10] = '\0';
+        nameOrFreq[3] = '\0';
     } 
     else {
         return false;
     }
     if (settings.scanListEnabled[scanListIndex]) {
-        sprintf(bufferOut, "%d:%-10s*", scanListIndex + 1, nameOrFreq);
+        sprintf(bufferOut, "%d:%-4s*", scanListIndex + 1, nameOrFreq);
     } else {
-        sprintf(bufferOut, "%d:%-10s", scanListIndex + 1, nameOrFreq);
+        sprintf(bufferOut, "%d:%-4s", scanListIndex + 1, nameOrFreq);
     }
     return true;
 }
