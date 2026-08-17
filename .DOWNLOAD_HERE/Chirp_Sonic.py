@@ -89,10 +89,10 @@ struct {
 
 // --------------------
 
-#seekto 0x00880E;
+#seekto 0x008900;
 struct {
-    char name[4];
-} listname[24]; //end 886D
+    char name[16];
+} listname[20];
 
 // --------------------
 
@@ -1738,21 +1738,16 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                 _mem.live_DTMF_decoder = int(element.value)
 
             # scanlist stuff
-            if elname == "slDef":
-                _mem.sl.slDef = int(element.value) + 1
-
-            elif elname.startswith("listname"):
+            if elname.startswith("listname"):
                 idx = int(elname.replace("listname", ""))
                 if 0 <= idx < (MR_CHANNELS_LIST - 1):
                     val_str = str(element.value).strip()
                     
-                    if val_str:  # Si non vide
-                        val_bytes = val_str.encode('ascii', 'ignore')[:3]
-                        # Pad avec 0xFF comme le firmware
-                        val_bytes = val_bytes + b'\xFF' * (4 - len(val_bytes))
-                    else:  # Si vide, remplir avec 0xFF
-                        val_bytes = b'\xFF' * 4
-                        
+                    if val_str:
+                        val_bytes = val_str.encode('ascii', 'ignore')[:15]
+                        val_bytes = val_bytes + b'\xFF' * (16 - len(val_bytes))
+                    else: 
+                        val_bytes = b'\xFF' * 16
                     _mem.listname[idx].name = val_bytes
 
             # Shortcuts
@@ -2108,7 +2103,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             listname = bytes(valid_bytes).decode('ascii', errors='ignore').strip()
 
             # Create the CHIRP setting object
-            val = RadioSettingValueString(0, 3, listname)
+            val = RadioSettingValueString(0, 15, listname)
             listname_setting = RadioSetting(
                 f"listname{i}", 
                 f"Scan List Name {i+1}", 
@@ -2116,7 +2111,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             )
             listname_setting.set_doc(
                 f'Name for scan list {i+1}\n'
-                f'Maximum 3 characters'
+                f'Maximum 16 characters'
             )
             scanl.append(listname_setting)
 
