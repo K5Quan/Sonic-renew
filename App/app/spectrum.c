@@ -1229,6 +1229,7 @@ void SCANNER_CustomScanFrequency(void)
     static uint32_t resultFreq = 0;
     static uint32_t lastFreq = 0;
     SPECTRUM_PAUSED = true;
+    //static char str[19];
     SpectrumPauseCount = 2000;
     if (BK4819_GetFrequencyScanResult(&resultFreq)) {
         resultFreq = ((resultFreq + 12) / 25) * 25;
@@ -1237,19 +1238,20 @@ void SCANNER_CustomScanFrequency(void)
         if (delta < 100) {hitCount++;} else {hitCount = 0;}
         lastFreq = resultFreq;
         BK4819_SetFrequencyScan(false);
-        if (hitCount >= 3) {
+        if (hitCount >= 2) {
             const uint32_t fundamental = resultFreq / 2;
             //BK4819_PickRXFilterPathBasedOnFrequency(fundamental);
             BK4819_SetFrequency(fundamental);
-            SYSTICK_DelayUs(12000);
+            SYSTICK_DelayUs(25000);
             uint16_t rssiFundamental = BK4819_GetRSSI();
             //BK4819_PickRXFilterPathBasedOnFrequency(resultFreq);
             BK4819_SetFrequency(resultFreq);
-            SYSTICK_DelayUs(12000);
+            SYSTICK_DelayUs(25000);
             uint16_t rssiHarmonic = BK4819_GetRSSI();
-            if (rssiFundamental > rssiHarmonic+10) {resultFreq = fundamental;}
+            if (rssiFundamental > rssiHarmonic) {resultFreq = fundamental;}
             peak.f = resultFreq;
             FillfreqHistory();
+            //sprintf(str,"F%u H%u",rssiFundamental,rssiHarmonic);ShowOSDPopup(str);
             hitCount = 0;
         }
         BK4819_SetFrequencyScan(true);
