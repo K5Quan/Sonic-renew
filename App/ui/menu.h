@@ -38,6 +38,7 @@ enum
     MENU_OFFSET,
     MENU_TOT,
     MENU_W_N,
+    MENU_SCR,
     MENU_MEM_CH,
     MENU_DEL_CH,
     MENU_MEM_NAME,
@@ -65,6 +66,7 @@ enum
 #endif
     MENU_RESET,
     MENU_F_LOCK,
+    MENU_SCREN,
 #ifdef ENABLE_F_CAL_MENU
     MENU_F_CALI,  
 #endif
@@ -137,3 +139,4 @@ int UI_MENU_GetCurrentMenuId();
 uint8_t UI_MENU_GetMenuIdx(uint8_t id);
 
 #endif
+extern const char* const        gSubMenu_SCRAMBLER[11];

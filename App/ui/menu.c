@@ -57,6 +57,8 @@ const t_menu_item MenuList[] =
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
     {"SetNFM",      MENU_SET_NFM       },
     #endif
+    {"Scramb",      MENU_SCR           },
+    {"ScraEn",      MENU_SCREN         },
     {"Compnd",      MENU_COMPAND       },
     {"Roger",       MENU_ROGER         },
     {"STE",         MENU_STE           },
@@ -213,6 +215,21 @@ const char * const gSubMenu_BATTYP[] =
     "1600mAh\nUV-K5",
     "2200mAh\nUV-R5+",
     "3500mAh\nUV-K5"
+};
+
+const char* const gSubMenu_SCRAMBLER[] =
+{
+    "OFF",
+    "2600Hz",
+    "2700Hz",
+    "2800Hz",
+    "2900Hz",
+    "3000Hz",
+    "3100Hz",
+    "3200Hz",
+    "3300Hz",
+    "3400Hz",
+    "3500Hz"
 };
 
 #ifdef ENABLE_FEAT_F4HWN
@@ -463,6 +480,13 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_W_N[gSubMenuSelection]);
             break;
 
+        case MENU_SCR:
+            strcpy(String, gSubMenu_SCRAMBLER[gSubMenuSelection]);
+            if (gSubMenuSelection > 0 && gSetting_ScrambleEnable)
+                    BK4819_EnableScramble(gSubMenuSelection - 1);
+                else
+                    BK4819_DisableScramble();
+            break;
         case MENU_ABR:
             if(gSubMenuSelection == 0)
             {
@@ -523,7 +547,7 @@ void UI_DisplayMenu(void)
             break;
         case MENU_STE:
         case MENU_D_ST:
-
+        case MENU_SCREN:
 #ifdef ENABLE_FEAT_F4HWN
         #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER //calypso
         case MENU_SET_TMR:

@@ -1229,8 +1229,12 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
         #endif
 #else
         if (vfoInfo->CHANNEL_BANDWIDTH == BANDWIDTH_NARROW)
-            UI_PrintStringSmallBold("N", LCD_WIDTH + 70, 0, line + 1);
+            UI_PrintStringSmallBold("N", 70, 0, line + 1);
 #endif
+
+        // show the audio scramble symbol
+        if (vfoInfo->SCRAMBLING_TYPE > 0 && gSetting_ScrambleEnable)
+            UI_PrintStringSmallNormal("SCR", 106, 0, line + 1);
 
 
 #ifdef ENABLE_FEAT_F4HWN

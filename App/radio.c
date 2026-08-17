@@ -303,6 +303,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
             tmp = STEP_12_5kHz;
         pVfo->STEP_SETTING  = tmp;
         pVfo->StepFrequency = gStepFrequencyTable[tmp];
+        
         pVfo->freq_config_RX.CodeType = (data[2] >> 0) & 0x0F;
         pVfo->freq_config_TX.CodeType = (data[2] >> 4) & 0x0F;
 
@@ -692,7 +693,10 @@ void RADIO_SetupRegisters(bool switchToForeground)
                         | BK4819_REG_3F_SQUELCH_LOST;
                     break;
             }
-
+            if (gRxVfo->SCRAMBLING_TYPE > 0 && gSetting_ScrambleEnable)
+                BK4819_EnableScramble(gRxVfo->SCRAMBLING_TYPE - 1);
+            else
+                BK4819_DisableScramble();
         }
     }
 

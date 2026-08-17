@@ -573,6 +573,7 @@ void APP_Update(void)
 
             if(gSetting_set_tot == 1 || gSetting_set_tot == 3)
             {
+                BK4819_DisableScramble();
                 BK4819_PlaySingleTone(gTxTimeoutToneAlert, 30, 1, true);
                 gTxTimeoutToneAlert += 100;
             }
@@ -1337,11 +1338,25 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             // PTT key always handled; other keys during TX do nothing
             if (Key == KEY_PTT) {
                 GENERIC_Key_PTT(bKeyPressed);
+                goto Skip;
             }
-            goto Skip;
+            
+            if (!bKeyPressed || bKeyHeld) {
+                if (!bKeyPressed) {
+                    GPIO_DisableAudioPath();
+                    gEnableSpeaker = false;
+                    if (gCurrentVfo->SCRAMBLING_TYPE == 0 || !gSetting_ScrambleEnable)
+                        BK4819_DisableScramble();
+                    else
+                        BK4819_EnableScramble(gCurrentVfo->SCRAMBLING_TYPE - 1);
+                }
+            }
+            else {
+                BK4819_DisableScramble();
+            }
         }
     }
-    else if (gScreenToDisplay != DISPLAY_INVALID && (
+        else if (gScreenToDisplay != DISPLAY_INVALID && (
             (Key != KEY_SIDE1 && Key != KEY_SIDE2)
 #ifdef ENABLE_FEAT_F4HWN // For F + SIDE1 or F + SIDE2
             || (gWasFKeyPressed && (Key == KEY_SIDE1 || Key == KEY_SIDE2))

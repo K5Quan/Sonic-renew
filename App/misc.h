@@ -139,7 +139,7 @@ extern const uint16_t        scan_pause_delay_in_7_10ms;
 extern const uint8_t         gMicGain_dB2[9];
 
 
-
+extern bool                  gSetting_ScrambleEnable;
 extern uint8_t               gSetting_F_LOCK;
 
 extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
