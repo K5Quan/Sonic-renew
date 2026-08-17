@@ -896,7 +896,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
                     uint8_t countList = att->scanlist;
                     if(countList > MR_CHANNELS_LIST + 1) countList = 0;
 
-                    char sl_str[5] = {0};
+                    char sl_str[10] = {0};
                     uint8_t sl_x;
 
                     if (countList == MR_CHANNELS_LIST + 1) {
@@ -906,7 +906,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
                     } else {
                         const char *name = gListName[countList - 1];
                         if (!IsEmptyName(name, sizeof(gListName[0]))) {
-                            snprintf(sl_str, sizeof(sl_str), "%.3s", name);
+                            snprintf(sl_str, sizeof(sl_str), "%s", name);
                             sl_x = 113;
                         } else {
                             snprintf(sl_str, sizeof(sl_str), "%02d", countList);

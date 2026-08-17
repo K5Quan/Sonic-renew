@@ -91,7 +91,7 @@ struct {
 
 #seekto 0x008900;
 struct {
-    char name[16];
+    char name[10];
 } listname[20];
 
 // --------------------
@@ -1744,10 +1744,10 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                     val_str = str(element.value).strip()
                     
                     if val_str:
-                        val_bytes = val_str.encode('ascii', 'ignore')[:15]
-                        val_bytes = val_bytes + b'\xFF' * (16 - len(val_bytes))
+                        val_bytes = val_str.encode('ascii', 'ignore')[:10]
+                        val_bytes = val_bytes + b'\xFF' * (10 - len(val_bytes))
                     else: 
-                        val_bytes = b'\xFF' * 16
+                        val_bytes = b'\xFF' * 10
                     _mem.listname[idx].name = val_bytes
 
             # Shortcuts
@@ -2103,7 +2103,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             listname = bytes(valid_bytes).decode('ascii', errors='ignore').strip()
 
             # Create the CHIRP setting object
-            val = RadioSettingValueString(0, 15, listname)
+            val = RadioSettingValueString(0, 10, listname)
             listname_setting = RadioSetting(
                 f"listname{i}", 
                 f"Scan List Name {i+1}", 
@@ -2111,7 +2111,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             )
             listname_setting.set_doc(
                 f'Name for scan list {i+1}\n'
-                f'Maximum 16 characters'
+                f'Maximum 10 characters'
             )
             scanl.append(listname_setting)
 

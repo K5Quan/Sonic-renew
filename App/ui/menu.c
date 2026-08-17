@@ -307,7 +307,7 @@ void UI_DisplayMenu(void)
     const unsigned int menu_item_x2    = LCD_WIDTH - 1;
     unsigned int       i;
     char               String[64];  // bigger cuz we can now do multi-line in one string (use '\n' char)
-    const int m = UI_MENU_GetCurrentMenuId();
+    //const int m = UI_MENU_GetCurrentMenuId();
     UI_DisplayClear();
 
 #ifndef ENABLE_CUSTOM_MENU_LAYOUT
@@ -649,16 +649,34 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_LIST_CH:
-            if (gSubMenuSelection == MR_CHANNELS_LIST + 1)
+            if (gSubMenuSelection == MR_CHANNELS_LIST + 1) {
                 strcpy(String, "ALL");
-            else if (gSubMenuSelection == 0 && m == MENU_LIST_CH)
+            }
+            else if (gSubMenuSelection == 0) {
                 strcpy(String, "OFF");
-            else {
-                const char *name = gListName[gSubMenuSelection - 1];
-                if (IsEmptyName(name, sizeof(gListName[0])))
+            }
+            else if (gSubMenuSelection >= 1 && gSubMenuSelection <= MR_CHANNELS_LIST) {
+                char cleanName[10];
+                const char *rawName = gListName[gSubMenuSelection - 1];
+                
+                uint8_t i;
+                for (i = 0; i < 10; i++) {
+                    char c = rawName[i];
+                    if (c == '\0' || (uint8_t)c == 0xFF) {
+                        break;
+                    }
+                    cleanName[i] = c;
+                }
+                cleanName[i] = '\0';
+            
+                if (cleanName[0] == '\0') {
                     sprintf(String, "%02u", gSubMenuSelection);
-                else
-                    sprintf(String, "%02u (%.3s)", gSubMenuSelection, name);
+                } else {
+                    sprintf(String, "%02u\n%s", gSubMenuSelection, cleanName);
+                }
+            }
+            else {
+                strcpy(String, "N/A");
             }
             break;
 
