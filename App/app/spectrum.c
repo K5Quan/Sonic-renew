@@ -26,7 +26,6 @@
 #include "action.h"
 #include "ui/main.h"
 #include "scheduler.h"
-
 #include "misc.h"
 #include "driver/py25q16.h"
 #include "version.h"
@@ -136,6 +135,7 @@ static const int osdPopupTimes[] = {0, 200, 500, 1000, 3000, 5000};
     static bool benchLapDone = false;
 #endif
 
+bool CloseCallActive = 0;
 bool Cleared = 0;
 static bool SettingsLoaded = false;
 uint8_t  gKeylockCountdown = 0;
@@ -1215,103 +1215,45 @@ static void ResetBenchStats(void) {
 }
 #endif
 
-uint32_t SCANNER_CustomScanFrequency(uint32_t timeout_ms)
-{
-    uint32_t detectedFrequency = gTxVfo->pRX->Frequency;
-    uint32_t elapsed_ms = 0;
-    uint8_t  hitCount = 0;
-    uint32_t lastFreq = 0;
-
-    // 1. Initialisation matérielle du récepteur
-    gMonitor = false;
-    //BK4819_StopScan();
-    //RADIO_SelectVfos();
-    //RADIO_SetupRegisters(true);
-
-    // Activer le mode Balayage de Fréquence Matériel sur le BK4819
+void CloseCall(void){
+    SPECTRUM_PAUSED = true;
+    BK4819_PickRXFilterPathBasedOnFrequency(0xFFFFFFFF);
+    ShowOSDPopup("CLOSE CALL");
     BK4819_SetFrequencyScan(true);
+    CloseCallActive = 1;
+}
 
-    // 2. Boucle de capture brute
-    while (true)
-    {
-        uint32_t resultFreq = 0;
-
-        // Vérifier si le BK4819 a verrouillé/détecté une fréquence
-        if (BK4819_GetFrequencyScanResult(&resultFreq))
-        {
-            // Calcul du delta par rapport à la dernière fréquence accrochée
-            int32_t delta = (int32_t)resultFreq - (int32_t)lastFreq;
-            if (delta < 0) {
-                delta = -delta;
-            }
-
-            lastFreq = resultFreq;
-
-            // Si la fréquence est stable (écart < 1 kHz), on valide une étape
-            if (delta < 100) {
-                hitCount++;
-            } else {
-                hitCount = 0;
-            }
-
-            // Arrêter temporairement le scan matériel pour vérifier la stabilité
-            BK4819_SetFrequencyScan(false);
-
-            // Dès qu'on accroche 3 fois d'affilée la même fréquence, c'est validé
-            if (hitCount >= 3)
-            {
-                // Vérification harmonique VHF (optionnel, évite les fausses réceptions)
-                const uint32_t fundamental = resultFreq / 2;
-                if (resultFreq >= (frequencyBandTable[BAND3_137MHz].lower * 2) &&
-                    resultFreq <  (frequencyBandTable[BAND4_174MHz].lower * 2) &&
-                    fundamental >= frequencyBandTable[BAND3_137MHz].lower &&
-                    fundamental <  frequencyBandTable[BAND4_174MHz].lower)
-                {
-                    // Mesure RSSI du fondamental
-                    BK4819_SetFrequency(fundamental);
-                    BK4819_PickRXFilterPathBasedOnFrequency(fundamental);
-                    BK4819_RX_TurnOn();
-                    SYSTEM_DelayMs(20);
-                    
-                    (void)BK4819_GetRSSI();
-                    uint16_t rssiFundamental = BK4819_GetRSSI();
-
-                    // Mesure RSSI de l'harmonique
-                    BK4819_SetFrequency(resultFreq);
-                    BK4819_PickRXFilterPathBasedOnFrequency(resultFreq);
-                    BK4819_RX_TurnOn();
-                    SYSTEM_DelayMs(20);
-
-                    uint16_t rssiHarmonic = BK4819_GetRSSI();
-
-                    // Si le fondamental est nettement plus fort, c'est la vraie fréquence
-                    if (rssiFundamental > rssiHarmonic && (rssiFundamental - rssiHarmonic) >= 4) {
-                        resultFreq = fundamental;
-                    }
-                }
-
-                detectedFrequency = resultFreq;
-                break; // Fréquence trouvée !
-            }
-
-            // Reprendre le balayage si pas encore assez de confirmation
-            BK4819_SetFrequencyScan(true);
+void SCANNER_CustomScanFrequency(void)
+{
+    static uint8_t  hitCount = 0;
+    static uint32_t resultFreq = 0;
+    static uint32_t lastFreq = 0;
+    SPECTRUM_PAUSED = true;
+    SpectrumPauseCount = 2000;
+    if (BK4819_GetFrequencyScanResult(&resultFreq)) {
+        resultFreq = ((resultFreq + 12) / 25) * 25;
+        int32_t delta = (int32_t)resultFreq - (int32_t)lastFreq;
+        if (delta < 0) { delta = -delta; }
+        if (delta < 100) {hitCount++;} else {hitCount = 0;}
+        lastFreq = resultFreq;
+        BK4819_SetFrequencyScan(false);
+        if (hitCount >= 3) {
+            const uint32_t fundamental = resultFreq / 2;
+            //BK4819_PickRXFilterPathBasedOnFrequency(fundamental);
+            BK4819_SetFrequency(fundamental);
+            SYSTICK_DelayUs(12000);
+            uint16_t rssiFundamental = BK4819_GetRSSI();
+            //BK4819_PickRXFilterPathBasedOnFrequency(resultFreq);
+            BK4819_SetFrequency(resultFreq);
+            SYSTICK_DelayUs(12000);
+            uint16_t rssiHarmonic = BK4819_GetRSSI();
+            if (rssiFundamental > rssiHarmonic+10) {resultFreq = fundamental;}
+            peak.f = resultFreq;
+            FillfreqHistory();
+            hitCount = 0;
         }
-
-        // Temporisation de boucle (10ms)
-        SYSTEM_DelayMs(10);
-        elapsed_ms += 10;
-
-        // Timeout de sécurité
-        if (timeout_ms > 0 && elapsed_ms >= timeout_ms) {
-            break;
-        }
+        BK4819_SetFrequencyScan(true);
     }
-
-    // 3. Nettoyage matériel après le scan
-    BK4819_StopScan();
-
-    return detectedFrequency;
 }
 
 static void ResetScanStats() {
@@ -2649,7 +2591,10 @@ static void HandleKeySpectrum(uint8_t key) {
                 break;
   
     case KEY_6: // next mode
-        NextAppMode();
+        if (historyListActive) {
+            CloseCall(); 
+        } else 
+            NextAppMode();
         break;
     case KEY_SIDE1:
         if (SPECTRUM_PAUSED) return;
@@ -2706,6 +2651,9 @@ static void HandleKeySpectrum(uint8_t key) {
             historyListActive   = false;
             SpectrumMonitor     = prevSpectrumMonitor;
             SetF(scanInfo.f);
+            CloseCallActive = 0;
+            BK4819_StopScan();
+            SPECTRUM_PAUSED = false;
             break;
         }
         if (WaitSpectrum) WaitSpectrum = 0;
@@ -3548,6 +3496,7 @@ static void Tick() {
         gNextTimeslice_10ms = 0;
         HandleUserInput();
         BACKLIGHT_Update();
+        if (CloseCallActive) SCANNER_CustomScanFrequency();
         if (osdPopupTimer) {
             osdPopupTimer -= 20; 
             if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
@@ -3570,9 +3519,10 @@ static void Tick() {
         if(SpectrumPauseCount) SpectrumPauseCount--;
 
     }
-    
+    //static bool toggleFilter = 0;
     if (gNextTimeslice_500ms) {
-            gNextTimeslice_500ms = false;
+        static bool Toggle = 0;
+        gNextTimeslice_500ms = false;
         if (gBacklightCountdown_500ms > 0) --gBacklightCountdown_500ms;
         if (gEeprom.BACKLIGHT_TIME <61 && gBacklightCountdown_500ms == 0) {BACKLIGHT_TurnOff();}
 
@@ -3582,6 +3532,18 @@ static void Tick() {
             gIsKeylocked = true;
 
 	    }
+        if (CloseCallActive && gEeprom.BACKLIGHT_MAX > 5) {
+            Toggle = !Toggle;
+            BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, Toggle);
+            BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, Toggle);
+        }
+        /* toggleFilter = !toggleFilter;
+        if (toggleFilter && CloseCallActive) {
+            BK4819_PickRXFilterPathBasedOnFrequency(10000000);
+        } else {
+            BK4819_PickRXFilterPathBasedOnFrequency(40000000);
+        } */
+    
     }
 
     if (SPECTRUM_PAUSED && (SpectrumPauseCount == 0)) {
@@ -3670,8 +3632,7 @@ void APP_RunSpectrum(void) {
         appMode = mode;
         ResetModifiers();
         if (appMode==FREQUENCY_MODE && !Key_1_pressed) {
-            ShowOSDPopup("SEARCH");
-            currentFreq = SCANNER_CustomScanFrequency(10000);
+            currentFreq = gTxVfo->pRX->Frequency;
             SpectrumRangeStart = currentFreq - (GetBW() >> 1);
             SpectrumRangeStop  = currentFreq + (GetBW() >> 1);
         }
@@ -4402,7 +4363,8 @@ void RenderBandSelect() {
 static void RenderHistoryList() {
     uint16_t count = CountValidHistoryItems();
     char title[32];
-    sprintf(title, "HISTORY: %d", count);
+    if (CloseCallActive) sprintf(title, "HISTORY: %d CC", count);
+    else sprintf(title, "HISTORY: %d", count);
 
     // Only preload channels if the scroll offset has changed to optimize performance
     if (historyScrollOffset != lastHistoryScrollOffset) {
