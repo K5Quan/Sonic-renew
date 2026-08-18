@@ -66,7 +66,6 @@ enum
 #endif
     MENU_RESET,
     MENU_F_LOCK,
-    MENU_SCREN,
 #ifdef ENABLE_F_CAL_MENU
     MENU_F_CALI,  
 #endif

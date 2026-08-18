@@ -693,8 +693,8 @@ void RADIO_SetupRegisters(bool switchToForeground)
                         | BK4819_REG_3F_SQUELCH_LOST;
                     break;
             }
-            if (gRxVfo->SCRAMBLING_TYPE > 0 && gSetting_ScrambleEnable)
-                BK4819_EnableScramble(gRxVfo->SCRAMBLING_TYPE - 1);
+            if (gEeprom.SCRAMBLING_TYPE > 0)
+                BK4819_EnableScramble(gEeprom.SCRAMBLING_TYPE - 1);
             else
                 BK4819_DisableScramble();
         }

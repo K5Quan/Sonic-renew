@@ -1875,14 +1875,14 @@ static void DrawF(uint32_t f) {
     if (appMode == SCAN_BAND_MODE) {
         snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
         if (isListening && isKnownChannel) {
-            snprintf(line2, sizeof(line2), " %s %s ", channelName, StringCode);
+            snprintf(line2, sizeof(line2), " %s %s", channelName, StringCode);
         } else {
-            snprintf(line2, sizeof(line2), " %s%s %s ", prefix, BParams[bl].BandName, StringCode);
+            snprintf(line2, sizeof(line2), " %s%s %s", prefix, BParams[bl].BandName, StringCode);
         }
     } else if (appMode == CHANNEL_MODE) {
 
         if (channelName[0] != '\0') {
-            snprintf(line2, sizeof(line2), "%s %s ", channelName, StringCode);
+            snprintf(line2, sizeof(line2), "%s %s", channelName, StringCode);
         }
     } else {
         line2[0] = '\0';

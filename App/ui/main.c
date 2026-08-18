@@ -692,15 +692,24 @@ void UI_DisplayMain(void)
         }
 
         // "VFO MODE" / "MR MODE" ─────────────────────────────
+        char str[19];
         if (isMR) {
-            UI_PrintStringSmallNormal("CHANNEL", 0, 0, 0);
+            if (gEeprom.SCRAMBLING_TYPE)
+                sprintf(str, "CHANNEL SCR %d", gEeprom.SCRAMBLING_TYPE);
+            else
+                sprintf(str, "CHANNEL");
+            UI_PrintStringSmallNormal(str, 0, 0, 0);
             GUI_DisplaySmallestDark("SQL",  6,  42, false, false);
             GUI_DisplaySmallestDark("BAND", 28, 42, false, false);
             GUI_DisplaySmallestDark("STEP", 58, 42, false, false);
             GUI_DisplaySmallestDark("POW",  88, 42, false, false);
             GUI_DisplaySmallestDark("MOD",  110,42, false, false);
         } else {
-            UI_PrintStringSmallNormal("FREQUENCY", 0, 0, 0);
+            if (gEeprom.SCRAMBLING_TYPE)
+                sprintf(str, "FREQUENCY SCR %d", gEeprom.SCRAMBLING_TYPE);
+            else
+                sprintf(str, "FREQUENCY");
+            UI_PrintStringSmallNormal(str, 0, 0, 0);
             GUI_DisplaySmallestDark("SQL",  6,  42, false, false);
             GUI_DisplaySmallestDark("BND", 28, 42, false, false);
             GUI_DisplaySmallestDark("STP", 58, 42, false, false);
@@ -1232,9 +1241,6 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
             UI_PrintStringSmallBold("N", 70, 0, line + 1);
 #endif
 
-        // show the audio scramble symbol
-        if (vfoInfo->SCRAMBLING_TYPE > 0 && gSetting_ScrambleEnable)
-            UI_PrintStringSmallNormal("SCR", 106, 0, line + 1);
 
 
 #ifdef ENABLE_FEAT_F4HWN

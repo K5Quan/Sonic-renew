@@ -122,8 +122,8 @@ void FUNCTION_Transmit()
 
     // turn the RED LED on
     BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
-    if (gCurrentVfo->SCRAMBLING_TYPE > 0 && gSetting_ScrambleEnable)
-        BK4819_EnableScramble(gCurrentVfo->SCRAMBLING_TYPE - 1);
+    if (gEeprom.SCRAMBLING_TYPE > 0)
+        BK4819_EnableScramble(gEeprom.SCRAMBLING_TYPE - 1);
     else
         BK4819_DisableScramble(); 
     if (gSetting_backlight_on_tx_rx & BACKLIGHT_ON_TR_TX) {

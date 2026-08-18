@@ -184,17 +184,13 @@ typedef struct {
     uint8_t               KEY_2_LONG_PRESS_ACTION;
     uint8_t               MIC_SENSITIVITY;
     uint8_t               MIC_SENSITIVITY_TUNING;
-    
-
     int16_t               BK4819_XTAL_FREQ_LOW;
     uint8_t               VOLUME_GAIN;
     #ifdef ENABLE_FEAT_F4HWN
         uint8_t           VOLUME_GAIN_BACKUP;
     #endif
     uint8_t               DAC_GAIN;
-
     VFO_Info_t            VfoInfo[2];
-   
     uint8_t               KEY_M_LONG_PRESS_ACTION;
     uint8_t               BACKLIGHT_MIN;
     uint8_t               BACKLIGHT_MAX;
@@ -202,6 +198,7 @@ typedef struct {
 #ifdef ENABLE_RSSI_BAR
     uint8_t               S0_LEVEL;
     uint8_t               S9_LEVEL;
+    uint8_t               SCRAMBLING_TYPE;
 #endif
 } EEPROM_Config_t;
 

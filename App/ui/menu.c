@@ -58,7 +58,6 @@ const t_menu_item MenuList[] =
     {"SetNFM",      MENU_SET_NFM       },
     #endif
     {"Scramb",      MENU_SCR           },
-    {"ScraEn",      MENU_SCREN         },
     {"Compnd",      MENU_COMPAND       },
     {"Roger",       MENU_ROGER         },
     {"STE",         MENU_STE           },
@@ -482,7 +481,7 @@ void UI_DisplayMenu(void)
 
         case MENU_SCR:
             strcpy(String, gSubMenu_SCRAMBLER[gSubMenuSelection]);
-            if (gSubMenuSelection > 0 && gSetting_ScrambleEnable)
+            if (gSubMenuSelection > 0)
                     BK4819_EnableScramble(gSubMenuSelection - 1);
                 else
                     BK4819_DisableScramble();
@@ -547,7 +546,6 @@ void UI_DisplayMenu(void)
             break;
         case MENU_STE:
         case MENU_D_ST:
-        case MENU_SCREN:
 #ifdef ENABLE_FEAT_F4HWN
         #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER //calypso
         case MENU_SET_TMR:

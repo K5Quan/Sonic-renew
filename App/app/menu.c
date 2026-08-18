@@ -174,9 +174,6 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
         case MENU_SET_TMR:
         #endif
 #endif
-        case MENU_SCREN:
-            *pMax = ARRAY_SIZE(gSubMenu_OFF_ON) - 1;
-            break;
         case MENU_AM:
             *pMax = ARRAY_SIZE(gModulationStr) - 1;
             break;
@@ -378,13 +375,12 @@ void MENU_AcceptSetting(void)
             return;
 
         case MENU_SCR:
-            gTxVfo->SCRAMBLING_TYPE = gSubMenuSelection;
-            PY25Q16_WriteBuffer(0x00A00E, &gSubMenuSelection, 1, false);
-            if (gSubMenuSelection > 0 && gSetting_ScrambleEnable)
+            gEeprom.SCRAMBLING_TYPE = gSubMenuSelection;
+            gRequestSaveSettings = true;
+            if (gSubMenuSelection > 0)
                 BK4819_EnableScramble(gSubMenuSelection - 1);
             else
                 BK4819_DisableScramble();
-            gRequestSaveChannel     = 1;
             return;
 
         case MENU_DEL_CH:
@@ -533,10 +529,6 @@ void MENU_AcceptSetting(void)
             gUnlockAllTxConfCnt = 0;   // сбрасываем счётчик
             break;
         }
-        case MENU_SCREN:
-            gSetting_ScrambleEnable = gSubMenuSelection;
-            gFlagReconfigureVfos    = true;
-            break;
 
         #ifdef ENABLE_F_CAL_MENU
             case MENU_F_CALI:
@@ -607,13 +599,9 @@ void MENU_AcceptSetting(void)
             gSetting_set_tmr = gSubMenuSelection;
             break;
         #endif    
-     //   case MENU_TX_LOCK:
-     //       gTxVfo->TX_LOCK = gSubMenuSelection;
-     //       gRequestSaveChannel       = 1;
-     //       return;
+     
 #endif
     }
-
     gRequestSaveSettings = true;
 }
 
@@ -707,8 +695,7 @@ void MENU_ShowCurrentSetting(void)
             break;
 
         case MENU_SCR:
-            PY25Q16_ReadBuffer(0x00A00E, &gTxVfo->SCRAMBLING_TYPE, 1);
-            gSubMenuSelection = gTxVfo->SCRAMBLING_TYPE;
+            gSubMenuSelection = gEeprom.SCRAMBLING_TYPE;
             break;
         case MENU_MEM_CH:
                 gSubMenuSelection = gEeprom.MrChannel[gEeprom.TX_VFO];
@@ -817,9 +804,6 @@ void MENU_ShowCurrentSetting(void)
             gSubMenuSelection = gSetting_F_LOCK;
             break;
             
-        case MENU_SCREN:
-            gSubMenuSelection = gSetting_ScrambleEnable;
-            break;
         #ifdef ENABLE_F_CAL_MENU
             case MENU_F_CALI:
                 gSubMenuSelection = gEeprom.BK4819_XTAL_FREQ_LOW;
@@ -1036,7 +1020,6 @@ static void MENU_Key_EXIT(bool bKeyPressed, bool bKeyHeld)
 {
     if (bKeyHeld || !bKeyPressed)
         return;
-
     if (!gCssBackgroundScan)
     {
         /* Backlight related menus set full brightness. Set it back to the configured value,
@@ -1064,7 +1047,7 @@ static void MENU_Key_EXIT(bool bKeyPressed, bool bKeyHeld)
 
 
         gRequestDisplayScreen = DISPLAY_MAIN;
-
+        
         if (gEeprom.BACKLIGHT_TIME == 0) // backlight set to always off
         {
             BACKLIGHT_TurnOff();    // turn the backlight OFF

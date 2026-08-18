@@ -165,8 +165,9 @@ void SETTINGS_InitEEPROM(void)
     #endif
     gEeprom.SQUELCH_LEVEL        = (Data[1] > 0 && Data[1] < 10) ? Data[1] : 1;
     gEeprom.TX_TIMEOUT_TIMER     = (Data[2] > 4 && Data[2] < 180) ? Data[2] : 11;
+    gEeprom.SCRAMBLING_TYPE      = (Data[3] > 0 && Data[3] < 11) ? Data[3] : 0;
     gEeprom.KEY_LOCK             = (Data[4] <  2) ? Data[4] : false;
-    gEeprom.FlashlightOnRX = (Data[5] & 0x02) ? true : false;
+    gEeprom.FlashlightOnRX       = (Data[5] & 0x02) ? true : false;
     gEeprom.MIC_SENSITIVITY      = (Data[7] <  9) ? Data[7] : 4;
 
     // 0E78..0E7F
@@ -285,9 +286,6 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
     // 0F40..0F47
     PY25Q16_ReadBuffer(0x00A150, Data, 8);
     gSetting_F_LOCK            = (Data[0] < F_LOCK_LEN) ? Data[0] : F_LOCK_136_500;
-    gSetting_ScrambleEnable    = (Data[6] < 2) ? Data[6] : true;
-
-    //gSetting_TX_EN             = (Data[7] & (1u << 0)) ? true : false;
     gSetting_battery_text      = (((Data[7] >> 2) & 3u) <= 2) ? (Data[7] >> 2) & 3 : 2; // default PERCENT
     #ifdef ENABLE_AUDIO_BAR
         gSetting_mic_bar       = !!(Data[7] & (1u << 4));
@@ -587,9 +585,9 @@ void SETTINGS_SaveSettings(void)
             State[1] = gSquelchLevelOriginal;
         else
     #endif
-        State[1] = gEeprom.SQUELCH_LEVEL;
+    State[1] = gEeprom.SQUELCH_LEVEL;
     State[2] = gEeprom.TX_TIMEOUT_TIMER;
-    State[3] = false;
+    State[3] = gEeprom.SCRAMBLING_TYPE;
     State[4] = gEeprom.KEY_LOCK;
     State[5] = (gEeprom.FlashlightOnRX ? 0x02 : 0x00);
     State[6] = 0;
@@ -704,7 +702,6 @@ void SETTINGS_SaveSettings(void)
     // 0x0F40
     State = SecBuf;
     State[0]  = gSetting_F_LOCK;
-    State[6]  = gSetting_ScrambleEnable;
     State[7] = (State[7] & ~(3u << 2)) | ((gSetting_battery_text & 3u) << 2);
     #ifdef ENABLE_AUDIO_BAR
         if (!gSetting_mic_bar)           State[7] &= ~(1u << 4);

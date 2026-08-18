@@ -1345,10 +1345,10 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                 if (!bKeyPressed) {
                     GPIO_DisableAudioPath();
                     gEnableSpeaker = false;
-                    if (gCurrentVfo->SCRAMBLING_TYPE == 0 || !gSetting_ScrambleEnable)
+                    if (gEeprom.SCRAMBLING_TYPE == 0)
                         BK4819_DisableScramble();
                     else
-                        BK4819_EnableScramble(gCurrentVfo->SCRAMBLING_TYPE - 1);
+                        BK4819_EnableScramble(gEeprom.SCRAMBLING_TYPE - 1);
                 }
             }
             else {
@@ -1475,3 +1475,4 @@ Skip:
 
     gUpdateDisplay = true;
 }
+
