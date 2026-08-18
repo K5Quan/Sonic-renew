@@ -149,7 +149,7 @@ volatile uint16_t gDualWatchCountdown_10ms;
 bool              gDualWatchActive           = false;
 
 volatile uint8_t  gSerialConfigCountDown_500ms;
-
+volatile uint32_t gGlobalSysTickCounter;
 volatile bool     gNextTimeslice_500ms;
 volatile bool     gNextTimeslice_Monitor;
 volatile bool     gNextTimeslice_10ms;

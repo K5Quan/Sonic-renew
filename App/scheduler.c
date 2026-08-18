@@ -40,7 +40,6 @@
                 flag = true;             \
     } while (0)
 
-static volatile uint32_t gGlobalSysTickCounter;
 
 // we come here every 10ms
 void SysTick_Handler(void)

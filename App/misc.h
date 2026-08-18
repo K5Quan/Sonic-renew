@@ -268,7 +268,7 @@ extern volatile uint16_t     gDualWatchCountdown_10ms;
 extern bool                  gDualWatchActive;
 
 extern volatile uint8_t      gSerialConfigCountDown_500ms;
-
+extern volatile uint32_t     gGlobalSysTickCounter;
 extern volatile bool         gNextTimeslice_500ms;
 extern volatile bool         gNextTimeslice_Monitor;
 extern volatile bool         gNextTimeslice_10ms;

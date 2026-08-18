@@ -768,11 +768,19 @@ static uint16_t GetStepsCount()
 
 static uint32_t GetBW() { return GetStepsCount() * GetScanStep(); }
 
-static uint16_t GetRandomChannelFromRSSI(uint16_t maxChannels) {
-  uint32_t rssi = rssiHistory[1]*rssiHistory[maxChannels/2];
-  if (maxChannels == 0 || rssi == 0) { return 1; }
-    // Scale RSSI to [1, maxChannels]
-    return 1 + (rssi % maxChannels);
+static uint16_t GetRandomChannel(uint16_t maxChannels) {
+    if (maxChannels == 0) { return 1; }
+
+    // État persistant injecté avec le temps système actuel
+    static uint32_t seed = 0xA5A5A5A5;
+    seed ^= gGlobalSysTickCounter;
+
+    // Standard LCG / xorshift pour faire tourner la graine
+    seed ^= seed << 13;
+    seed ^= seed >> 17;
+    seed ^= seed << 5;
+
+    return 1 + (uint16_t)(((uint64_t)seed * maxChannels) >> 32);
 }
 
 static void DeInitSpectrum() {
@@ -969,7 +977,7 @@ static void ExitAndCopyToVfo() {
         case SPECTRUM:
             // PTT Mode 1: NINJA MODE (Random channel with low RSSI)
             if (PttEmission == 1 && scanChannelsCount > 0) {
-                uint16_t randomChannel = GetRandomChannelFromRSSI(scanChannelsCount);
+                uint16_t randomChannel = GetRandomChannel(scanChannelsCount);
                 uint32_t rndfreq = 0;
                 uint16_t attempts = 0;
                 SpectrumDelay = 0; //not compatible with ninja
@@ -1194,7 +1202,7 @@ static void ToggleRX(bool on) {
         BK4819_SetFilterBandwidth(BK4819_FILTER_BW_WIDE, false); 
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, 0);
-        channelName[0] = '\0';
+        //channelName[0] = '\0';
     }
     
     if (on != audioState) {
@@ -1794,7 +1802,7 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
     if (!isListening && total <= 200) {
         char line[19] = "";
         snprintf(line, sizeof(line), "SCANNING %dch", total);
-        UI_PrintStringSmallNormal(line, 0, 128, 3);
+        UI_PrintStringSmallNormal(line, 0, 128, 5);
         return;
     }
     const uint8_t fill_start = 4;
@@ -1944,12 +1952,12 @@ static void DrawF(uint32_t f) {
                         break;
                     case 1:
                         if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
-                            snprintf(Text, sizeof(Text), "Ninja RX %u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
+                            snprintf(Text, sizeof(Text), "NJ %u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
                             else snprintf(Text, sizeof(Text), "Ninja");
                         break;
                     case 2:
                         if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
-                            snprintf(Text, sizeof(Text), "%u.%05u %s", lastReceivingFreq / 100000, lastReceivingFreq % 100000, StringCode);
+                            snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
                         else snprintf(Text, sizeof(Text), "LastRX");
                         break;
                     case 3:
@@ -1967,9 +1975,9 @@ static void DrawF(uint32_t f) {
                 snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
 #endif
                 }
-                ScanProgress_DrawGaugeLine(3);
-                if(isListening) DrawMeter(4);
-                UI_PrintStringSmallbackground(Text, 0, 127, 5, 0);
+                ScanProgress_DrawGaugeLine(4);
+                if(isListening) DrawMeter(5);
+                UI_PrintStringSmallbackground(Text, 0, 127, 3, 0);
                 UI_PrintStringSmallbackground(line3, 0, 127, 6, 0);
                 BlitLine(4); 
                 BlitLine(5); 
