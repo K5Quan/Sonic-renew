@@ -67,9 +67,9 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
-  local target="f4hwn.sonic.chirp.v50"
+  local target="f4hwn.sonic.chirp.${VERSION_NO}"
   if [[ "$preset" == "NOCOM" ]]; then
-    target="f4hwn.sonic.nocom.v50"
+    target="f4hwn.sonic.nocom.${VERSION_NO}"
   fi
   echo -e "\n 🚀 Building: ${preset}"
   docker run \
@@ -79,13 +79,13 @@ build_preset() {
     -w /src \
     -e VERSION_STRING_2=${VERSION_NO} \
     "$IMAGE" \
-    bash -c "cmake --preset ${preset} -DTARGET=SONIC.${preset}.${VERSION_NO} -DVERSION_STRING_1=${VERSION_NO} -DVERSION_STRING_2=${VERSION_NO} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
+    bash -c "cmake --preset ${preset} -DTARGET=${target} -DVERSION_STRING_1=${VERSION_NO} -DVERSION_STRING_2=${VERSION_NO} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
              cmake --build --preset ${preset} -j" \
   2>&1 | sed "s|/src/|C:/Perso/Sonic/|g" \
        | sed -E '/^[[:space:]]+[A-Za-z0-9_]+(:[A-Za-z]+)?=/d; /--( Configuring|Generating) done/d; /-- Build files have been written to/d'
 
   docker run --rm -v "$PWD":/src -w /src "$IMAGE" \
-    arm-none-eabi-size ./build/${preset}/SONIC.${preset}.${VERSION_NO}.elf
+    arm-none-eabi-size ./build/${preset}/${target}.elf
 
   echo "✅ Done: ${preset}"
 }
@@ -97,9 +97,9 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.v50" ;;
-    NOCOM) target="f4hwn.sonic.nocom.v50" ;;
-    *)     target="f4hwn.sonic.chirp.v50" ;; # Valeur par défaut
+    RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
+    NOCOM) target="f4hwn.sonic.nocom.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.chirp.${VERSION_NO}" ;; # Valeur par défaut
   esac
   local ifile="./build/${preset}/${target}.bin"
 
