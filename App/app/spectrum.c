@@ -17,6 +17,7 @@
 // ============================================================
 // SECTION: Includes
 // ============================================================
+#ifndef ENABLE_USB
 #include "app/spectrum.h"
 #include "nav_invert.h"
 #include "driver/backlight.h"
@@ -231,7 +232,7 @@ static bandparameters   *BParams = NULL;
 #endif
 
 #ifndef ENABLE_USB
-    #define                 MAX_SCAN_CHANNELS 500
+    #define                 MAX_SCAN_CHANNELS 975
 #else
     #define                 MAX_SCAN_CHANNELS 10
 #endif
@@ -512,9 +513,7 @@ static void LoadActiveScanFrequencies(void)
     if (appMode == SCAN_BAND_MODE) { sprintf(str, "P%d BANDS:%d ", currentBandPreset + 1, CountActiveBands()); }
     if (appMode == CHANNEL_MODE) { 
         uint16_t needed = CountValidFrequencies();
-        if (needed >=500) {
-            sprintf(str, "MAX 500 CH");
-        } else sprintf(str, "CHANNELS:%d", needed);
+        sprintf(str, "CHANNELS:%d", needed);
         scanChannelsCount = 0;
         ChannelAttributes_t cache;
 
@@ -4373,3 +4372,4 @@ static void RenderHistoryList() {
                       historyScrollOffset, true, GetHistoryRow);
 }
 
+#endif

@@ -509,7 +509,9 @@ void SETTINGS_FactoryReset(bool bIsAll)
     gVfoStateChanged = true;
     gScheduleVfoSave = true;
     SETTINGS_SaveVfoIndicesFlush();
-    ClearSettings();
+    #ifndef ENABLE_USB
+        ClearSettings();
+    #endif
 }
 
 #ifdef ENABLE_FMRADIO

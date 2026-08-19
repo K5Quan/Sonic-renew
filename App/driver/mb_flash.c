@@ -101,14 +101,21 @@ static void MB_PrepareInternalFlash(void)
 /* during which the flash bus is unavailable. It must therefore NOT fetch any */
 /* code from flash nor read any flash data: it uses raw register access only  */
 /* (no external calls), reads the source from the external SPI flash in       */
-/* polled mode, and resets the MCU when done. It is placed in .RamFunc, which */
-/* the linker stores in flash and the startup copies to RAM alongside .data.  */
+/* polled mode, and resets the MCU when done. Normally it is placed in         */
+/* .RamFunc, which startup copies to RAM alongside .data. With the overlay     */
+/* enabled it is linked in .MBRamFunc and copied over the PY25Q16 sector cache */
+/* only immediately before use.                                               */
 /* -------------------------------------------------------------------------- */
 
 /* These primitives are called repeatedly while application flash is offline.
  * Keep one copy of each in the copied RAM section: noinline/noclone prevents
  * GCC from silently duplicating one back into MB_RamReflash. */
-#define MB_RAM_HELPER __attribute__((section(".RamFunc"), noinline, noclone, used))
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT_OVERLAY
+    #define MB_RAM_SECTION ".MBRamFunc"
+#else
+    #define MB_RAM_SECTION ".RamFunc"
+#endif
+#define MB_RAM_HELPER __attribute__((section(MB_RAM_SECTION), noinline, noclone, used))
 
 /* Polled single-byte SPI2 transfer. The result is returned through out so
  * timeout and received 0xFF remain distinguishable. */
@@ -217,8 +224,7 @@ __attribute__((always_inline)) static inline void mb_ram_lcd_clear(void)
         GPIOB->BSRR = MB_LCD_CS_PIN;
     }
 }
-
-__attribute__((section(".RamFunc"), noinline, used))
+__attribute__((section(MB_RAM_SECTION), noinline, used))
 static void MB_RamReflash(uint32_t intAddr, uint32_t extAddr, uint32_t imageSize,
                           uint8_t *progressLine)
 {
@@ -386,6 +392,39 @@ fatal_reset:
 
 /* Set when a polled SPI wait below times out (external flash unresponsive). */
 static volatile int mb_spi_err;
+
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT_OVERLAY
+/* Linker-provided load/execution bounds for the restore stub. Its execution
+ * address aliases the PY25Q16 sector cache; its load image remains in flash. */
+extern uint8_t __mb_ramfunc_load_start;
+extern uint8_t __mb_ramfunc_start;
+extern uint8_t __mb_ramfunc_end;
+
+static bool mb_load_ram_reflash_overlay(void)
+{
+    const volatile uint8_t *src = &__mb_ramfunc_load_start;
+    volatile uint8_t *dst = &__mb_ramfunc_start;
+    volatile uint8_t *end = &__mb_ramfunc_end;
+
+    /* Volatile byte copies prevent a library memcpy call. The copy itself runs
+     * while internal flash is still fully available. */
+    while (dst < end)
+        *dst++ = *src++;
+
+    /* Cortex-M0+ has no instruction cache, but the barriers ensure that every
+     * store is visible before the following BLX starts fetching the stub. */
+    __DSB();
+    __ISB();
+
+    src = &__mb_ramfunc_load_start;
+    dst = &__mb_ramfunc_start;
+    while (dst < end)
+        if (*dst++ != *src++)
+            return false;
+
+    return true;
+}
+#endif
 
 /* Polled single-byte SPI2 transfer (flash-resident; runs in normal context).
  * Bounded so a wedged SPI can never freeze the firmware: on timeout it sets
@@ -656,8 +695,27 @@ uint8_t MB_RestoreSlot(uint8_t slot, uint8_t *progress_line)
 
     const uint32_t slotBase = MB_SLOT0_EXT_BASE + (uint32_t)slot * MB_SLOT_STRIDE;
 
-    /* Valid: the RAM stub copies exactly image_size bytes, pads the partial
-     * page with 0xFF and erases the remainder of the application region. */
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT_OVERLAY
+    /* No PY25Q16 driver access is allowed after this point: the sector cache is
+     * about to become executable storage and the RAM stub always ends in reset.
+     * Mask IRQs first, then explicitly stop SPI2 DMA before overwriting the
+     * cache. Keeping both operations local avoids relying on validation's
+     * current polled-SPI implementation and closes any IRQ re-arm window. */
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    mb_spi_polled_mode();
+    PY25Q16_InvalidateCache();
+    if (!mb_load_ram_reflash_overlay())
+    {
+        __set_PRIMASK(primask);
+        return MB_ERR_RAM_LOAD;
+    }
+#endif
+
+    /* Valid and, for the overlay path, safely loaded: the RAM stub copies
+     * exactly image_size bytes, pads the partial page with 0xFF and erases the
+     * remainder of the application region. Keep flash locked until this point
+     * so an overlay-copy failure can return without changing flash state. */
     MB_PrepareInternalFlash();
 
     /* Call through a volatile pointer so the compiler emits an absolute 'blx'
