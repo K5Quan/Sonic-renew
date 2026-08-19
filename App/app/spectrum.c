@@ -64,6 +64,8 @@ typedef struct __attribute__((packed)) {
     #define HISTORY_SIZE 50
 #elif defined(ENABLE_UART)
     #define HISTORY_SIZE 100
+#else //NOCOM
+    #define HISTORY_SIZE 100
 #endif
 
 static uint16_t historyListIndex = 0;
@@ -1751,20 +1753,37 @@ switch(SpectrumMonitor) {
         pos += len;
         } 
     } else {
-      len = sprintf(&String[pos], "ST%s", scanStepNames[settings.scanStepIndex]);
-      pos += len;
+      len = sprintf(&String[pos], "ST%s ", scanStepNames[settings.scanStepIndex]);pos += len;
     }
-   
-  GUI_DisplaySmallest(String, 0, 1, true,true);
-  BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4],&gBatteryCurrent);
+    switch(PttEmission) {
+        case 1:
+            len = sprintf(&String[pos], "NINJA");
+        case 2:
+            len = sprintf(&String[pos], "LASTRX");
+            break;
+        case 0:
+            len = sprintf(&String[pos], "VFO");
+            break;
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            len = sprintf(&String[pos], "ROGER");
+            break;
+        
+        }
+    GUI_DisplaySmallest(String, 0, 1, true,true);
+    BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4],&gBatteryCurrent);
 
-  uint16_t voltage = (gBatteryVoltages[0] + gBatteryVoltages[1] + gBatteryVoltages[2] +
-             gBatteryVoltages[3]) /
-            4 * 760 / gBatteryCalibration[3];
+    uint16_t voltage = (gBatteryVoltages[0] + gBatteryVoltages[1] + gBatteryVoltages[2] +
+               gBatteryVoltages[3]) /
+              4 * 760 / gBatteryCalibration[3];
 
-  unsigned perc = BATTERY_VoltsToPercent(voltage);
-  sprintf(String,"%d%%", perc);
-  GUI_DisplaySmallest(String, 112, 1, true,true);
+    unsigned perc = BATTERY_VoltsToPercent(voltage);
+    sprintf(String,"%d%%", perc);
+    GUI_DisplaySmallest(String, 112, 1, true,true);
 }
 
 // ------------------ Frequency string ------------------
@@ -1799,12 +1818,7 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
         total = GetStepsCount();
         current_index = scanInfo.i;
     }
-    if (!isListening && total <= 200) {
-        char line[19] = "";
-        snprintf(line, sizeof(line), "SCANNING %dch", total);
-        UI_PrintStringSmallNormal(line, 0, 128, 5);
-        return;
-    }
+    if (!isListening && total <= 200) {return;}
     const uint8_t fill_start = 4;
     const uint8_t fill_cols  = 121;
 
@@ -1868,53 +1882,26 @@ static void DrawF(uint32_t f) {
     snprintf(freqStr, sizeof(freqStr), "%u.%05u", f / 100000, f % 100000);
     char line1[19] = "";
     char line2[19] = "";
-    char line3[19] = "";
     sprintf(line1, "%s", freqStr);
     char prefix[9] = "";
     UpdateCssDetection();
     if (appMode == SCAN_BAND_MODE) {
         snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
         if (isListening && isKnownChannel) {
-            snprintf(line2, sizeof(line2), " %s %s", channelName, StringCode);
+            snprintf(line2, sizeof(line2), " %s", channelName);
         } else {
-            snprintf(line2, sizeof(line2), " %s%s %s", prefix, BParams[bl].BandName, StringCode);
+            snprintf(line2, sizeof(line2), " %s%s", prefix, BParams[bl].BandName);
         }
     } else if (appMode == CHANNEL_MODE) {
 
         if (channelName[0] != '\0') {
-            snprintf(line2, sizeof(line2), "%s %s", channelName, StringCode);
+            snprintf(line2, sizeof(line2), "%s", channelName);
         }
     } else {
         line2[0] = '\0';
     }
 
-    line3[0] = '\0';
-    int pos = 0;
-
-    if(isListening){
-        if (MaxListenTime > 0) {
-            pos += sprintf(&line3[pos], " RX %d/%s ", spectrumElapsedCount/1000, labels[IndexMaxLT]);
-
-            if (WaitSpectrum > 0) {
-                if (WaitSpectrum < 61000) {
-                    pos += sprintf(&line3[pos], "| Wait %ds ", WaitSpectrum / 1000);
-                } else {
-                    pos += sprintf(&line3[pos], "End OO ");
-                }
-            }
-        }
-        else {
-            pos += sprintf(&line3[pos], " RX %ds  ", spectrumElapsedCount/1000);
-
-            if (WaitSpectrum > 0) {
-                if (WaitSpectrum < 61000) {
-                    pos += sprintf(&line3[pos], "| Wait %ds ", WaitSpectrum / 1000);
-                } else {
-                    pos += sprintf(&line3[pos], "End OO ");
-                }
-            }
-        }
-    } else ArrowLine = 2;
+    ArrowLine = 2;
     static char Text[20]="";
     DrawNums();
     if(f < 100000000) {
@@ -1926,7 +1913,7 @@ static void DrawF(uint32_t f) {
         line1[8] = 0;
         UI_DisplayFrequency(line1, 13, 0, 1);
     }
-    UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
+    
     switch(ShowLines) {
             case 1:
             case 3:
@@ -1940,33 +1927,26 @@ static void DrawF(uint32_t f) {
                 
                 GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
                 ArrowLine = 3;
+                UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);
                 break;
             }
             case 2:
                 {       //SCAN
-                if(isListening) {
-                    sprintf(Text, "Signal %d dBm", Rssi2DBm(scanInfo.rssi)); 
-                } else {switch(PttEmission) {
-                    case 0:
-                        snprintf(Text, sizeof(Text), "TX %s %u.%05u", gCurrentVfo->Name, gCurrentVfo->freq_config_TX.Frequency  / 100000, gCurrentVfo->freq_config_TX.Frequency  % 100000);
-                        break;
+                UI_PrintString(line2, 0, 127, 2, 8);
+                switch(PttEmission) {
                     case 1:
-                        if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
-                            snprintf(Text, sizeof(Text), "NJ %u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
-                            else snprintf(Text, sizeof(Text), "Ninja");
-                        break;
                     case 2:
                         if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
-                            snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
-                        else snprintf(Text, sizeof(Text), "LastRX");
+                            snprintf(Text, sizeof(Text), "%u.%05u %s", lastReceivingFreq / 100000, lastReceivingFreq % 100000, StringCode);
                         break;
+                    case 0:
                     case 3:
                     case 4:
                     case 5:
                     case 6:
                     case 7:
                     case 8:
-                        snprintf(Text, sizeof(Text), "RO %s %u.%05u", gCurrentVfo->Name, gCurrentVfo->freq_config_TX.Frequency  / 100000, gCurrentVfo->freq_config_TX.Frequency  % 100000);
+                        snprintf(Text, sizeof(Text), "%s %u.%05u", gCurrentVfo->Name, gCurrentVfo->freq_config_TX.Frequency  / 100000, gCurrentVfo->freq_config_TX.Frequency  % 100000);
                         break;
                     
                     }
@@ -1975,16 +1955,16 @@ static void DrawF(uint32_t f) {
                 snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
 #endif
                 }
-                ScanProgress_DrawGaugeLine(4);
+                
                 if(isListening) DrawMeter(5);
-                UI_PrintStringSmallbackground(Text, 0, 127, 3, 0);
-                UI_PrintStringSmallbackground(line3, 0, 127, 6, 0);
+                else ScanProgress_DrawGaugeLine(5);
+                UI_PrintStringSmallbackground(Text, 0, 127, 4, 0);
+                //UI_PrintStringSmallbackground(line3, 0, 127, 6, 0);
                 BlitLine(4); 
                 BlitLine(5); 
                 BlitLine(6);
                 break;
             }
-    }
 }
 
 static void LookupChannelModulation() {
@@ -3167,12 +3147,12 @@ static void RenderSpectrum()
 
 static void DrawMeter(int line) {
     const uint8_t METER_PAD_LEFT = 4;
-    const uint8_t LINE_HEIGHT    = 4;           // Height of the vertical lines
+    const uint8_t LINE_HEIGHT    = 5;           // Height of the vertical lines
     const uint8_t Y_START_BIT    = 1;
     const uint8_t SPACING        = 2;           // Space between each vertical line
     
     // Total width available for the meter
-    uint8_t max_width_px = 120; 
+    uint8_t max_width_px = 90; 
     uint8_t fill_px      = Rssi2PX(scanInfo.rssi, 0, max_width_px);
     
     settings.dbMax = -60; 
@@ -3195,6 +3175,10 @@ static void DrawMeter(int line) {
             gFrameBuffer[line][x_pos] |= (1 << bit);
         }
     }
+    static char Text[8]="";
+    sprintf(Text, "%d dbm", Rssi2DBm(scanInfo.rssi));
+    GUI_DisplaySmallest(Text, 96, 41, false, true);
+
 }
 
 static void RenderStill() {

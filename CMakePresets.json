@@ -69,9 +69,14 @@
         },
        
 {
+    "name": "NOCOM","inherits": "default","cacheVariables": {
+        "EDITION_STRING": "NOCOM",
+        "TARGET": "SONIC.NOCOM.V50"
+    }
+},
+{
     "name": "USB","inherits": "default","cacheVariables": {
         "ENABLE_USB": true,
-        //"ENABLE_UART": true,
         "EDITION_STRING": "USB",
         "TARGET": "SONIC.USB.V50"
     }
@@ -85,6 +90,7 @@
 }
 ],
 "buildPresets": [
+    {"name": "NOCOM","configurePreset": "NOCOM"},
     {"name": "USB","configurePreset": "USB"},
     {"name": "RS232","configurePreset": "RS232"}
 ]

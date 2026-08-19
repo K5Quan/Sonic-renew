@@ -80,12 +80,10 @@ if(NOT SQL_TONE)
 endif()
 target_compile_definitions(App INTERFACE SQL_TONE=${SQL_TONE})
 
-if(ENABLE_UART OR ENABLE_USB)
-    target_sources(App INTERFACE 
-        driver/crc.c
-        driver/eeprom_compat.c
-    )
-endif()
+target_sources(App INTERFACE 
+    driver/crc.c
+    driver/eeprom_compat.c
+)
 
 enable_feature(ENABLE_UART
     driver/uart.c 
