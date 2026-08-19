@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    NOCOM|USB|RS232|All)
+    NOCOM|CHIRP|All)
       PRESET="$1"
       shift
       ;;
@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
-PRESET=${PRESET:-USB}
+PRESET=${PRESET:-CHIRP}
 
 # ---------------------------------------------
 # Nettoyage si l'option est activée
@@ -41,9 +41,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(NOCOM|USB|RS232|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(NOCOM|CHIRP|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: NOCOM USB RS232 All"
+  echo "Valid presets are: NOCOM CHIRP All"
   exit 1
 fi
 
@@ -62,10 +62,7 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
-  local target="f4hwn.sonic.usb.v50"
-  if [[ "$preset" == "RS232" ]]; then
-    target="f4hwn.sonic.rs232.v50"
-  fi
+  local target="f4hwn.sonic.chirp.v50"
   if [[ "$preset" == "NOCOM" ]]; then
     target="f4hwn.sonic.nocom.v50"
   fi
@@ -91,7 +88,7 @@ flash_preset() {
   case "$preset" in
     RS232) target="f4hwn.sonic.rs232.v50" ;;
     NOCOM) target="f4hwn.sonic.nocom.v50" ;;
-    *)     target="f4hwn.sonic.usb.v50" ;; # Valeur par défaut
+    *)     target="f4hwn.sonic.chirp.v50" ;; # Valeur par défaut
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -110,15 +107,15 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(NOCOM USB RS232)
+  PRESETS=(NOCOM CHIRP)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
   echo ""
   echo "🎉 All presets built successfully!"
 
-  # Si 'All' est compilé, on flashe uniquement le preset USB
-  flash_preset "USB"
+  # Si 'All' est compilé, on flashe uniquement le preset CHIRP
+  flash_preset "CHIRP"
 else
   build_preset "$PRESET"
   flash_preset "$PRESET"

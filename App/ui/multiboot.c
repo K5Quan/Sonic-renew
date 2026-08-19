@@ -13,6 +13,19 @@
 #include "ui/helper.h"
 #include "ui/multiboot.h"
 
+static uint8_t gRunningSlot = MB_SLOT_BACKUP;
+
+static uint8_t mb_remember_running_slot(uint8_t slot)
+{
+    gRunningSlot = slot;
+    return slot;
+}
+
+uint8_t MB_GetRunningSlot(void)
+{
+    return gRunningSlot;
+}
+
 static const char *mb_error_text(uint8_t err)
 {
     switch (err)
@@ -70,12 +83,12 @@ static uint8_t mb_copy_slot_version(char *dst, uint8_t cap, const mb_slot_header
     return n;
 }
 
-/* "SONIC MULTIBOOT" banner in the top status bar, shown on every screen - the
+/* "F4HWN MULTIBOOT" banner in the top status bar, shown on every screen - the
  * same way the firmware puts mode labels there (inverse 3x5 capsule). */
 static void mb_status_bar(void)
 {
     UI_StatusClear();
-    GUI_DisplaySmallestInverse("SONIC MULTIBOOT", 34, 0, true, true, 94);
+    GUI_DisplaySmallestInverse("F4HWN MULTIBOOT", 34, 0, true, true, 94);
 
     /* Thin line dressing up the otherwise blank row between the status bar and
      * the first content row. Drawn on gFrameBuffer[0] (line 0), which every
@@ -250,6 +263,7 @@ __attribute__((noinline)) static void mb_prepare_progress_screen(const char *tit
     UI_PrintStringSmallNormal(title, 2, 126, 1);
     UI_PrintStringSmallNormal("DO NOT POWER OFF", 2, 126, 3);
     UI_PrintStringSmallNormal(detail, 2, 126, 5);
+    /* Empty gauge that the RAM copier fills as it reflashes. */
     mb_draw_progress_outline();
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
@@ -261,7 +275,7 @@ static void mb_prepare_progress(uint8_t slot)
     slot_title[13] = (char)('0' + slot);
     const char *title = (slot == 0u) ? "Restore Main" : slot_title;
 
-    mb_prepare_progress_screen(title, "Writing & Verify");
+    mb_prepare_progress_screen(title, "Writing / Verify");
 }
 
 /* Discreet "Main backup" screen shown once, at the first boot after a normal
@@ -432,17 +446,16 @@ uint8_t MB_BootResolveProfile(void)
     {
         if (MB_InternalMatchesProfile(&mark))
         #ifdef ENABLE_USB
-            return mark.index+1;                  /* For SONIC USB write to next SLOT */
+            return mb_remember_running_slot(mark.index+1); /* slot named by the marker */
         #else
-            return mark.index;                  /* running the slot the marker names */
+            return mb_remember_running_slot(mark.index); /* slot named by the marker */
         #endif
-
         /* Marker read fine but internal no longer carries its identity -> the
          * firmware was replaced outside multiboot (a plain Flash-Firmware). Adopt
          * it as Main. Deliberately NOT a content scan here: a build that merely
          * duplicates a user slot (or a marker that already points at such a slot)
          * must still refresh Main. */
-        return mb_adopt_internal_as_main();
+        return mb_remember_running_slot(mb_adopt_internal_as_main());
     }
 
     /* Marker unreliable (MISSING / LEGACY / CORRUPT / IO): identify the running
@@ -458,7 +471,7 @@ uint8_t MB_BootResolveProfile(void)
         if (m == MB_FW_MATCH)
         {
             (void)MB_SetActiveProfile(slot);    /* record/repair the marker */
-            return slot;
+            return mb_remember_running_slot(slot);
         }
         if (m == MB_FW_IO)
             had_io = true;
@@ -476,5 +489,5 @@ uint8_t MB_BootResolveProfile(void)
             mb_profile_error_halt();
     }
 
-    return mb_adopt_internal_as_main();
+    return mb_remember_running_slot(mb_adopt_internal_as_main());
 }

@@ -54,10 +54,11 @@ ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
-/* ENABLE_NO_HEAP passes --defsym=__min_heap_size=0. Keep Sonic's historical
- * 0x7D0-byte reservation for configurations that do not enable it. */
-_Min_Heap_Size = DEFINED(__min_heap_size) ? __min_heap_size : 0x07D0;
-_Min_Stack_Size = 0x0400;
+/* Generate a link error if heap and stack don't fit into RAM */
+/* ENABLE_NO_HEAP passes --defsym=__min_heap_size=0 to drop the reserved heap
+ * (no malloc/sbrk is linked); default stays 0x200 otherwise. */
+_Min_Heap_Size = DEFINED(__min_heap_size) ? __min_heap_size : 0x200;      /* required amount of heap  */
+_Min_Stack_Size = 0x400; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
@@ -139,8 +140,10 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+
     *(.RamFunc)        /* functions that must execute from RAM (e.g. internal */
-    *(.RamFunc*)       /* flash reprogramming); copied with initialized data */
+    *(.RamFunc*)       /* flash reprogramming); copied to RAM with .data      */
+
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
@@ -148,8 +151,7 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >RAM AT> FLASH
 
-  /* Explicit placement of CherryUSB buffers. Keeping this section present but
-     empty also gives RS232 builds the same overlay load-address calculation. */
+  /* Explicit placement of .noncacheable (CherryUSB) + end-of-FLASH symbol */
   .noncacheable :
   {
     . = ALIGN(4);

@@ -227,7 +227,9 @@ void Main(void)
             #ifdef ENABLE_SPECTRUM
                 case 4:
                 case 5:
+                #ifndef ENABLE_USB
                     APP_RunSpectrum();
+                #endif
                     break;
             #endif
 

@@ -87,7 +87,6 @@ static void DoErase()
     UI_DisplayClear();
     UI_PrintString("ERASING...", 0, 127, 0, 10);
     ST7565_BlitFullScreen();
-    PY25Q16_ClearBlockProtect();
     SYSTEM_DelayMs(10);
     SETTINGS_FactoryReset(1);
     UI_DisplayClear();
