@@ -207,6 +207,7 @@ SECTIONS
   /* .mb_ramfunc is the final section with a FLASH load image. The workspace
      member is NOLOAD/BSS storage and therefore contributes RAM only. */
   _eflash_used = LOADADDR(.mb_ramfunc) + SIZEOF(.mb_ramfunc);
+
   
   /* Uninitialized data section */
   . = ALIGN(4);

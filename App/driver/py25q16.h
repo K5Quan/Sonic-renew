@@ -27,7 +27,8 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
 void PY25Q16_SectorErase(uint32_t Address);
 void PY25Q16_ClearBlockProtect(void);  // сбросить Block Protect биты перед стиранием
 
-/* Drop the internal write cache after raw multiboot slot/profile operations. */
+/* Drop the internal write cache after raw multiboot slot/profile operations,
+ * and before multiboot reuses the cache storage as a RAM overlay. */
 void PY25Q16_InvalidateCache(void);
 
 #ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
