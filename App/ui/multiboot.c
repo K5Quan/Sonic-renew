@@ -26,6 +26,7 @@ static const char *mb_error_text(uint8_t err)
         case MB_ERR_SPI:           return "SPI ERROR";
         case MB_ERR_SLOT:          return "bad slot";
         case MB_ERR_AUTH:          return "auth";
+        case MB_ERR_RAM_LOAD:      return "RAM LOAD ERROR";
         default:                   return "error";
     }
 }
