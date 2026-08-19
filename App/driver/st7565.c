@@ -68,7 +68,7 @@ static void SPI_Init()
     InitStruct.NSS = LL_SPI_NSS_SOFT;
     InitStruct.BitOrder = LL_SPI_MSB_FIRST;
     InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-    InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV256;
+    InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV64;
     LL_SPI_Init(SPIx, &InitStruct);
 
     LL_SPI_Enable(SPIx);
@@ -199,9 +199,11 @@ void ST7565_DrawLine(const unsigned int Column, const unsigned int Line, const u
 void ST7565_FillScreen(uint8_t value)
 {
     CS_Assert();
-    for (unsigned i = 0; i < 8; i++) {
-        // TODO: This is wrong
-        DrawLine(0, i, NULL, value);
+    for (uint8_t line = 0; line < 8u; line++) {
+        ST7565_SelectColumnAndLine(4u, line);
+        A0_Set();
+        for (uint8_t column = 0; column < LCD_WIDTH; column++)
+            SPI_WriteByte(value);
     }
     CS_Release();
 }
@@ -255,7 +257,7 @@ void ST7565_FillScreen(uint8_t value)
 // D=0, display OFF
 #define ST7565_CMD_DISPLAY_ON_OFF 0xAE 
 
-uint8_t cmds[] = {
+const uint8_t cmds[] = {
     ST7565_CMD_BIAS_SELECT | 0,             // Select bias setting: 1/9
     ST7565_CMD_COM_DIRECTION  | (0 << 3),   // Set output direction of COM: normal
     ST7565_CMD_SEG_DIRECTION | 1,           // Set scan direction of SEG: reverse
@@ -308,17 +310,16 @@ uint8_t cmds[] = {
     //#if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
     void ST7565_Gauge(uint8_t line, uint8_t min, uint8_t max, uint8_t value)
     {
-        // прямоугольные края прогрессбар меню
-       // gFrameBuffer[line][54] = 0x3f; // левая стенка |
-        gFrameBuffer[line][55] = 0x3f; // левая стенка |
+        gFrameBuffer[line][54] = 0x0c;
+        gFrameBuffer[line][55] = 0x12;
 
-        gFrameBuffer[line][121] = 0x3f; // правая стенка |
-      //  gFrameBuffer[line][122] = 0x3f; // правая стенка |
+        gFrameBuffer[line][121] = 0x12;
+        gFrameBuffer[line][122] = 0x0c;
 
         uint8_t filled = map(value, min, max, 56, 120);
 
         for (uint8_t i = 56; i <= 120; i++) {
-            gFrameBuffer[line][i] = (i <= filled) ? 0x3f : 0x21; // 0x3f=заполнено, 0x21=пусто (рамка)
+            gFrameBuffer[line][i] = (i <= filled) ? 0x2d : 0x21;
         }
     }
     //#endif
@@ -329,6 +330,10 @@ void ST7565_Init(void)
     SPI_Init();
     ST7565_HardwareReset();
     CS_Assert();
+
+    /* Hide the controller RAM immediately.  On K1 there is no usable hardware
+     * reset pin, so its power-on contents can otherwise briefly reach the LCD. */
+    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 0);
     ST7565_WriteByte(ST7565_CMD_SOFTWARE_RESET);   // software reset
     SYSTEM_DelayMs(120);
 
@@ -350,14 +355,28 @@ void ST7565_Init(void)
         ST7565_WriteByte(ST7565_CMD_POWER_CIRCUIT | 0b111);   // VB=1 VR=1 VF=1
 
     SYSTEM_DelayMs(40);
-    
-    ST7565_WriteByte(ST7565_CMD_SET_START_LINE | 0);   // line 0
-    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 1);   // D=1
 
+    ST7565_WriteByte(ST7565_CMD_SET_START_LINE | 0);   // line 0
     CS_Release();
 
+    /* Clear all eight LCD RAM pages while the display is still disabled. */
     ST7565_FillScreen(0x00);
+
+    CS_Assert();
+    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 1);   // D=1
+    CS_Release();
 }
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    void ST7565_ShutDown(void)
+    {
+        CS_Assert();
+        ST7565_WriteByte(ST7565_CMD_POWER_CIRCUIT | 0b000);   // VB=0 VR=1 VF=1
+        ST7565_WriteByte(ST7565_CMD_SET_START_LINE | 0);   // line 0
+        ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 0);   // D=1
+        CS_Release();
+    }
+#endif
 
 void ST7565_FixInterfGlitch(void)
 {

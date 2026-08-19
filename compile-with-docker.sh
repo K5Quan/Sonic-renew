@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    NOCOM|USB|RS232|All)
+    NOCOM|CHIRP|All)
       PRESET="$1"
       shift
       ;;
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
-PRESET=${PRESET:-USB}
+PRESET=${PRESET:-CHIRP}
 
 # ---------------------------------------------
 # Nettoyage si l'option est activée
@@ -46,9 +46,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(NOCOM|USB|RS232|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(NOCOM|CHIRP|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: NOCOM USB RS232 All"
+  echo "Valid presets are: NOCOM CHIRP All"
   exit 1
 fi
 
@@ -67,6 +67,10 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
+  local target="f4hwn.sonic.chirp.v50"
+  if [[ "$preset" == "NOCOM" ]]; then
+    target="f4hwn.sonic.nocom.v50"
+  fi
   echo -e "\n 🚀 Building: ${preset}"
   docker run \
     --rm \
@@ -91,7 +95,13 @@ build_preset() {
 # ---------------------------------------------
 flash_preset() {
   local preset="$1"
-  local ifile="./build/${preset}/SONIC.${preset}.${VERSION_NO}.bin"
+  local target
+  case "$preset" in
+    RS232) target="f4hwn.sonic.rs232.v50" ;;
+    NOCOM) target="f4hwn.sonic.nocom.v50" ;;
+    *)     target="f4hwn.sonic.chirp.v50" ;; # Valeur par défaut
+  esac
+  local ifile="./build/${preset}/${target}.bin"
 
   echo -e "\n⚡ Flashing ${preset} firmware on ${UPLOAD_PORT}..."
 
@@ -108,7 +118,7 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(NOCOM USB RS232)
+  PRESETS=(NOCOM CHIRP)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
@@ -117,7 +127,7 @@ if [[ "$PRESET" == "All" ]]; then
 
   # Si 'All' est compilé, on flashe uniquement le preset USB
   if [ "$FLASH" = true ]; then
-    flash_preset "USB"
+    flash_preset "CHIRP"
   fi;
 else
   build_preset "$PRESET"

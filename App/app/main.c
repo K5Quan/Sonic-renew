@@ -221,7 +221,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
         case KEY_4:
         case KEY_5:
             break;
-
+#ifndef ENABLE_USB
         case KEY_6:
             APP_RunSpectrumMode(2);
             gRequestDisplayScreen = DISPLAY_MAIN;
@@ -241,7 +241,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
             APP_RunSpectrumMode(0);
             gRequestDisplayScreen = DISPLAY_MAIN;
             break;
-
+#endif
         case KEY_UP:
             gEeprom.SQUELCH_LEVEL = (gEeprom.SQUELCH_LEVEL < 9) ? gEeprom.SQUELCH_LEVEL + 1 : 9;
             gVfoConfigureMode     = VFO_CONFIGURE;

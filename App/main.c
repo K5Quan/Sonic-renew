@@ -42,6 +42,10 @@
 #include "driver/system.h"
 #include "driver/systick.h"
 #include "driver/py25q16.h"
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    #include "driver/mb_flash.h"
+    #include "ui/multiboot.h"
+#endif
 #ifdef ENABLE_UART
     #include "driver/uart.h"
 #endif
@@ -75,6 +79,12 @@ void Main(void)
 {
     SYSTICK_Init();
     BOARD_Init();
+
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    /* Select the profile before the first settings read. If this firmware was
+     * flashed normally, it is first backed up as Main (slot/profile 0). */
+    PY25Q16_SetProfileBase(MB_ProfileBase(MB_BootResolveProfile()));
+#endif
 
     // Читаем кнопку СРАЗУ при старте, до долгой инициализации
 
@@ -112,6 +122,14 @@ void Main(void)
     BATTERY_GetReadings(false);
 
     BOOT_Mode_t  BootMode = BOOT_GetMode();
+
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    if (BootMode == BOOT_MODE_MULTIBOOT)
+    {
+        BOOT_ProcessMode(BootMode);
+        BootMode = BOOT_MODE_NORMAL;
+    }
+#endif
 
     // Erase режимы — обрабатываем немедленно, до любой инициализации настроек
     if (BootMode == BOOT_MODE_ERASE_NO_CALIB || BootMode == BOOT_MODE_ERASE)
@@ -209,7 +227,9 @@ void Main(void)
             #ifdef ENABLE_SPECTRUM
                 case 4:
                 case 5:
+                #ifndef ENABLE_USB
                     APP_RunSpectrum();
+                #endif
                     break;
             #endif
 

@@ -9,6 +9,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ENABLE_LTO": false,
+        "ENABLE_NO_HEAP": false,
         "ENABLE_FMRADIO": true,
         "ENABLE_UART": false,
         "ENABLE_USB": false,
@@ -59,6 +60,8 @@
         "ENABLE_FEAT_F4HWN_DEBUG": false,
         "ENABLE_FEAT_F4HWN_MEM": false,
         "ENABLE_FEAT_F4HWN_AUDIO_SCOPE": true,
+        "ENABLE_FEAT_F4HWN_MULTIBOOT": true,
+        "ENABLE_FEAT_F4HWN_MULTIBOOT_OVERLAY": true,
         "ENABLE_AGC_SHOW_DATA": false,
         "ENABLE_UART_RW_BK_REGS": false,
         "ENABLE_SWD": false
@@ -72,19 +75,12 @@
       }
     },
     {
-      "name": "USB",
+      "name": "CHIRP",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
-        "EDITION_STRING": "USB"
-      }
-    },
-    {
-      "name": "RS232",
-      "inherits": "default",
-      "cacheVariables": {
         "ENABLE_UART": true,
-        "EDITION_STRING": "RS232"
+        "EDITION_STRING": "Sonic"
       }
     }
   ],
@@ -93,12 +89,8 @@
       "configurePreset": "NOCOM"
     },
     {
-      "name": "USB",
-      "configurePreset": "USB"
-    },
-    {
-      "name": "RS232",
-      "configurePreset": "RS232"
+      "name": "CHIRP",
+      "configurePreset": "CHIRP"
     }
   ]
 }

@@ -482,6 +482,19 @@ static void sort(int16_t *a, int16_t *b)
         }
     }
 
+    void GUI_DisplaySmallestInverse(const char *pString, uint8_t x, uint8_t Line,
+                                    bool statusbar, bool fill, uint8_t end)
+    {
+        GUI_DisplaySmallest(pString, x, (Line * 8) + 1, statusbar, fill);
+
+        uint8_t start = x - 2;
+        uint8_t *buffer = statusbar ? gStatusLine : gFrameBuffer[Line];
+        buffer[start] ^= 0x3E;
+        for (uint8_t i = start + 1; i < end; i++)
+            buffer[i] ^= 0x7F;
+        buffer[end] ^= 0x3E;
+    }
+
     bool IsEmptyName(const char *name, uint8_t len) {
         if (name[0] == '\0' || name[0] == '\xff')
             return true;
@@ -535,6 +548,11 @@ void UI_DisplayPopup(const char *string)
 void UI_DisplayClear()
 {
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+}
+
+void UI_StatusClear()
+{
+    memset(gStatusLine, 0, sizeof(gStatusLine));
 }
 
 // wide_spacing = true: 6 px

@@ -6,8 +6,9 @@
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN
-    /* Всегда показываем VERSION_STRING_1 (например "v0.22") — не зависит от пресета */
-    const char Version[]      = VERSION_STRING_1;
+    /* Keep the product identity in the device-info reply.  UVStudio and the
+     * multiboot metadata scanner use this string to identify Sonic images. */
+    const char Version[]      = AUTHOR_STRING_2 " " VERSION_STRING_2;
     const char Edition[]      = EDITION_STRING;
 #else
     const char Version[]      = AUTHOR_STRING VER;
