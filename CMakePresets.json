@@ -78,7 +78,7 @@
 {
     "name": "USB","inherits": "default","cacheVariables": {
         "ENABLE_USB": true,
-        //"ENABLE_UART": true,
+        "ENABLE_UART": true,
         "EDITION_STRING": "Sonic",
         "TARGET": "f4hwn.sonic.usb.v50"
     }

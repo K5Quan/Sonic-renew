@@ -60,14 +60,6 @@ typedef struct __attribute__((packed)) {
     uint16_t    HTimeS;
 } HistoryStruct;
 
-#if defined(ENABLE_USB)
-    #define HISTORY_SIZE 50
-#elif defined(ENABLE_UART)
-    #define HISTORY_SIZE 100
-#else //NOCOM
-    #define HISTORY_SIZE 100
-#endif
-
 static uint16_t historyListIndex = 0;
 static int historyScrollOffset = 0;
 static bool gHistoryScan = false;
@@ -232,7 +224,17 @@ typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 
 /***************************BIG RAM******************************************/
 static bandparameters   *BParams = NULL;
-#define                 MAX_SCAN_CHANNELS 500
+#if defined(ENABLE_USB)
+    #define HISTORY_SIZE 10
+#else //NOCOM
+    #define HISTORY_SIZE 100
+#endif
+
+#ifndef ENABLE_USB
+    #define                 MAX_SCAN_CHANNELS 500
+#else
+    #define                 MAX_SCAN_CHANNELS 10
+#endif
 static uint32_t         ScanFrequencies[MAX_SCAN_CHANNELS];
 static uint32_t         HFreqs[HISTORY_SIZE];           //4
 static uint8_t          HCode[HISTORY_SIZE];            //1

@@ -430,7 +430,11 @@ uint8_t MB_BootResolveProfile(void)
     if (ms == MB_MARK_VALID)
     {
         if (MB_InternalMatchesProfile(&mark))
+        #ifdef ENABLE_USB
+            return mark.index+1;                  /* For SONIC USB write to next SLOT */
+        #else
             return mark.index;                  /* running the slot the marker names */
+        #endif
 
         /* Marker read fine but internal no longer carries its identity -> the
          * firmware was replaced outside multiboot (a plain Flash-Firmware). Adopt
