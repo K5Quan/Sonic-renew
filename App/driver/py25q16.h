@@ -27,4 +27,15 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
 void PY25Q16_SectorErase(uint32_t Address);
 void PY25Q16_ClearBlockProtect(void);  // сбросить Block Protect биты перед стиранием
 
+/* Drop the internal write cache after raw multiboot slot/profile operations. */
+void PY25Q16_InvalidateCache(void);
+
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+/* Addresses below the calibration boundary are transparently redirected into
+ * the selected firmware slot's private settings bank. Calibration, logo,
+ * firmware slots and multiboot state remain shared. */
+#define PY25Q16_PROFILE_SHARED_FROM  0x00010000u
+void PY25Q16_SetProfileBase(uint32_t Base);
+#endif
+
 #endif

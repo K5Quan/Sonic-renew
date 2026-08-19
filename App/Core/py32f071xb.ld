@@ -134,10 +134,12 @@ SECTIONS
   _sidata = LOADADDR(.data);
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data : 
+  .data :
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+    *(.RamFunc)        /* functions that must execute from RAM (e.g. internal */
+    *(.RamFunc*)       /* flash reprogramming); copied with initialized data */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
@@ -185,5 +187,4 @@ SECTIONS
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
-
 

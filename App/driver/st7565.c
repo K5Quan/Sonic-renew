@@ -199,9 +199,11 @@ void ST7565_DrawLine(const unsigned int Column, const unsigned int Line, const u
 void ST7565_FillScreen(uint8_t value)
 {
     CS_Assert();
-    for (unsigned i = 0; i < 8; i++) {
-        // TODO: This is wrong
-        DrawLine(0, i, NULL, value);
+    for (uint8_t line = 0; line < 8u; line++) {
+        ST7565_SelectColumnAndLine(4u, line);
+        A0_Set();
+        for (uint8_t column = 0; column < LCD_WIDTH; column++)
+            SPI_WriteByte(value);
     }
     CS_Release();
 }
@@ -329,6 +331,7 @@ void ST7565_Init(void)
     SPI_Init();
     ST7565_HardwareReset();
     CS_Assert();
+    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 0);
     ST7565_WriteByte(ST7565_CMD_SOFTWARE_RESET);   // software reset
     SYSTEM_DelayMs(120);
 
@@ -352,11 +355,14 @@ void ST7565_Init(void)
     SYSTEM_DelayMs(40);
     
     ST7565_WriteByte(ST7565_CMD_SET_START_LINE | 0);   // line 0
-    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 1);   // D=1
 
     CS_Release();
 
     ST7565_FillScreen(0x00);
+
+    CS_Assert();
+    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 1);   // D=1
+    CS_Release();
 }
 
 void ST7565_FixInterfGlitch(void)

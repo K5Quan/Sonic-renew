@@ -43,6 +43,25 @@ static uint8_t SectorCache[SECTOR_SIZE];
 static uint8_t BlackHole[4] __attribute__((aligned(4)));
 static volatile bool TC_Flag;
 
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+static uint32_t ProfileBase = 0;
+
+void PY25Q16_SetProfileBase(uint32_t Base)
+{
+    ProfileBase = Base;
+}
+
+static inline uint32_t ProfileMap(uint32_t Address)
+{
+    return (Address < PY25Q16_PROFILE_SHARED_FROM) ? (Address + ProfileBase) : Address;
+}
+#else
+static inline uint32_t ProfileMap(uint32_t Address)
+{
+    return Address;
+}
+#endif
+
 static inline void CS_Assert()
 {
     GPIO_ResetOutputPin(CS_PIN);
@@ -218,6 +237,7 @@ static void WriteEnable();
 static void SectorErase(uint32_t Addr);
 static void SectorProgram(uint32_t Addr, const uint8_t *Buf, uint32_t Size);
 static void PageProgram(uint32_t Addr, const uint8_t *Buf, uint32_t Size);
+static void ReadBufferRaw(uint32_t Address, void *pBuffer, uint32_t Size);
 
 void PY25Q16_Init()
 {
@@ -225,7 +245,7 @@ void PY25Q16_Init()
     SPI_Init();
 }
 
-void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size)
+static void ReadBufferRaw(uint32_t Address, void *pBuffer, uint32_t Size)
 {
     CS_Assert();
 
@@ -250,8 +270,15 @@ void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size)
     CS_Release();
 }
 
+void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size)
+{
+    ReadBufferRaw(ProfileMap(Address), pBuffer, Size);
+}
+
 void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, bool Append)
 {
+    Address = ProfileMap(Address);
+
 #ifdef DEBUG
     printf("spi flash write: %06x %ld %d\n", Address, Size, Append);
 #endif
@@ -277,7 +304,8 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
 
         if (SecAddr != SectorCacheAddr)
         {
-            PY25Q16_ReadBuffer(SecAddr, SectorCache, SECTOR_SIZE);
+            /* Address is already mapped; do not apply the profile base twice. */
+            ReadBufferRaw(SecAddr, SectorCache, SECTOR_SIZE);
             SectorCacheAddr = SecAddr;
         }
 
@@ -333,12 +361,18 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
 
 void PY25Q16_SectorErase(uint32_t Address)
 {
+    Address = ProfileMap(Address);
     Address -= (Address % SECTOR_SIZE);
     SectorErase(Address);
     if (SectorCacheAddr == Address)
     {
         memset(SectorCache, 0xff, SECTOR_SIZE);
     }
+}
+
+void PY25Q16_InvalidateCache(void)
+{
+    SectorCacheAddr = 0x1000000;
 }
 
 // Remove Block Protect before full erase.

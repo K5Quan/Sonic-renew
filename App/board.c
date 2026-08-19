@@ -71,8 +71,16 @@ void BOARD_GPIO_Init(void)
     LL_GPIO_InitTypeDef InitStruct;
     LL_GPIO_StructInit(&InitStruct);
     InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    InitStruct.Pull = LL_GPIO_PULL_UP;
     InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+
+    /* Keep the backlight dark while the multiboot/profile state is resolved. */
+    LL_GPIO_ResetOutputPin(GPIOF, LL_GPIO_PIN_8);
+    InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+    InitStruct.Pull = LL_GPIO_PULL_NO;
+    InitStruct.Pin = LL_GPIO_PIN_8;
+    LL_GPIO_Init(GPIOF, &InitStruct);
+
+    InitStruct.Pull = LL_GPIO_PULL_UP;
 
     // ---------------------
     // Input pins
@@ -123,9 +131,8 @@ void BOARD_GPIO_Init(void)
     LL_GPIO_Init(GPIOF, &InitStruct);
 #endif
 
-    // Backlight: PF8
     // BK4819 CS: PF9
-    InitStruct.Pin = LL_GPIO_PIN_9 | LL_GPIO_PIN_8  ;
+    InitStruct.Pin = LL_GPIO_PIN_9;
     LL_GPIO_Init(GPIOF, &InitStruct);
 
 #ifndef ENABLE_SWD
@@ -177,10 +184,10 @@ void BOARD_ADC_GetBatteryInfo(uint16_t *pVoltage, uint16_t *pCurrent)
 void BOARD_Init(void)
 {
     BOARD_GPIO_Init();
+    ST7565_Init();
     BACKLIGHT_InitHardware();
     BOARD_ADC_Init();
     PY25Q16_Init();
-    ST7565_Init();
 #ifdef ENABLE_FMRADIO
     BK1080_Init0();
 #endif

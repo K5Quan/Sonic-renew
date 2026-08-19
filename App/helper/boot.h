@@ -25,7 +25,10 @@ enum BOOT_Mode_t
     BOOT_MODE_NORMAL = 0,
     BOOT_MODE_ERASE_NO_CALIB,    // PTT + SIDE1: стереть всё кроме калибровок
     BOOT_MODE_ERASE,  // PTT + SIDE2: стереть всё включая калибровки
-    BOOT_MODE_F_LOCK             // оставлен для совместимости, не используется
+    BOOT_MODE_F_LOCK,            // оставлен для совместимости, не используется
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    BOOT_MODE_MULTIBOOT,
+#endif
 };
 
 typedef enum BOOT_Mode_t BOOT_Mode_t;

@@ -62,6 +62,13 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
+  local target="f4hwn.sonic.usb.v50"
+  if [[ "$preset" == "RS232" ]]; then
+    target="f4hwn.sonic.rs232.v50"
+  fi
+  if [[ "$preset" == "NOCOM" ]]; then
+    target="f4hwn.sonic.nocom.v50"
+  fi
   echo -e "\n 🚀 Building: ${preset}"
   docker run --rm -u $(id -u):$(id -g) -v "$PWD":/src -w /src "$IMAGE" \
   bash -c "cmake --preset ${preset} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
@@ -70,7 +77,7 @@ build_preset() {
        | sed -E '/^[[:space:]]+[A-Za-z0-9_]+(:[A-Za-z]+)?=/d; /--( Configuring|Generating) done/d; /-- Build files have been written to/d'
 
   docker run --rm -v "$PWD":/src -w /src "$IMAGE" \
-    arm-none-eabi-size ./build/${preset}/SONIC.${preset}.V50.elf
+    arm-none-eabi-size "./build/${preset}/${target}.elf"
 
   echo "✅ Done: ${preset}"
 }
@@ -80,7 +87,13 @@ build_preset() {
 # ---------------------------------------------
 flash_preset() {
   local preset="$1"
-  local ifile="./build/${preset}/SONIC.${preset}.V50.bin"
+  local target
+  case "$preset" in
+    RS232) target="f4hwn.sonic.rs232.v50" ;;
+    NOCOM) target="f4hwn.sonic.nocom.v50" ;;
+    *)     target="f4hwn.sonic.usb.v50" ;; # Valeur par défaut
+  esac
+  local ifile="./build/${preset}/${target}.bin"
 
   echo -e "\n⚡ Flashing ${preset} firmware on COM14..."
 

@@ -29,19 +29,36 @@
 #include "ui/helper.h"
 #include "ui/menu.h"
 #include "ui/ui.h"
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    #include "ui/multiboot.h"
+#endif
 
 BOOT_Mode_t BOOT_GetMode(void)
 {
-    KEY_Code_t key;
+    KEY_Code_t key[2];
+    bool ptt[2];
+
     SYSTEM_DelayMs(20);
-    key = KEYBOARD_Poll();
+    key[0] = KEYBOARD_Poll();
+    ptt[0] = GPIO_IsPttPressed();
     SYSTEM_DelayMs(20);
-    if (key != KEYBOARD_Poll())
+    key[1] = KEYBOARD_Poll();
+    ptt[1] = GPIO_IsPttPressed();
+
+    if (key[0] != key[1])
         return BOOT_MODE_NORMAL;
 
-    bool ptt = GPIO_IsPttPressed();
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    if (!ptt[0] && !ptt[1] && key[0] == KEY_MENU)
+    {
+        gKeyReading0 = KEY_MENU;
+        gKeyReading1 = KEY_MENU;
+        gDebounceCounter = 2;
+        return BOOT_MODE_MULTIBOOT;
+    }
+#endif
 
-    if (ptt && key == KEY_SIDE2)
+    if (ptt[0] && ptt[1] && key[0] == KEY_SIDE2)
         return BOOT_MODE_ERASE_NO_CALIB;
 
     return BOOT_MODE_NORMAL;
@@ -123,5 +140,12 @@ void BOOT_ProcessMode(BOOT_Mode_t Mode)
         GUI_SelectNextDisplay(DISPLAY_MAIN);
         return;
     }
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+    if (Mode == BOOT_MODE_MULTIBOOT) {
+        UI_MultibootSelector();
+        GUI_SelectNextDisplay(DISPLAY_MAIN);
+        return;
+    }
+#endif
     GUI_SelectNextDisplay(DISPLAY_MAIN);
 }
