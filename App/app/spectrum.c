@@ -1357,6 +1357,7 @@ static bool InitScan() {
             peak.i = 0;
             break;
     }
+    if(appMode!= CHANNEL_MODE) PttEmission = 2;
     return scanInitializedSuccessfully;
 }
 
@@ -1867,31 +1868,46 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
 }
 
 static void DrawNums() {
-if (appMode==CHANNEL_MODE) {
-    uint8_t selectedCount = 0;
-    if (!validScanListCount) {
-        BuildValidScanListIndices();
-    }
-
-    if (!selectedCount) {
-        for (uint8_t i = 0; i < validScanListCount; i++) {
-            if (settings.scanListEnabled[validScanListIndices[i]]) selectedCount++;
+    static char Text[20]="";
+    if (appMode==CHANNEL_MODE) {
+        uint8_t selectedCount = 0;
+        if (!validScanListCount) {
+            BuildValidScanListIndices();
         }
-    }
 
-    sprintf(String, "SL:%u/%u", selectedCount, validScanListCount);
-    GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
-    sprintf(String, "CH:%u", scanChannelsCount);
-    GUI_DisplaySmallest(String, 101, Bottom_print, false, true);
-    return;
-    }
+        if (!selectedCount) {
+            for (uint8_t i = 0; i < validScanListCount; i++) {
+                if (settings.scanListEnabled[validScanListIndices[i]]) selectedCount++;
+            }
+        }
+        if((!PttEmission || PttEmission >2) && (ShowLines != 2)) {// Channel OR ROGER
+            sprintf(Text, "%s %u.%05u", TxChannelName, 
+            ScanFrequencies[TX_Channel] / 100000, ScanFrequencies[TX_Channel]  % 100000);
+            GUI_DisplaySmallest(Text,35 , Bottom_print, false, true);
+            Text[0] = '\0';
+        }
+        else if (ShowLines != 2){
+            if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
+                sprintf(Text, "%u.%05u %s", lastReceivingFreq / 100000,
+                lastReceivingFreq % 100000, StringCode);
+            GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
+            Text[0] = '\0';
+        }
+            sprintf(Text, "SL:%u/%u", selectedCount, validScanListCount);
+            GUI_DisplaySmallest(Text, 2, Bottom_print, false, true);
+            Text[0] = '\0';
+            //sprintf(Text, "CH:%u", scanChannelsCount);
+            //GUI_DisplaySmallest(Text, 101, Bottom_print, false, true);
+            //Text[0] = '\0';
+            return;
+        }
 
-if(appMode!=CHANNEL_MODE) {
-    sprintf(String, "%u.%05u", SpectrumRangeStart / 100000, SpectrumRangeStart % 100000);
-    GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
-    sprintf(String, "%u.%05u", SpectrumRangeStop / 100000, SpectrumRangeStop % 100000);
-    GUI_DisplaySmallest(String, 90, Bottom_print, false, true);
-    }
+    if(appMode!=CHANNEL_MODE) {
+        sprintf(Text, "%u.%05u", SpectrumRangeStart / 100000, SpectrumRangeStart % 100000);
+        GUI_DisplaySmallest(Text, 2, Bottom_print, false, true);
+        sprintf(Text, "%u.%05u", SpectrumRangeStop / 100000, SpectrumRangeStop % 100000);
+        GUI_DisplaySmallest(Text, 90, Bottom_print, false, true);
+        }
 }
 
 static void BlitLine(unsigned line) {
@@ -1953,14 +1969,10 @@ static void DrawF(uint32_t f) {
             case 1:
             case 3:
                 {           //SPECTRUM
-                if(isListening) { sprintf(Text, "%d dBm", Rssi2DBm(scanInfo.rssi)); }
-                else { 
-                    if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) {
-                        snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
-                    }
-                }
-                
-                GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
+                // if(isListening) { 
+                //     sprintf(Text, "%d dBm", Rssi2DBm(scanInfo.rssi)); 
+                //     GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
+                // }
                 ArrowLine = 3;
                 UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);
                 break;
@@ -2077,12 +2089,15 @@ static void NextScanStep() {
 }
 
 void NextAppMode(void) {
+    static uint8_t PreviousPttEmission;
     if (Spectrum_state == 1) {
         Spectrum_state = 3;
         appMode = SCAN_BAND_MODE;
+        PreviousPttEmission = PttEmission;
     } else {
         Spectrum_state = 1;
         appMode = CHANNEL_MODE;
+        PttEmission = PreviousPttEmission;
     }
    
     gRequestedSpectrumState  = Spectrum_state;
@@ -2351,9 +2366,11 @@ static void HandleKeyParameters(uint8_t key) {
                       SoundBoost = !SoundBoost;
                       break;
                 case PARAM_PTT_EMISSION:
-                      PttEmission = isKey3 ?
+                      if(appMode == CHANNEL_MODE) {
+                        PttEmission = isKey3 ?
                             (PttEmission >= 8 ? 0 : PttEmission + 1) :
                             (PttEmission <= 0 ? 8 : PttEmission - 1);
+                      } else PttEmission = 2;
                       break;  
                 case PARAM_MONITOR_SCAN:
                     gMonitorScan = !gMonitorScan; 

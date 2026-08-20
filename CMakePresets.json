@@ -70,8 +70,8 @@
                 "ENABLE_AGC_SHOW_DATA": false,
                 "ENABLE_UART_RW_BK_REGS": false,
                 "ENABLE_SWD": false,
-                "VERSION_STRING_1": "v50",
-                "VERSION_STRING_2": "v50"
+                "VERSION_STRING_1": "V51",
+                "VERSION_STRING_2": "V51"
             }
         },
        
@@ -79,15 +79,15 @@
     "name": "NOCOM","inherits": "default","cacheVariables": {
         "EDITION_STRING": "NOCOM",
         "ENABLE_UART": true,
-        "TARGET": "f4hwn.sonic.nocom.v50"
+        "TARGET": "f4hwn.sonic.nocom.V51"
     }
 },
 {
     "name": "CHIRP","inherits": "default","cacheVariables": {
         "ENABLE_USB": true,
-        "ENABLE_UART": true,
+        "ENABLE_UART": false,
         "EDITION_STRING": "Sonic",
-        "TARGET": "f4hwn.sonic.chirp.v50"
+        "TARGET": "f4hwn.sonic.chirp.V51"
     }
 }
 ],
