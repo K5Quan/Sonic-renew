@@ -544,7 +544,7 @@ void UI_DisplayMain(void)
                 sprintf(String, "M%u", gEeprom.ScreenChannel[vfo_num] + 1);
             else
                 sprintf(String, "M%.3s", INPUTBOX_GetAscii());
-            UI_PrintString(String, 18 - (strlen(String) * 4), 0, 1, 8);
+            UI_PrintStringSmallBold(String, 0, 0, 2);
 
             const ChannelAttributes_t* att = MR_GetChannelAttributes(gEeprom.ScreenChannel[vfo_num]);
             if (att && att->scanlist > 0 && att->scanlist <= MR_CHANNELS_LIST) {

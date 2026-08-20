@@ -72,6 +72,7 @@ static int lastHistoryScrollOffset = -1;
 // ============================================================
 
 static uint16_t indexFs = 0;
+static uint16_t TX_Channel = 0;
 static uint8_t MonitorIndex = 0;
 static uint32_t SpectrumRangeStart = 1400000;
 static uint32_t SpectrumRangeStop = 110000000;
@@ -201,6 +202,7 @@ static char StringC[10];
 static bool isKnownChannel = false;
 static uint16_t  gChannel;
 static char channelName[12];
+static char TxChannelName[12];
 ModulationMode_t  channelModulation;
 static BK4819_FilterBandwidth_t channelBandwidth;
 static bool isInitialized = false;
@@ -550,7 +552,8 @@ static void LoadActiveScanFrequencies(void)
             }
         }
     }
-    if (!gComeBack) ShowOSDPopup(str);
+uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
+SETTINGS_FetchChannelName(TxChannelName, ch);
 }
 
 static void LoadMonitorFrequencies(void)
@@ -1042,44 +1045,25 @@ static void SpectrumTransmit() {
                 }
                 if (rndfreq) {
                     gCurrentVfo->freq_config_TX.Frequency = rndfreq;
-                    gCurrentVfo->freq_config_RX.Frequency = rndfreq;
-                    gEeprom.MrChannel[0]     = randomChannel;
-                    gEeprom.ScreenChannel[0] = randomChannel;
                     lastReceivingFreq = rndfreq;
                     gCurrentVfo->Modulation   = MODULATION_FM;
-                    gCurrentVfo->STEP_SETTING = STEP_0_01kHz;
-                    gRequestSaveChannel       = 1;
                 }
             }
             // PTT Mode 2: Last RX
             if (PttEmission == 2) {
                 SpectrumDelay = 0;
-                const FREQUENCY_Band_t band = FREQUENCY_GetBand(lastReceivingFreq);
-                gEeprom.FreqChannel[0]    = band + FREQ_CHANNEL_FIRST;
-                gCurrentVfo->CHANNEL_SAVE = band + FREQ_CHANNEL_FIRST;
                 gCurrentVfo->freq_config_TX.Frequency = lastReceivingFreq;
-                gCurrentVfo->freq_config_RX.Frequency = lastReceivingFreq;
-                gCurrentVfo->STEP_SETTING = STEP_0_01kHz;
                 gCurrentVfo->Modulation   = MODULATION_FM;
                 gCurrentVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
-                
-                uint32_t mrFreq = gTxVfo->pRX->Frequency;
-                uint8_t  mrBand = gTxVfo->Band;
-                uint16_t freqCh = FREQ_CHANNEL_FIRST + mrBand;
-                gEeprom.ScreenChannel[0] = freqCh;
-                gEeprom.FreqChannel[0]   = freqCh;
-                RADIO_SelectVfos();            
-                gTxVfo->pRX->Frequency = mrFreq;
-                gTxVfo->pTX->Frequency = mrFreq;
-                gTxVfo->Band           = mrBand;
-                SETTINGS_SaveChannel(freqCh, 0, gTxVfo, 2); 
-                RADIO_ConfigureSquelchAndOutputPower(gTxVfo);
-                RADIO_SetupRegisters(true);
-                gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
-                gRequestDisplayScreen = DISPLAY_MAIN;
-                SETTINGS_SetVfoFrequency(lastReceivingFreq);
             }
-            // PTT Mode 0: VFO Freq
+            // PTT Mode 0: Channel Freq
+            if (PttEmission == 0) {
+                SpectrumDelay = 0;
+                gCurrentVfo->freq_config_TX.Frequency = ScanFrequencies[TX_Channel];
+                gCurrentVfo->Modulation   = MODULATION_FM;
+                gCurrentVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
+            }
+            
             break;
         default:
             break;
@@ -1813,7 +1797,7 @@ switch(SpectrumMonitor) {
             len = sprintf(&String[pos], "LASTRX");
             break;
         case 0:
-            len = sprintf(&String[pos], "VFO");
+            len = sprintf(&String[pos], "CHANNEL");
             break;
         case 3:
         case 4:
@@ -1997,7 +1981,7 @@ static void DrawF(uint32_t f) {
                     case 6:
                     case 7:
                     case 8:
-                        snprintf(Text, sizeof(Text), "%s %u.%05u", gCurrentVfo->Name, gCurrentVfo->freq_config_TX.Frequency  / 100000, gCurrentVfo->freq_config_TX.Frequency  % 100000);
+                        snprintf(Text, sizeof(Text), "%s %u.%05u", TxChannelName, ScanFrequencies[TX_Channel] / 100000, ScanFrequencies[TX_Channel]  % 100000);
                         break;
                     
                     }
@@ -2532,13 +2516,12 @@ static void HandleKeySpectrum(uint8_t key) {
                         UpdateCurrentFreq(0);
                         break;
                     case CHANNEL_MODE:
-/*                         if(PttEmission == 0) {// VFO
-                            uint16_t Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
-                            if (Next == 0xFFFF) return;
-                            if (Channel == Next) return;
-                            gCurrentVfo->pTX->Frequency = SETTINGS_FetchChannelFrequency(Next);
+                        if(!PttEmission || PttEmission >2) {// Channel OR ROGER
+                            TX_Channel = TX_Channel <= 0 ? scanChannelsCount - 1 : TX_Channel - 1;
+                            uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
+                            SETTINGS_FetchChannelName(TxChannelName, ch);
                             return;
-                        } */
+                        } 
                         BuildValidScanListIndices();
                         if (validScanListCount > 0) {
                             // Déplacement vers le haut avec gestion du Scroll Offset
@@ -2601,10 +2584,12 @@ static void HandleKeySpectrum(uint8_t key) {
                         UpdateCurrentFreq(1);
                         break;
                     case CHANNEL_MODE:
-                        if(PttEmission == 0) {// VFO
-                            MAIN_Key_UP_DOWN(1,0,0);
+                        if(!PttEmission || PttEmission >2) {// Channel OR ROGER
+                            TX_Channel = TX_Channel >= scanChannelsCount - 1 ? 0 : TX_Channel + 1;
+                            uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
+                            SETTINGS_FetchChannelName(TxChannelName, ch);
                             return;
-                        }
+                        } 
                         BuildValidScanListIndices();
                         if (validScanListCount > 0) {
                             // Déplacement vers le bas avec gestion du Scroll Offset
@@ -2704,7 +2689,7 @@ static void HandleKeySpectrum(uint8_t key) {
             SpectrumMonitor     = prevSpectrumMonitor;
             SetF(scanInfo.f);
             CloseCallActive = 0;
-            BK4819_StopScan();
+            BK4819_SetFrequencyScan(false);
             SPECTRUM_PAUSED = false;
             break;
         }
@@ -3650,6 +3635,9 @@ static void Tick() {
 
     if (gNextTimeslice_AutoPtt && PttEmission >= 3) {
         gNextTimeslice_AutoPtt = 0;
+        gCurrentVfo->freq_config_TX.Frequency = ScanFrequencies[TX_Channel];
+        gCurrentVfo->Modulation   = MODULATION_FM;
+        gCurrentVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
         Spectrum_TX();
         SYSTEM_DelayMs(50);
         Spectrum_END_TX();
@@ -4338,7 +4326,7 @@ static void GetParametersRow(uint16_t index, ListRow *row) {
             snprintf(row->left, sizeof(row->left), "PTT:");
             switch (PttEmission) {
             case 0: 
-                strncpy(row->right, "VFO FREQ", sizeof(row->right) - 1);
+                strncpy(row->right, "CHANNEL", sizeof(row->right) - 1);
                 break;
             case 1:
                 strncpy(row->right, "NINJA",    sizeof(row->right) - 1);

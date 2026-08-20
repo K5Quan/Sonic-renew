@@ -78,6 +78,7 @@
 {
     "name": "NOCOM","inherits": "default","cacheVariables": {
         "EDITION_STRING": "NOCOM",
+        "ENABLE_UART": true,
         "TARGET": "f4hwn.sonic.nocom.v50"
     }
 },
