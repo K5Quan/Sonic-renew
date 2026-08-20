@@ -170,6 +170,7 @@ static int bandListScrollOffset = 0;
 static void RenderBandSelect();
 static void ClearHistory(uint8_t mode);
 static void DrawMeter(int);
+static void Spectrum_END_TX(void);
 static uint8_t scanListSelectedIndex = 0;
 static uint8_t scanListScrollOffset = 0;
 static uint8_t parametersSelectedIndex = 0;
@@ -660,15 +661,37 @@ static void SetRegMenuValue(uint8_t st, bool add) {
   BK4819_WriteRegister(s.num, reg | (v << s.offset));
   
 }
+static bool PTT_released = 0;
+static bool last_ptt_state = 0;
 
 KEY_Code_t GetKey() {
-  KEY_Code_t btn = KEYBOARD_Poll();
-  if (GPIO_IsPttPressed()) {btn = KEY_PTT;}
-  if (gSetting_nav_invert) {
-    if (btn == KEY_UP)   btn = KEY_DOWN;
-    else if (btn == KEY_DOWN) btn = KEY_UP;
-  }
-  return btn;
+    KEY_Code_t btn = KEYBOARD_Poll();
+    bool ptt_pressed = GPIO_IsPttPressed();
+
+    if (ptt_pressed) {
+        btn = KEY_PTT;
+        PTT_released = 0;
+        SpectrumPauseCount = 2000;
+    } else {
+        // Si le PTT était appuyé au cycle précédent mais ne l'est plus
+        if (last_ptt_state) {
+            PTT_released = 1;
+        }
+    }
+
+    last_ptt_state = ptt_pressed; // Mise à jour pour le prochain appel
+
+    if (gSetting_nav_invert) {
+        if (btn == KEY_UP)        btn = KEY_DOWN;
+        else if (btn == KEY_DOWN) btn = KEY_UP;
+    }
+    if (PTT_released) {
+        PTT_released = 0;
+        Spectrum_END_TX();
+        SPECTRUM_PAUSED = false;
+    }
+
+    return btn;
 }
 
 static void SetState(State state) {
@@ -965,15 +988,42 @@ void SaveHistory(void) {
     
     ShowOSDPopup("HISTORY SAVED");
 }
+static void Spectrum_END_TX(void)
+{
+    if(TX_freq_check(gCurrentVfo->pTX->Frequency) != 0) {
+        // TX frequency not allowed
+        ShowOSDPopup("TX DISABLE");
+        return;
+    }
+    RADIO_SendEndOfTransmission();
+}
 
-static void ExitAndCopyToVfo() {
-    RestoreRegisters();
+static void Spectrum_TX()
+{
+    if(TX_freq_check(gCurrentVfo->pTX->Frequency) != 0) {
+        // TX frequency not allowed
+        ShowOSDPopup("TX DISABLE");
+        return;
+    }
+    
+    RADIO_SetTxParameters();
+    // turn the RED LED on
+    BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
+    if (gEeprom.SCRAMBLING_TYPE > 0)
+        BK4819_EnableScramble(gEeprom.SCRAMBLING_TYPE - 1);
+    else
+        BK4819_DisableScramble(); 
+    if (gSetting_backlight_on_tx_rx & BACKLIGHT_ON_TR_TX) {
+        BACKLIGHT_TurnOn();
+    }
+}
 
+static void SpectrumTransmit() {
+    
     if (historyListActive) {
         SetF(HFreqs[historyListIndex]);
         gCurrentVfo->Modulation = MODULATION_FM;
         gRequestSaveChannel = 1;
-        DeInitSpectrum();
     }
 
     switch (currentState) {
@@ -995,6 +1045,7 @@ static void ExitAndCopyToVfo() {
                     gCurrentVfo->freq_config_RX.Frequency = rndfreq;
                     gEeprom.MrChannel[0]     = randomChannel;
                     gEeprom.ScreenChannel[0] = randomChannel;
+                    lastReceivingFreq = rndfreq;
                     gCurrentVfo->Modulation   = MODULATION_FM;
                     gCurrentVfo->STEP_SETTING = STEP_0_01kHz;
                     gRequestSaveChannel       = 1;
@@ -1026,21 +1077,17 @@ static void ExitAndCopyToVfo() {
                 RADIO_SetupRegisters(true);
                 gVfoConfigureMode     = VFO_CONFIGURE_RELOAD;
                 gRequestDisplayScreen = DISPLAY_MAIN;
-
                 SETTINGS_SetVfoFrequency(lastReceivingFreq);
             }
             // PTT Mode 0: VFO Freq
-            gComeBack = 1;
-            DeInitSpectrum();
             break;
-
         default:
-            DeInitSpectrum();
             break;
     }
-
-    SYSTEM_DelayMs(200);
-    isInitialized = false;
+    SPECTRUM_PAUSED = true;
+    SpectrumPauseCount = 2000;
+    Spectrum_TX();
+    SYSTEM_DelayMs(50);
 }
 
 static uint16_t GetRssi(void) {
@@ -1476,9 +1523,11 @@ static void ToggleModulation() {
 }
 
 static void ToggleListeningBW(bool inc) {
-  settings.listenBw = ACTION_NextBandwidth(settings.listenBw, false, inc);
-  //BK4819_SetFilterBandwidth(settings.listenBw, false);
-  
+    settings.listenBw = ACTION_NextBandwidth(settings.listenBw, false, inc);
+    //BK4819_SetFilterBandwidth(settings.listenBw, false);
+    if (!isListening) { //Fix Kolyan
+        ToggleRX(false);
+    }
 }
 
 static void ToggleStepsCount() {
@@ -1759,6 +1808,7 @@ switch(SpectrumMonitor) {
     switch(PttEmission) {
         case 1:
             len = sprintf(&String[pos], "NINJA");
+            break;
         case 2:
             len = sprintf(&String[pos], "LASTRX");
             break;
@@ -2482,6 +2532,13 @@ static void HandleKeySpectrum(uint8_t key) {
                         UpdateCurrentFreq(0);
                         break;
                     case CHANNEL_MODE:
+/*                         if(PttEmission == 0) {// VFO
+                            uint16_t Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
+                            if (Next == 0xFFFF) return;
+                            if (Channel == Next) return;
+                            gCurrentVfo->pTX->Frequency = SETTINGS_FetchChannelFrequency(Next);
+                            return;
+                        } */
                         BuildValidScanListIndices();
                         if (validScanListCount > 0) {
                             // Déplacement vers le haut avec gestion du Scroll Offset
@@ -2544,6 +2601,10 @@ static void HandleKeySpectrum(uint8_t key) {
                         UpdateCurrentFreq(1);
                         break;
                     case CHANNEL_MODE:
+                        if(PttEmission == 0) {// VFO
+                            MAIN_Key_UP_DOWN(1,0,0);
+                            return;
+                        }
                         BuildValidScanListIndices();
                         if (validScanListCount > 0) {
                             // Déplacement vers le bas avec gestion du Scroll Offset
@@ -2622,7 +2683,7 @@ static void HandleKeySpectrum(uint8_t key) {
             }
         break;
     case KEY_PTT:
-        ExitAndCopyToVfo();
+        SpectrumTransmit();
         break;
     case KEY_MENU:
             if (historyListActive) scanInfo.f = HFreqs[historyListIndex];
@@ -2805,7 +2866,7 @@ static void OnKeyDownStill(KEY_Code_t key) {
       break;
 
       case KEY_PTT:
-        ExitAndCopyToVfo();
+        SpectrumTransmit();
         break;
       case KEY_MENU:
           stillEditRegs = !stillEditRegs;
@@ -3589,9 +3650,9 @@ static void Tick() {
 
     if (gNextTimeslice_AutoPtt && PttEmission >= 3) {
         gNextTimeslice_AutoPtt = 0;
-        RADIO_PrepareTX();
+        Spectrum_TX();
         SYSTEM_DelayMs(50);
-        RADIO_SendEndOfTransmission();
+        Spectrum_END_TX();
     }
 }
 void APP_RunSpectrumMode(uint8_t mode) {
@@ -3659,6 +3720,7 @@ void APP_RunSpectrum(void) {
         //cpu_hz = CpuInfo_GetClockHz();
 #endif
         gComeBack = 0;
+        Skip();
         while (isInitialized) {Tick();}
 
         if (gSpectrumChangeRequested) {

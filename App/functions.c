@@ -113,13 +113,9 @@ void FUNCTION_Transmit()
         BK1080_Init0();
 #endif
 
-
     gUpdateStatus = true;
-
     GUI_DisplayScreen();
-
     RADIO_SetTxParameters();
-
     // turn the RED LED on
     BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
     if (gEeprom.SCRAMBLING_TYPE > 0)
@@ -145,32 +141,6 @@ void FUNCTION_Select(FUNCTION_Type_t Function)
         gRxIdleMode = false;
         UI_DisplayStatus();
     }
-
-    /*
-    switch (Function) {
-        case FUNCTION_FOREGROUND:
-            FUNCTION_Foreground(PreviousFunction);
-            return;
-
-        case FUNCTION_POWER_SAVE:
-            FUNCTION_PowerSave();
-            return;
-
-        case FUNCTION_TRANSMIT:
-            FUNCTION_Transmit();
-            break;
-
-        case FUNCTION_MONITOR:
-            gMonitor = true;
-            break;
-
-        case FUNCTION_INCOMING:
-        case FUNCTION_RECEIVE:
-        case FUNCTION_BAND_SCOPE:
-        default:
-            break;
-    }
-    */
 
     if (Function == FUNCTION_FOREGROUND) {
         FUNCTION_Foreground(PreviousFunction);
