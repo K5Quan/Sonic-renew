@@ -95,20 +95,20 @@ static uint8_t  PttEmission = 0;
 static bool     gMonitorScan = true;       
 
 // Configuration des index du menu des paramètres
-#define PARAM_SPECTRUM_DELAY    0
-#define PARAM_MAX_LISTEN_TIME   1
-#define PARAM_RANGE_START       2
-#define PARAM_RANGE_STOP        3
-#define PARAM_SCAN_STEP         4
-#define PARAM_LISTEN_BW         5
-#define PARAM_MODULATION        6
-#define PARAM_POWER_SAVE        7
-#define PARAM_AUTO_KEYLOCK      8
-#define PARAM_NOISE_LEVEL_OFF   9
-#define PARAM_OSD_POPUP         10
-#define PARAM_RECORD_TRIGGER    11
-#define PARAM_SOUND_BOOST       12
-#define PARAM_PTT_EMISSION      13
+#define PARAM_PTT_EMISSION      0
+#define PARAM_SPECTRUM_DELAY    1
+#define PARAM_MAX_LISTEN_TIME   2
+#define PARAM_RANGE_START       3
+#define PARAM_RANGE_STOP        4
+#define PARAM_SCAN_STEP         5
+#define PARAM_LISTEN_BW         6
+#define PARAM_MODULATION        7
+#define PARAM_POWER_SAVE        8
+#define PARAM_AUTO_KEYLOCK      9
+#define PARAM_NOISE_LEVEL_OFF   10
+#define PARAM_OSD_POPUP         11
+#define PARAM_RECORD_TRIGGER    12
+#define PARAM_SOUND_BOOST       13
 #define PARAM_MONITOR_SCAN      14
 #define PARAM_RESET_DEFAULT     15
 
@@ -1881,9 +1881,10 @@ static void DrawNums() {
             }
         }
         if((!PttEmission || PttEmission >2) && (ShowLines != 2)) {// Channel OR ROGER
-            sprintf(Text, "%s %u.%05u", TxChannelName, 
-            ScanFrequencies[TX_Channel] / 100000, ScanFrequencies[TX_Channel]  % 100000);
-            GUI_DisplaySmallest(Text,35 , Bottom_print, false, true);
+            sprintf(Text, "%s", TxChannelName);
+            //sprintf(Text, "%s %u.%05u", TxChannelName, 
+            //ScanFrequencies[TX_Channel] / 100000, ScanFrequencies[TX_Channel]  % 100000);
+            GUI_DisplaySmallest(Text,42 , Bottom_print, false, true);
             Text[0] = '\0';
         }
         else if (ShowLines != 2){
@@ -1896,9 +1897,9 @@ static void DrawNums() {
             sprintf(Text, "SL:%u/%u", selectedCount, validScanListCount);
             GUI_DisplaySmallest(Text, 2, Bottom_print, false, true);
             Text[0] = '\0';
-            //sprintf(Text, "CH:%u", scanChannelsCount);
-            //GUI_DisplaySmallest(Text, 101, Bottom_print, false, true);
-            //Text[0] = '\0';
+            sprintf(Text, "CH:%u", scanChannelsCount);
+            GUI_DisplaySmallest(Text, 101, Bottom_print, false, true);
+            Text[0] = '\0';
             return;
         }
 
@@ -1956,35 +1957,39 @@ static void DrawF(uint32_t f) {
     static char Text[20]="";
     DrawNums();
     if(f < 100000000) {
-        UI_PrintStringSmallBold(line1 + 7, 100, 0, 1);
+        UI_PrintStringSmallBold(line1 + 7, 86, 0, 1);
         line1[7] = 0;
-        UI_DisplayFrequency(line1, 16, 0, 1);
+        UI_DisplayFrequency(line1, 2, 0, 1);
     } else {
-        UI_PrintStringSmallBold(line1 + 8, 110, 0, 1);
+        UI_PrintStringSmallBold(line1 + 8, 99, 0, 1);
         line1[8] = 0;
-        UI_DisplayFrequency(line1, 13, 0, 1);
+        UI_DisplayFrequency(line1, 2, 0, 1);
     }
-    
+    GUI_DisplaySmallest(StringCode, 95, 1, false, true);
     switch(ShowLines) {
             case 1:
             case 3:
                 {           //SPECTRUM
-                // if(isListening) { 
-                //     sprintf(Text, "%d dBm", Rssi2DBm(scanInfo.rssi)); 
-                //     GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
-                // }
                 ArrowLine = 3;
                 UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);
+                line2[0] = '\0';
                 break;
             }
             case 2:
                 {       //SCAN
-                UI_PrintString(line2, 0, 127, 2, 8);
+                UI_PrintString(line2, 35, 35, 2, 8);
+                if (isListening)    UI_PrintString("RX>", 2, 0, 2, 8);
+                else                UI_PrintString("RX", 2, 0, 2, 8);
+                if (last_ptt_state) UI_PrintString("TX>", 2, 0, 4, 8);
+                else                UI_PrintString("TX", 2, 0, 4, 8);
+                //GUI_DisplaySmallest("RX", 2, 21, false, true);
+                //GUI_DisplaySmallest("TX", 2, 33, false, true);
                 switch(PttEmission) {
                     case 1:
                     case 2:
-                        if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
-                            snprintf(Text, sizeof(Text), "%u.%05u %s", lastReceivingFreq / 100000, lastReceivingFreq % 100000, StringCode);
+                        if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) {
+                            snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
+                        }
                         break;
                     case 0:
                     case 3:
@@ -1993,7 +1998,7 @@ static void DrawF(uint32_t f) {
                     case 6:
                     case 7:
                     case 8:
-                        snprintf(Text, sizeof(Text), "%s %u.%05u", TxChannelName, ScanFrequencies[TX_Channel] / 100000, ScanFrequencies[TX_Channel]  % 100000);
+                        snprintf(Text, sizeof(Text), "%s", TxChannelName);
                         break;
                     
                     }
@@ -2002,11 +2007,9 @@ static void DrawF(uint32_t f) {
                 snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
 #endif
                 }
-                
-                if(isListening) DrawMeter(5);
-                else ScanProgress_DrawGaugeLine(5);
-                UI_PrintStringSmallbackground(Text, 0, 127, 4, 0);
-                //UI_PrintStringSmallbackground(line3, 0, 127, 6, 0);
+                if(isListening) DrawMeter(6);
+                else ScanProgress_DrawGaugeLine(6);
+                UI_PrintString(Text, 35, 35, 4, 8);
                 BlitLine(4); 
                 BlitLine(5); 
                 BlitLine(6);
@@ -2488,7 +2491,7 @@ static void HandleKeySpectrum(uint8_t key) {
                 ShowLines++;
                 if (ShowLines > 3 || ShowLines < 1) ShowLines = 1;
                 const char *viewName           = "SPECTRUM";
-				if (ShowLines == 2) viewName   = "FAST SCAN";
+				if (ShowLines == 2) viewName   = "ULTRA WATCH";
 				if (ShowLines == 3) viewName   = "SMOOTH SPECTRUM";
                 DelayRssi = (ShowLines == 2)?750:1500;
                 ShowOSDPopup(viewName);
@@ -2912,14 +2915,14 @@ static void MyDrawHLine(uint8_t y, bool white)
     uint8_t bit_mask = 1U << (y % 8);
     for (uint8_t x = 0; x < 128; x++) {
         if (white) {
-            gFrameBuffer[byte_idx][x] &= ~bit_mask;  // белая
+            gFrameBuffer[byte_idx][x] &= ~bit_mask;
         } else {
-            gFrameBuffer[byte_idx][x] |= bit_mask;   // чёрная
+            gFrameBuffer[byte_idx][x] |= bit_mask;
         }
     }
 }
 
-// Короткая горизонтальная пунктирная линия
+
 static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t step, bool white)
 {
     if (y >= 64 || x_start >= x_end || x_end > 127) return;
@@ -2941,34 +2944,36 @@ static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step)
 {
     if (x >= 128) return;
     for (uint8_t y = y_start; y <= y_end && y < 64; y++) {
-        if (step > 1 && (y % step) != 0) continue;  // пунктир
+        if (step > 1 && (y % step) != 0) continue;
         uint8_t byte_idx = y / 8;
         uint8_t bit_mask = 1U << (y % 8);
-        gFrameBuffer[byte_idx][x] |= bit_mask;  // чёрная (для белой сделай отдельно или параметр)
+        gFrameBuffer[byte_idx][x] |= bit_mask;
     }
 }
 
 static void MyDrawFrameLines(void)
 {
-
-    MyDrawVLine(0,   0, 17, 1);   // Left vertical solid line (top section)
-    MyDrawVLine(127, 0, 17, 1);   // Right vertical solid line (top section)
-    
-    MyDrawShortHLine(0, 0, 3, 1, false);      // Top short horizontal line (left edge)
-    MyDrawShortHLine(0, 4, 8, 2, false);      // Top short horizontal line (inner left)
-    
-    MyDrawShortHLine(0, 124, 127, 1, false);  // Top short horizontal line (right edge)
-    MyDrawShortHLine(0, 118, 123, 2, false);  // Top short horizontal line (inner right)
-    
-    MyDrawShortHLine(17, 0, 10, 1, false);    // Mid-top short horizontal line (left)
-    MyDrawShortHLine(17, 120, 127, 1, false); // Mid-top short horizontal line (right)
-    
     if (ShowLines ==1 || ShowLines ==3) {
+        MyDrawVLine(0,   0, 17, 1);   // Left vertical solid line (top section)
+        MyDrawVLine(127, 0, 17, 1);   // Right vertical solid line (top section)
+        MyDrawShortHLine(0, 0, 3, 1, false);      // Top short horizontal line (left edge)
+        MyDrawShortHLine(0, 4, 8, 2, false);      // Top short horizontal line (inner left)
+        MyDrawShortHLine(0, 124, 127, 1, false);  // Top short horizontal line (right edge)
+        MyDrawShortHLine(0, 118, 123, 2, false);  // Top short horizontal line (inner right)
+        MyDrawShortHLine(17, 0, 10, 1, false);    // Mid-top short horizontal line (left)
+        MyDrawShortHLine(17, 120, 127, 1, false); // Mid-top short horizontal line (right)
         MyDrawShortHLine(21, 0, 10, 1, false);    // Mid-bottom short horizontal line (left)
         MyDrawShortHLine(21, 120, 127, 1, false); // Mid-bottom short horizontal line (right)
-        MyDrawHLine(47, true);  // Black horizontal line at y=49
+        MyDrawHLine(47,0);  // Black horizontal line at y=49
         MyDrawVLine(0,   21, 47, 1);  // Left vertical solid line (bottom section)
         MyDrawVLine(127, 21, 47, 1);  // Right vertical solid line (bottom section)
+    }
+    else {
+        MyDrawHLine(16,0);
+        MyDrawHLine(30,0);
+        MyDrawHLine(46,0);
+        MyDrawVLine(28, 16, 46, 1);  // Left vertical solid line (bottom section)
+        MyDrawVLine(29, 16, 46, 1);  // Left vertical solid line (bottom section)
     }
 }
 #endif
@@ -3211,7 +3216,7 @@ static void RenderSpectrum()
 
 static void DrawMeter(int line) {
     const uint8_t METER_PAD_LEFT = 4;
-    const uint8_t LINE_HEIGHT    = 5;           // Height of the vertical lines
+    const uint8_t LINE_HEIGHT    = 4;           // Height of the vertical lines
     const uint8_t Y_START_BIT    = 1;
     const uint8_t SPACING        = 2;           // Space between each vertical line
     
@@ -3241,7 +3246,7 @@ static void DrawMeter(int line) {
     }
     static char Text[8]="";
     sprintf(Text, "%d dbm", Rssi2DBm(scanInfo.rssi));
-    GUI_DisplaySmallest(Text, 96, 41, false, true);
+    GUI_DisplaySmallest(Text, 96, Bottom_print, false, true);
 
 }
 
@@ -3304,9 +3309,6 @@ static void Render() {
     }
     switch (currentState) {
         case SPECTRUM:
-#ifdef ENABLE_SPECTRUM_LINES
-            MyDrawFrameLines();
-#endif
             if(isListening) {
                 DrawF(peak.f);
                 BlitLine(6);
@@ -3343,6 +3345,9 @@ static void Render() {
             ST7565_BlitFullScreen();
             return;
     }
+#ifdef ENABLE_SPECTRUM_LINES
+            MyDrawFrameLines();
+#endif
 BlitFullScreen();
 }
 
@@ -3796,7 +3801,8 @@ typedef struct {
     uint8_t Noislvl_OFF;
     uint16_t UOO_trigger;
     uint8_t osdPopupIndex;
-    uint8_t Spectrum_state;  
+    uint8_t Spectrum_state;
+    uint16_t TX_Channel;
     bool Backlight_On;
     bool SoundBoost;  
     bool gMonitorScan;
@@ -3857,6 +3863,7 @@ void LoadSettings()
     Spectrum_state = eepromData.Spectrum_state;    
     SoundBoost = eepromData.SoundBoost;
     gMonitorScan = eepromData.gMonitorScan;   
+    TX_Channel = eepromData.TX_Channel;   
 
     #ifdef ENABLE_SAVE_REGISTERS
         BK4819_WriteRegister(BK4819_REG_40, eepromData.R40);
@@ -3899,6 +3906,7 @@ static void SaveSettings()
     eepromData.Spectrum_state = Spectrum_state;    
     eepromData.SoundBoost = SoundBoost;
     eepromData.gMonitorScan = gMonitorScan;
+    eepromData.TX_Channel = TX_Channel;
   
     for (int i = 0; i < MAX_BANDS; i++) { 
       if (settings.bandEnabled[i]) {
@@ -3989,6 +3997,7 @@ void ClearSettings()
     Spectrum_state = 1; 
     SoundBoost = 0;
     gMonitorScan = false;
+    TX_Channel = 0;
     settings.bandEnabled[0] = 1;
     for (uint8_t i = 1; i < MAX_BANDS; i++) {settings.bandEnabled[i] = 0;}
     
