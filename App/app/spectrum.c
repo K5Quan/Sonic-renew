@@ -1046,9 +1046,11 @@ static void SpectrumTransmit() {
             // PTT Mode 0: Channel Freq
             if (PttEmission == 0) {
                 SpectrumDelay = 0;
-                gCurrentVfo->freq_config_TX.Frequency = ScanFrequencies[TX_Channel];
-                gCurrentVfo->Modulation   = MODULATION_FM;
-                gCurrentVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
+                uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
+                gEeprom.ScreenChannel[0] = ch;
+                gEeprom.MrChannel[0] = ch;
+                gEeprom.FreqChannel[0] = ScanFrequencies[TX_Channel];
+                RADIO_ConfigureChannel(0,VFO_CONFIGURE_RELOAD);
             }
             
             break;
@@ -2940,6 +2942,7 @@ static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step)
 
 static void MyDrawFrameLines(void)
 {
+    if (currentState == STILL) return;
     if (ShowLines ==1 || ShowLines ==3) {
         MyDrawVLine(0,   0, 17, 1);   // Left vertical solid line (top section)
         MyDrawVLine(127, 0, 17, 1);   // Right vertical solid line (top section)
@@ -3232,9 +3235,8 @@ static void DrawMeter(int line) {
         }
     }
     static char Text[8]="";
-    sprintf(Text, "%d dbm", Rssi2DBm(scanInfo.rssi));
-    GUI_DisplaySmallest(Text, 96, Bottom_print, false, true);
-
+    sprintf(Text, "%d", Rssi2DBm(scanInfo.rssi));
+    UI_PrintStringSmallNormal(Text, 96, 96, line);
 }
 
 static void RenderStill() {
