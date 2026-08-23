@@ -810,9 +810,6 @@ void CheckKeys(void)
         }
         else { 
             gPttDebounceCounter = 0;
-            #ifndef ENABLE_USB
-            if (gComeBack) APP_RunSpectrum(); //Robzyl mod for Ninja
-            #endif
         }
     }
 

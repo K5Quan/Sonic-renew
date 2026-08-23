@@ -134,7 +134,7 @@ static void DeleteChannelWithConfirm(void)
     }
 
     if (confirmed) {
-        SETTINGS_UpdateChannel(ch, NULL, false, false, true);
+        SETTINGS_UpdateChannel(ch, NULL, false);
         MR_InvalidateChannelAttributesCache();
         gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
         gFlagResetVfos    = true;
@@ -166,7 +166,7 @@ static void toggle_chan_scanlist(void)
         if (scanlist > MR_CHANNELS_LIST + 1)
             scanlist = 0;
         gTxVfo->SCANLIST_PARTICIPATION = scanlist;
-        SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true, true, true);
+        SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true);
     }
 
     gVfoConfigureMode = VFO_CONFIGURE;
@@ -221,7 +221,6 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
         case KEY_4:
         case KEY_5:
             break;
-#ifndef ENABLE_USB
         case KEY_6:
             APP_RunSpectrumMode(2);
             gRequestDisplayScreen = DISPLAY_MAIN;
@@ -241,7 +240,6 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
             APP_RunSpectrumMode(0);
             gRequestDisplayScreen = DISPLAY_MAIN;
             break;
-#endif
         case KEY_UP:
             gEeprom.SQUELCH_LEVEL = (gEeprom.SQUELCH_LEVEL < 9) ? gEeprom.SQUELCH_LEVEL + 1 : 9;
             gVfoConfigureMode     = VFO_CONFIGURE;

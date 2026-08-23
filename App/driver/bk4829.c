@@ -1291,7 +1291,7 @@ void BK4819_SetScanFrequency(uint32_t Frequency)
     // REG_51
     //
     // <15>  0
-    //       1 = Enable TxCTCSS/CDCSS
+    //       1 = Enable Tx CTCSS/CDCSS
     //       0 = Disable
     //
     // <14>  0

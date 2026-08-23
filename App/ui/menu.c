@@ -323,7 +323,7 @@ void UI_DisplayMenu(void)
     const unsigned int menu_item_x2    = LCD_WIDTH - 1;
     unsigned int       i;
     char               String[64];  // bigger cuz we can now do multi-line in one string (use '\n' char)
-    //const int m = UI_MENU_GetCurrentMenuId();
+    const int m = UI_MENU_GetCurrentMenuId();
     UI_DisplayClear();
 
 #ifndef ENABLE_CUSTOM_MENU_LAYOUT
@@ -412,7 +412,7 @@ void UI_DisplayMenu(void)
         uint8_t gaugeMax = 0;
     //#endif
 
-    switch (UI_MENU_GetCurrentMenuId())
+    switch (m)
     {
         case MENU_SQL:
             sprintf(String, "%d", gSubMenuSelection);
@@ -852,7 +852,7 @@ void UI_DisplayMenu(void)
             y = (6 - (lines < 6 ? lines : 6)) / 2;
 
             // only for SysInf
-            if(UI_MENU_GetCurrentMenuId() == MENU_VOL)
+            if(m == MENU_VOL)
             {
                 sprintf(edit, "%u.%02uV %u%%",
                     gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100,
@@ -889,13 +889,13 @@ void UI_DisplayMenu(void)
         }
     }
 
-    if ((UI_MENU_GetCurrentMenuId() == MENU_R_CTCS || UI_MENU_GetCurrentMenuId() == MENU_R_DCS) && gCssBackgroundScan)
+    if ((m == MENU_R_CTCS || m == MENU_R_DCS) && gCssBackgroundScan)
         UI_PrintStringSmallBold("SCAN", menu_item_x1, menu_item_x2, 4);
 
-    if ((UI_MENU_GetCurrentMenuId() == MENU_RESET    ||
-         UI_MENU_GetCurrentMenuId() == MENU_MEM_CH   ||
-         UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME ||
-         UI_MENU_GetCurrentMenuId() == MENU_DEL_CH) && gAskForConfirmation)
+    if ((m == MENU_RESET    ||
+         m == MENU_MEM_CH   ||
+         m == MENU_MEM_NAME ||
+         m == MENU_DEL_CH) && gAskForConfirmation)
     {     
         char *pPrintStr = (gAskForConfirmation == 1) ? "SURE?" : "WAIT!";
         UI_PrintStringSmallBold(pPrintStr, menu_item_x1, menu_item_x2, 4);

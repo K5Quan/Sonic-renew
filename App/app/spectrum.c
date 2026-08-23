@@ -17,7 +17,7 @@
 // ============================================================
 // SECTION: Includes
 // ============================================================
-#ifndef ENABLE_USB
+
 #include "app/spectrum.h"
 #include "nav_invert.h"
 #include "driver/backlight.h"
@@ -235,9 +235,9 @@ static bandparameters   *BParams = NULL;
 #endif
 
 #ifndef ENABLE_USB
-    #define                 MAX_SCAN_CHANNELS 975
+    #define                 MAX_SCAN_CHANNELS 500
 #else
-    #define                 MAX_SCAN_CHANNELS 10
+    #define                 MAX_SCAN_CHANNELS 975
 #endif
 static uint32_t         ScanFrequencies[MAX_SCAN_CHANNELS];
 static uint32_t         HFreqs[HISTORY_SIZE];           //4
@@ -282,16 +282,7 @@ static uint8_t nextBandToScanIndex = 0;
 static void LookupChannelModulation();
 
 static uint8_t validScanListIndices[MR_CHANNELS_LIST];
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                              K1 SPECIFIC
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-bool gComeBack = 0;
+
 static void LoadActiveBands(void);
 uint16_t BOARD_gMR_fetchChannel(const uint32_t freq);
 static void LoadActiveScanFrequencies(void);
@@ -516,7 +507,9 @@ static void LoadActiveScanFrequencies(void)
     if (appMode == SCAN_BAND_MODE) { sprintf(str, "P%d BANDS:%d ", currentBandPreset + 1, CountActiveBands()); }
     if (appMode == CHANNEL_MODE) { 
         uint16_t needed = CountValidFrequencies();
-        sprintf(str, "CHANNELS:%d", needed);
+        if (needed >= MAX_SCAN_CHANNELS) {
+            sprintf(str, "TOO MANY CH");
+        } else sprintf(str, "CHANNELS:%d", needed);
         scanChannelsCount = 0;
         ChannelAttributes_t cache;
 
@@ -572,12 +565,6 @@ static void LoadMonitorFrequencies(void)
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef ENABLE_SPECTRUM_LINES
 static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t step, bool white); //ПРОСТОЙ РЕЖИМ ЛИНИИ
@@ -1109,7 +1096,7 @@ static void UpdateCssDetection(void) {
         BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
         BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
         (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
-
+    
     BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
 
     if (scanResult == BK4819_CSS_RESULT_CDCSS) {
@@ -1889,8 +1876,8 @@ static void DrawNums() {
         }
         else if (ShowLines != 2){
             if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) 
-                sprintf(Text, "%u.%05u %s", lastReceivingFreq / 100000,
-                lastReceivingFreq % 100000, StringCode);
+                sprintf(Text, "%u.%05u", lastReceivingFreq / 100000,
+                lastReceivingFreq % 100000);
             GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
             Text[0] = '\0';
         }
@@ -3707,9 +3694,9 @@ void APP_RunSpectrum(void) {
         SYSTEM_DelayMs(10);
         BK4819_RX_TurnOn();
         SYSTEM_DelayMs(50);
-        uint8_t CodeType = gTxVfo->pRX->CodeType;
-        uint8_t Code     = gTxVfo->pRX->Code;
-        BK4819_SetCDCSSCodeWord(DCS_GetGolayCodeWord(CodeType, Code));
+        // uint8_t CodeType = gTxVfo->pRX->CodeType;
+        // uint8_t Code     = gTxVfo->pRX->Code;
+        // BK4819_SetCDCSSCodeWord(DCS_GetGolayCodeWord(CodeType, Code));
         ResetInterrupts();
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 0);
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, 0);
@@ -3729,7 +3716,6 @@ void APP_RunSpectrum(void) {
         temp_dc = CpuTemp_ReadDeciCelsius();
         //cpu_hz = CpuInfo_GetClockHz();
 #endif
-        gComeBack = 0;
         Skip();
         while (isInitialized) {Tick();}
 
@@ -4447,5 +4433,3 @@ static void RenderHistoryList() {
     RenderUnifiedList(title, false, count, historyListIndex,
                       historyScrollOffset, true, GetHistoryRow);
 }
-
-#endif

@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
-PRESET=${PRESET:-CHIRP}
+PRESET=${PRESET:-NOCOM}
 
 # ---------------------------------------------
 # Nettoyage si l'option est activée
@@ -120,3 +120,4 @@ else
   build_preset "$PRESET"
   flash_preset "$PRESET"
 fi
+echo "End at : $(date +'%H:%M:%S')"

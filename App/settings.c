@@ -509,9 +509,8 @@ void SETTINGS_FactoryReset(bool bIsAll)
     gVfoStateChanged = true;
     gScheduleVfoSave = true;
     SETTINGS_SaveVfoIndicesFlush();
-    #ifndef ENABLE_USB
-        ClearSettings();
-    #endif
+    ClearSettings();
+    
 }
 
 #ifdef ENABLE_FMRADIO
@@ -803,9 +802,9 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
         ;
         State -> _8[6] =  pVFO->STEP_SETTING;
 
-        PY25Q16_WriteBuffer(OffsetVFO, Buf, sizeof(State_t), false);
+        PY25Q16_WriteBuffer(OffsetVFO, Buf, 0x10, false);
 
-        SETTINGS_UpdateChannel(Channel, pVFO, true, true, true);
+        SETTINGS_UpdateChannel(Channel, pVFO, true);
 
         if (IS_MR_CHANNEL(Channel)) {
 #ifndef ENABLE_KEEP_MEM_NAME
@@ -836,59 +835,28 @@ void SETTINGS_SaveChannelName(uint16_t channel, const char * name)
     PY25Q16_WriteBuffer(0x004000 + offset, buf, 0x10, false);
 }
 
-void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep, bool check, bool save)
+void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep)
 {
-    {
-        ChannelAttributes_t  state;
-        ChannelAttributes_t  att = {
+
+    ChannelAttributes_t att = {
             .band = 0x7,
             .compander = 0,
             .unused_1 = 0,
             .unused_2 = 0,
             .exclude = 0,
             .scanlist = 0,
-            };        // default attributes
-
-        // 0x0D60
-        PY25Q16_ReadBuffer(0x008000 + (channel * 2), &state, 2);
+    };
 
         if (keep) {
             att.band = pVFO->Band;
             att.compander = pVFO->Compander;
-            att.unused_1 = 0;
-            att.unused_2 = 0;
-            att.exclude = 0;
             att.scanlist = pVFO->SCANLIST_PARTICIPATION;
-            if (check && state.__val == att.__val)
-                return; // no change in the attributes
-        }
-
-        state.__val = att.__val;
-
-#ifndef ENABLE_FEAT_F4HWN
-        save = true;
-#endif
-        if(save)
-        {
-            uint16_t buf[MR_CHANNELS_MAX + 24];
-            PY25Q16_ReadBuffer(0x008000, buf, sizeof(buf));
-            buf[channel] = state.__val;
-            PY25Q16_WriteBuffer(0x008000, buf, sizeof(buf), false);
         }
 
         MR_SetChannelAttributes(channel, &att);
 
-        if (IS_MR_CHANNEL(channel)) {   // it's a memory channel
-            if (!keep) {
-                // clear/reset the channel name
+    if (IS_MR_CHANNEL(channel) && !keep)
                 SETTINGS_SaveChannelName(channel, "");
-                // Zero the 16-byte channel data block (freq, tones, flags)
-                // so CHIRP reads a clean empty channel instead of stale data
-                uint8_t zeroBuf[16] = {0};
-                PY25Q16_WriteBuffer((uint32_t)channel * 16, zeroBuf, sizeof(zeroBuf), false);
-            }
-        }
-    }
 }
 
 void SETTINGS_WriteBuildOptions(void)
@@ -946,26 +914,3 @@ State[1] = 0
     }
 #endif
 
-void SETTINGS_SetVfoFrequency(uint32_t frequency)
-{
-    // Clamp to valid range
-    if (frequency < frequencyBandTable[0].lower)
-        frequency = frequencyBandTable[0].lower;
-    else if (frequency > frequencyBandTable[ARRAY_SIZE(frequencyBandTable) - 1].upper)
-        frequency = frequencyBandTable[ARRAY_SIZE(frequencyBandTable) - 1].upper;
-
-    const FREQUENCY_Band_t band = FREQUENCY_GetBand(frequency);
-    const uint8_t          vfo  = gEeprom.TX_VFO;
-
-    if (gTxVfo->Band != band) {
-        gTxVfo->Band                 = band;
-        gEeprom.ScreenChannel[vfo]   = band + FREQ_CHANNEL_FIRST;
-        gEeprom.FreqChannel[vfo]     = band + FREQ_CHANNEL_FIRST;
-        SETTINGS_SaveVfoIndices();
-        RADIO_ConfigureChannel(vfo, VFO_CONFIGURE_RELOAD);
-    }
-
-    gTxVfo->StepFrequency            = gStepFrequencyTable[gTxVfo->STEP_SETTING];
-    frequency                        = FREQUENCY_RoundToStep(frequency, gTxVfo->StepFrequency);
-    gTxVfo->freq_config_RX.Frequency = frequency;
-}
