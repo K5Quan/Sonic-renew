@@ -62,9 +62,9 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
-  local target="f4hwn.sonic.chirp.V51"
+  local target="f4hwn.sonic.chirp.V51g"
   if [[ "$preset" == "NOCOM" ]]; then
-    target="f4hwn.sonic.nocom.V51"
+    target="f4hwn.sonic.nocom.V51g"
   fi
   echo -e "\n 🚀 Building: ${preset}"
   docker run --rm -u $(id -u):$(id -g) -v "$PWD":/src -w /src "$IMAGE" \
@@ -86,9 +86,9 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.V51" ;;
-    NOCOM) target="f4hwn.sonic.nocom.V51" ;;
-    *)     target="f4hwn.sonic.chirp.V51" ;; # Valeur par défaut
+    RS232) target="f4hwn.sonic.rs232.V51g" ;;
+    NOCOM) target="f4hwn.sonic.nocom.V51g" ;;
+    *)     target="f4hwn.sonic.chirp.V51g" ;; # Valeur par défaut
   esac
   local ifile="./build/${preset}/${target}.bin"
 

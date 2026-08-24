@@ -841,8 +841,6 @@ static void DeleteHistoryItem(void) {
 }
 
 static void SaveHistoryToFreeChannel(void) {
-    if (!historyListActive) return;
-
     uint32_t f = HFreqs[historyListIndex];
     if (f < 1000000) return;
     char str[32];
@@ -881,6 +879,17 @@ static void SaveHistoryToFreeChannel(void) {
         ShowOSDPopup(str);
     } else {
         ShowOSDPopup("MEMORY FULL");
+    }
+}
+
+static void SaveAllHistoryToFreeChannels(void) {
+static uint16_t prev;
+prev = historyListIndex;
+    for (historyListIndex = 0; historyListIndex < HISTORY_SIZE; historyListIndex++) {
+        if(HFreqs[historyListIndex] == 0) {
+            historyListIndex = prev;
+            return;};
+        SaveHistoryToFreeChannel();   
     }
 }
 
@@ -978,6 +987,7 @@ void SaveHistory(void) {
     
     ShowOSDPopup("HISTORY SAVED");
 }
+
 static void Spectrum_END_TX(void)
 {
     if(TX_freq_check(gCurrentVfo->pTX->Frequency) != 0) {
@@ -1047,12 +1057,23 @@ static void SpectrumTransmit() {
             if (PttEmission == 0) {
                 SpectrumDelay = 0;
                 uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
-                gEeprom.ScreenChannel[0] = ch;
-                gEeprom.MrChannel[0] = ch;
-                gEeprom.FreqChannel[0] = ScanFrequencies[TX_Channel];
-                RADIO_ConfigureChannel(0,VFO_CONFIGURE_RELOAD);
+                //RADIO_SelectVfos();
+                gCurrentVfo =gRxVfo;
+                gRxVfo = &gEeprom.VfoInfo[gEeprom.RX_VFO];
+                RADIO_SetupRegisters(false);
+               
+                static int Vfo_conf= 0;
+                gEeprom.ScreenChannel[Vfo_conf] = ch;
+                gEeprom.MrChannel[Vfo_conf] = ch;
+                gEeprom.FreqChannel[Vfo_conf] = ScanFrequencies[TX_Channel];
+                RADIO_ConfigureChannel(Vfo_conf,VFO_CONFIGURE_RELOAD);
+                
+                Vfo_conf= 1;
+                gEeprom.ScreenChannel[Vfo_conf] = ch;
+                gEeprom.MrChannel[Vfo_conf] = ch;
+                gEeprom.FreqChannel[Vfo_conf] = ScanFrequencies[TX_Channel];
+                RADIO_ConfigureChannel(Vfo_conf,VFO_CONFIGURE_RELOAD);
             }
-            
             break;
         default:
             break;
@@ -2407,8 +2428,9 @@ static void HandleKeySpectrum(uint8_t key) {
             break;
         }
         case KEY_STAR: {
-                int step = (settings.rssiTriggerLevelUp >= 20) ? 5 : 1;
-                settings.rssiTriggerLevelUp =
+            if (historyListActive) {SaveAllHistoryToFreeChannels();break;}
+            int step = (settings.rssiTriggerLevelUp >= 20) ? 5 : 1;
+            settings.rssiTriggerLevelUp =
                     (settings.rssiTriggerLevelUp >= 50 ? 0 : settings.rssiTriggerLevelUp + step);
             SPECTRUM_PAUSED = true;
             SetTrigger50();
