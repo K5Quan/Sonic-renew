@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    NOCOM|CHIRP|All)
+    RS232|USB|All)
       PRESET="$1"
       shift
       ;;
@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
-PRESET=${PRESET:-NOCOM}
+PRESET=${PRESET:-RS232}
 
 # ---------------------------------------------
 # Nettoyage si l'option est activée
@@ -41,9 +41,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(NOCOM|CHIRP|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(RS232|USB|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: NOCOM CHIRP All"
+  echo "Valid presets are: RS232 USB All"
   exit 1
 fi
 
@@ -62,9 +62,9 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
-  local target="f4hwn.sonic.chirp.V51"
-  if [[ "$preset" == "NOCOM" ]]; then
-    target="f4hwn.sonic.nocom.V51"
+  local target="f4hwn.sonic.USB.V52"
+  if [[ "$preset" == "RS232" ]]; then
+    target="f4hwn.sonic.RS232.V52"
   fi
   echo -e "\n 🚀 Building: ${preset}"
   docker run --rm -u $(id -u):$(id -g) -v "$PWD":/src -w /src "$IMAGE" \
@@ -86,9 +86,9 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.V51" ;;
-    NOCOM) target="f4hwn.sonic.nocom.V51" ;;
-    *)     target="f4hwn.sonic.chirp.V51" ;; # Valeur par défaut
+    RS232) target="f4hwn.sonic.rs232.V52" ;;
+    RS232) target="f4hwn.sonic.RS232.V52" ;;
+    *)     target="f4hwn.sonic.USB.V52" ;; # Valeur par défaut
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -107,15 +107,15 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(NOCOM CHIRP)
+  PRESETS=(RS232 USB)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
   echo ""
   echo "🎉 All presets built successfully!"
 
-  # Si 'All' est compilé, on flashe uniquement le preset CHIRP
-  flash_preset "CHIRP"
+  # Si 'All' est compilé, on flashe uniquement le preset USB
+  flash_preset "USB"
 else
   build_preset "$PRESET"
   flash_preset "$PRESET"

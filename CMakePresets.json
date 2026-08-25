@@ -17,7 +17,7 @@
                 "ENABLE_SAVE_REGISTERS": false,
                 "ENABLE_ADVANCED_SPECTRUM":false,
                 "ENABLE_PERSIST": false,
-                "ENABLE_BENCH": false,
+                "ENABLE_BENCH": true,
                 "ENABLE_VERSION": false,
                 "ENABLE_ALARM": false,
                 "ENABLE_FLASHLIGHT": true,
@@ -70,29 +70,29 @@
                 "ENABLE_AGC_SHOW_DATA": false,
                 "ENABLE_UART_RW_BK_REGS": false,
                 "ENABLE_SWD": false,
-                "VERSION_STRING_1": "V51",
-                "VERSION_STRING_2": "V51"
+                "VERSION_STRING_1": "V52",
+                "VERSION_STRING_2": "V52"
             }
         },
        
 {
-    "name": "NOCOM","inherits": "default","cacheVariables": {
-        "EDITION_STRING": "NOCOM",
+    "name": "RS232","inherits": "default","cacheVariables": {
+        "EDITION_STRING": "RS232",
         "ENABLE_UART": true,
-        "TARGET": "f4hwn.sonic.nocom.V51"
+        "TARGET": "f4hwn.sonic.RS232.V52"
     }
 },
 {
-    "name": "CHIRP","inherits": "default","cacheVariables": {
+    "name": "USB","inherits": "default","cacheVariables": {
         "ENABLE_USB": true,
         "ENABLE_UART": false,
         "EDITION_STRING": "Sonic",
-        "TARGET": "f4hwn.sonic.chirp.V51"
+        "TARGET": "f4hwn.sonic.USB.V52"
     }
 }
 ],
 "buildPresets": [
-    {"name": "NOCOM","configurePreset": "NOCOM"},
-    {"name": "CHIRP","configurePreset": "CHIRP"}
+    {"name": "RS232","configurePreset": "RS232"},
+    {"name": "USB","configurePreset": "USB"}
 ]
 }

@@ -229,17 +229,8 @@ typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 
 /***************************BIG RAM******************************************/
 static bandparameters   *BParams = NULL;
-#if defined(ENABLE_USB)
-    #define HISTORY_SIZE 10
-#else //NOCOM
-    #define HISTORY_SIZE 100
-#endif
-
-#ifndef ENABLE_USB
-    #define                 MAX_SCAN_CHANNELS 500
-#else
-    #define                 MAX_SCAN_CHANNELS 975
-#endif
+#define HISTORY_SIZE 100
+#define MAX_SCAN_CHANNELS 975
 static uint32_t         ScanFrequencies[MAX_SCAN_CHANNELS];
 static uint32_t         HFreqs[HISTORY_SIZE];           //4
 static uint8_t          HCode[HISTORY_SIZE];            //1
@@ -2034,7 +2025,9 @@ static void DrawF(uint32_t f) {
                     }
                     
 #ifdef ENABLE_BENCH
-                snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
+                char bench[10];
+                snprintf(bench, sizeof(bench), "%u", benchRatePerSec);
+                GUI_DisplaySmallest(bench, 58, Bottom_print, false, true);
 #endif
                 }
                 if(isListening) DrawMeter(6);
