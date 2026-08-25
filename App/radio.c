@@ -24,6 +24,8 @@
 #include "settings.h"
 #include "ui/menu.h"
 
+//#include "debugging.h"
+
 VFO_Info_t    *gTxVfo;
 VFO_Info_t    *gRxVfo;
 VFO_Info_t    *gCurrentVfo;
@@ -218,6 +220,10 @@ void RADIO_ValidateAndSetCode(FREQ_Config_t *pFreq_Config, uint8_t tmp) {
             break;
     }
     pFreq_Config->Code = tmp;
+    
+          /////////////////////////DEBUG//////////////////////////
+          //char str[64] = "";sprintf(str, "Code type %d Code %d\r\n",pFreq_Config->CodeType, tmp );LogUart(str);
+
 }
 
 void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure)

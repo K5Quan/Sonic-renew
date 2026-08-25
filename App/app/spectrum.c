@@ -18,6 +18,8 @@
 // SECTION: Includes
 // ============================================================
 
+//#include "debugging.h"
+
 #include "app/spectrum.h"
 #include "nav_invert.h"
 #include "driver/backlight.h"
@@ -30,9 +32,6 @@
 #include "misc.h"
 #include "driver/py25q16.h"
 #include "version.h"
-#ifdef ENABLE_DEV
-#include "debugging.h"
-#endif
 #include <stdlib.h>
 #include "settings.h"
 // ============================================================
@@ -218,6 +217,8 @@ static char latestScanListName[12];
 static bool refreshScanListName = true;
 static bool IsBlacklisted(uint32_t f);
 static void SetState(State state);
+static void Spectrum_Prepare_Tx(void);
+static void Skip();
 
 typedef struct {
     char left[20];
@@ -547,6 +548,7 @@ static void LoadActiveScanFrequencies(void)
     }
 uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
 SETTINGS_FetchChannelName(TxChannelName, ch);
+Spectrum_Prepare_Tx(); //to display ch correctly
 }
 
 static void LoadMonitorFrequencies(void)
@@ -685,9 +687,10 @@ KEY_Code_t GetKey() {
 }
 
 static void SetState(State state) {
-  previousState = currentState;
-  currentState = state;
-  spectrumElapsedCount = 0;
+    previousState = currentState;
+    currentState = state;
+    spectrumElapsedCount = 0;
+    Skip();
 }
 
 // ============================================================
@@ -998,6 +1001,24 @@ static void Spectrum_END_TX(void)
     RADIO_SendEndOfTransmission();
 }
 
+static void Spectrum_Prepare_Tx(void) {
+                uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
+                RADIO_SelectVfos();
+                gRxVfo = &gEeprom.VfoInfo[gEeprom.RX_VFO];
+                gTxVfo = &gEeprom.VfoInfo[gEeprom.TX_VFO];
+                
+                gEeprom.ScreenChannel[0] = ch;
+                gEeprom.MrChannel[0] = ch;
+                gEeprom.FreqChannel[0] = ScanFrequencies[TX_Channel];
+                RADIO_ConfigureChannel(0,VFO_CONFIGURE_RELOAD);
+                
+                gEeprom.ScreenChannel[1] = ch;
+                gEeprom.MrChannel[1] = ch;
+                gEeprom.FreqChannel[1] = ScanFrequencies[TX_Channel];
+                RADIO_ConfigureChannel(1,VFO_CONFIGURE_RELOAD);
+                RADIO_SetupRegisters(false);
+}
+
 static void Spectrum_TX()
 {
     if(TX_freq_check(gCurrentVfo->pTX->Frequency) != 0) {
@@ -1028,12 +1049,12 @@ static void SpectrumTransmit() {
 
     switch (currentState) {
         case SPECTRUM:
+            SpectrumDelay = 0;
             // PTT Mode 1: NINJA MODE (Random channel with low RSSI)
             if (PttEmission == 1 && scanChannelsCount > 0) {
                 uint16_t randomChannel = GetRandomChannel(scanChannelsCount);
                 uint32_t rndfreq = 0;
                 uint16_t attempts = 0;
-                SpectrumDelay = 0; //not compatible with ninja
                 while (attempts < scanChannelsCount) {
                     rndfreq = ScanFrequencies[randomChannel];
                     if (rssiHistory[randomChannel] <= 120 && rndfreq) {break;}
@@ -1048,32 +1069,12 @@ static void SpectrumTransmit() {
             }
             // PTT Mode 2: Last RX
             if (PttEmission == 2) {
-                SpectrumDelay = 0;
                 gCurrentVfo->freq_config_TX.Frequency = lastReceivingFreq;
                 gCurrentVfo->Modulation   = MODULATION_FM;
                 gCurrentVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
             }
             // PTT Mode 0: Channel Freq
-            if (PttEmission == 0) {
-                SpectrumDelay = 0;
-                uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
-                //RADIO_SelectVfos();
-                gCurrentVfo =gRxVfo;
-                gRxVfo = &gEeprom.VfoInfo[gEeprom.RX_VFO];
-                RADIO_SetupRegisters(false);
-               
-                static int Vfo_conf= 0;
-                gEeprom.ScreenChannel[Vfo_conf] = ch;
-                gEeprom.MrChannel[Vfo_conf] = ch;
-                gEeprom.FreqChannel[Vfo_conf] = ScanFrequencies[TX_Channel];
-                RADIO_ConfigureChannel(Vfo_conf,VFO_CONFIGURE_RELOAD);
-                
-                Vfo_conf= 1;
-                gEeprom.ScreenChannel[Vfo_conf] = ch;
-                gEeprom.MrChannel[Vfo_conf] = ch;
-                gEeprom.FreqChannel[Vfo_conf] = ScanFrequencies[TX_Channel];
-                RADIO_ConfigureChannel(Vfo_conf,VFO_CONFIGURE_RELOAD);
-            }
+            //if (PttEmission == 0) {}
             break;
         default:
             break;
@@ -1108,17 +1109,21 @@ static uint16_t CountValidHistoryItems() {
 
 static void UpdateCssDetection(void) {
     static uint8_t LCode = 0;
-    if (CodeFreq == peak.f && (code != 0xFF)) return;
     if (settings.modulationType != MODULATION_FM) {
         code = 0xFF;
         return;
     }
-
+    //BK4819_SetFilterBandwidth(BK4819_FILTER_BW_WIDE, false); 
+    
     BK4819_WriteRegister(BK4819_REG_51,
-        BK4819_REG_51_ENABLE_CxCSS |
-        BK4819_REG_51_AUTO_CDCSS_BW_ENABLE |
-        BK4819_REG_51_AUTO_CTCSS_BW_ENABLE |
-        (51u << BK4819_REG_51_SHIFT_CxCSS_TX_GAIN1));
+    BK4819_REG_51_DISABLE_CxCSS         |
+    BK4819_REG_51_GPIO6_PIN2_NORMAL     |
+    BK4819_REG_51_TX_CDCSS_POSITIVE     |
+    BK4819_REG_51_MODE_CDCSS            |
+    BK4819_REG_51_CDCSS_23_BIT          |
+    BK4819_REG_51_1050HZ_NO_DETECTION   |
+    BK4819_REG_51_AUTO_CDCSS_BW_DISABLE |
+    BK4819_REG_51_AUTO_CTCSS_BW_DISABLE);
     
     BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
 
@@ -1127,9 +1132,12 @@ static void UpdateCssDetection(void) {
         if (LCode != 0xFF) {
             CodeFreq = peak.f;
             snprintf(StringCode, sizeof(StringCode), " D%03oN ", DCS_Options[LCode]);
+ShowOSDPopup(StringCode);
             code = LCode + 100;
-            gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_DIGITAL;
-            gCurrentVfo->freq_config_TX.Code     = LCode;
+            if (PttEmission == 2) { //Use received code to respond
+                gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_DIGITAL;
+                gCurrentVfo->freq_config_TX.Code     = LCode;
+            }
             return;
         }
     } else if (scanResult == BK4819_CSS_RESULT_CTCSS) {
@@ -1137,9 +1145,12 @@ static void UpdateCssDetection(void) {
         if (LCode != 0xFF) {
             CodeFreq = peak.f;
             snprintf(StringCode, sizeof(StringCode), " %u.%uHz ", CTCSS_Options[LCode] / 10, CTCSS_Options[LCode] % 10);
+ShowOSDPopup(StringCode);
             code = LCode;
-            gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_CONTINUOUS_TONE;
-            gCurrentVfo->freq_config_TX.Code     = LCode;
+            if (PttEmission == 2) { //Use received code to respond
+                gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_CONTINUOUS_TONE;
+                gCurrentVfo->freq_config_TX.Code     = LCode;
+            }
             return;
         }
     }
@@ -1765,41 +1776,8 @@ static void RemoveTrailZeros(char *s) {
 
 static void DrawStatus() {
 
-  int len=0;
-  int pos=0;
-   
-switch(SpectrumMonitor) {
-    case 0:
-      len = sprintf(&String[pos],"");
-      pos += len;
-      if (settings.rssiTriggerLevelUp == 50) len = sprintf(&String[pos],"");
-      else len = sprintf(&String[pos],"DS%d ", settings.rssiTriggerLevelUp);
-      pos += len;
-    break;
-
-    case 1:
-      len = sprintf(&String[pos],"FL ");
-      pos += len;
-    break;
-
-    case 2:
-      len = sprintf(&String[pos],"M ");
-      pos += len;
-    break;
-  } 
-  
-  
-  len = sprintf(&String[pos],"%s BW%s ", gModulationStr[settings.modulationType],bwNames[settings.listenBw]);
-  pos += len;
-    if(isListening) {
-        int16_t afcVal = BK4819_GetAFCValue();
-        if (afcVal) {
-        len = sprintf(&String[pos],"A%+d ", afcVal);
-        pos += len;
-        } 
-    } else {
-      len = sprintf(&String[pos], "ST%s ", scanStepNames[settings.scanStepIndex]);pos += len;
-    }
+    int len=0;
+    int pos=0;
     switch(PttEmission) {
         case 1:
             len = sprintf(&String[pos], "NINJA");
@@ -1818,8 +1796,42 @@ switch(SpectrumMonitor) {
         case 8:
             len = sprintf(&String[pos], "ROGER");
             break;
-        
-        }
+    }
+    pos += len;
+    switch(SpectrumMonitor) {
+        case 0:
+          len = sprintf(&String[pos],"");
+          pos += len;
+          if (settings.rssiTriggerLevelUp == 50) len = sprintf(&String[pos],"");
+          else len = sprintf(&String[pos]," DS%d ", settings.rssiTriggerLevelUp);
+          pos += len;
+        break;
+
+        case 1:
+          len = sprintf(&String[pos],"FL ");
+          pos += len;
+        break;
+
+        case 2:
+          len = sprintf(&String[pos],"M ");
+          pos += len;
+        break;
+    } 
+  
+  
+    len = sprintf(&String[pos],"%s BW%s ", gModulationStr[settings.modulationType],bwNames[settings.listenBw]);
+    pos += len;
+    if(isListening) {
+        int16_t afcVal = BK4819_GetAFCValue();
+        if (afcVal) {
+        len = sprintf(&String[pos],"A%+d ", afcVal);
+        pos += len;
+        } 
+    } else {
+      len = sprintf(&String[pos], "ST%s ", scanStepNames[settings.scanStepIndex]);pos += len;
+    }
+    
+
     GUI_DisplaySmallest(String, 0, 1, true,true);
     BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4],&gBatteryCurrent);
 
@@ -1946,13 +1958,14 @@ static void DrawF(uint32_t f) {
     char line2[19] = "";
     sprintf(line1, "%s", freqStr);
     char prefix[9] = "";
-    UpdateCssDetection();
+    //UpdateCssDetection();
     if (appMode == SCAN_BAND_MODE) {
         snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
+        GUI_DisplaySmallest(prefix, 117, 10, false, true);
         if (isListening && isKnownChannel) {
             snprintf(line2, sizeof(line2), " %s", channelName);
         } else {
-            snprintf(line2, sizeof(line2), " %s%s", prefix, BParams[bl].BandName);
+            snprintf(line2, sizeof(line2), "%s", BParams[bl].BandName);
         }
     } else if (appMode == CHANNEL_MODE) {
 
@@ -1988,18 +2001,17 @@ static void DrawF(uint32_t f) {
             case 2:
                 {       //SCAN
                 UI_PrintString(line2, 35, 35, 2, 8);
-                if (isListening)    UI_PrintString("RX>", 2, 0, 2, 8);
-                else                UI_PrintString("RX", 2, 0, 2, 8);
-                if (last_ptt_state) UI_PrintString("TX>", 2, 0, 4, 8);
-                else                UI_PrintString("TX", 2, 0, 4, 8);
-                //GUI_DisplaySmallest("RX", 2, 21, false, true);
-                //GUI_DisplaySmallest("TX", 2, 33, false, true);
+                if (isListening)    UI_PrintString("RX>", 2, 2, 2, 8);
+                else                UI_PrintString("RX", 2, 2, 2, 8);
+
                 switch(PttEmission) {
                     case 1:
                     case 2:
-                        if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) {
-                            snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
+                        if (lastReceivingFreq >= 1400000U && lastReceivingFreq <= 130000000U) {
+                            snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000U, lastReceivingFreq % 100000U);
                         }
+                        const char *status = last_ptt_state ? "TX>" : "TX";
+                        UI_PrintString(status, 2, 2, 4, 8);
                         break;
                     case 0:
                     case 3:
@@ -2009,6 +2021,14 @@ static void DrawF(uint32_t f) {
                     case 7:
                     case 8:
                         snprintf(Text, sizeof(Text), "%s", TxChannelName);
+                        const char dir_list[][4] = {"TX", "TX+", "TX-"};
+                        int i = 0;
+                        if (gTxVfo->freq_config_RX.Frequency != gTxVfo->freq_config_TX.Frequency)
+                            {   // show the TX offset symbol
+                                i = gTxVfo->TX_OFFSET_FREQUENCY_DIRECTION % 3;
+                            }
+                        if (last_ptt_state) UI_PrintString("TX>", 2, 2, 4, 8);
+                        else                UI_PrintString(dir_list[i], 2, 2, 4, 8);
                         break;
                     
                     }
@@ -2148,22 +2168,6 @@ static void SwitchToPreset(uint8_t newPreset) {
     }
 }
 
-uint8_t GetBandIndexForRow(uint8_t row) {
-    uint8_t pos = 0;
-    for (uint8_t i = 0; i < bandCount; i++) {
-        if (settings.bandEnabled[i]) {
-            if (pos == row) return i;
-            pos++;
-        }
-    }
-    for (uint8_t i = 0; i < bandCount; i++) {
-        if (!settings.bandEnabled[i]) {
-            if (pos == row) return i;
-            pos++;
-        }
-    }
-    return 0;
-}
 // ============================================================
 // SECTION: Per-state keyboard handlers
 // ============================================================
@@ -2197,9 +2201,8 @@ static void HandleKeyBandList(uint8_t key) {
                 break;
             case KEY_4: /* toggle selected band */
                 if (bandListSelectedIndex < bandCount) {
-                    uint8_t bandIndex = GetBandIndexForRow(bandListSelectedIndex);
-                    settings.bandEnabled[bandIndex] = !settings.bandEnabled[bandIndex];
-                    nextBandToScanIndex = bandIndex;
+                    settings.bandEnabled[bandListSelectedIndex] = !settings.bandEnabled[bandListSelectedIndex]; 
+                    nextBandToScanIndex = bandListSelectedIndex; 
                     bandListSelectedIndex++;
                 }
                 break;
@@ -2229,17 +2232,17 @@ static void HandleKeyBandList(uint8_t key) {
                     settings.bandEnabled[bandListSelectedIndex] = true;
                     nextBandToScanIndex = bandListSelectedIndex;
                     gForceModulation = 0; // KOLYAN ADD
-                    SetState(SPECTRUM);
                     ResetModifiers();
                     RelaunchScan();
+                    SetState(SPECTRUM);
                 }
                 break;
             case KEY_EXIT:
                     SpectrumMonitor = 0;
-                    SetState(SPECTRUM);
                     ResetModifiers();
                     RelaunchScan(); 
                     gForceModulation = 0; // KOLYAN ADD
+                    SetState(SPECTRUM);
                     break;
             default:
                 break;
@@ -2278,16 +2281,16 @@ static void HandleKeyScanList(uint8_t key) {
         case KEY_MENU: /* activate selected list and start scanning */
             if (scanListSelectedIndex < MR_CHANNELS_LIST) {
                 ToggleScanList(validScanListIndices[scanListSelectedIndex], 1);
-                SetState(SPECTRUM);
                 ResetModifiers();
                 gForceModulation = 0; //1 kolyan
+                SetState(SPECTRUM);
             }
             break;
         case KEY_EXIT:
             SpectrumMonitor = 0;
-            SetState(SPECTRUM);
             ResetModifiers();
             gForceModulation = 0; //1 kolyan
+            SetState(SPECTRUM);
             break;
         default:
             break;
@@ -2383,7 +2386,10 @@ static void HandleKeyParameters(uint8_t key) {
                         PttEmission = isKey3 ?
                             (PttEmission >= 8 ? 0 : PttEmission + 1) :
                             (PttEmission <= 0 ? 8 : PttEmission - 1);
-                      } else PttEmission = 2;
+                      } else {
+                            PttEmission = 2;
+                            ShowOSDPopup("CH MODE ONLY");
+                        }
                       break;  
                 case PARAM_MONITOR_SCAN:
                     gMonitorScan = !gMonitorScan; 
@@ -2398,9 +2404,9 @@ static void HandleKeyParameters(uint8_t key) {
           SaveSettings(); 
         break;
         case KEY_EXIT:
-            SetState(SPECTRUM);
             RelaunchScan();
             ResetModifiers();
+            SetState(SPECTRUM);
             if(Key_1_pressed) {Spectrum_state = 2;APP_RunSpectrum();}
             break;
         default:
@@ -2551,6 +2557,7 @@ static void HandleKeySpectrum(uint8_t key) {
                             TX_Channel = TX_Channel <= 0 ? scanChannelsCount - 1 : TX_Channel - 1;
                             uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
                             SETTINGS_FetchChannelName(TxChannelName, ch);
+                            Spectrum_Prepare_Tx();
                             return;
                         } 
                         BuildValidScanListIndices();
@@ -2619,6 +2626,7 @@ static void HandleKeySpectrum(uint8_t key) {
                             TX_Channel = TX_Channel >= scanChannelsCount - 1 ? 0 : TX_Channel + 1;
                             uint16_t ch = BOARD_gMR_fetchChannel(ScanFrequencies[TX_Channel]);
                             SETTINGS_FetchChannelName(TxChannelName, ch);
+                            Spectrum_Prepare_Tx();
                             return;
                         } 
                         BuildValidScanListIndices();
@@ -2715,13 +2723,14 @@ static void HandleKeySpectrum(uint8_t key) {
     case KEY_EXIT:
         if (historyListActive) {
             gHistoryScan        = false;
-            SetState(SPECTRUM);
             historyListActive   = false;
             SpectrumMonitor     = prevSpectrumMonitor;
             SetF(scanInfo.f);
             CloseCallActive = 0;
             BK4819_SetFrequencyScan(false);
             SPECTRUM_PAUSED = false;
+            StringCode[0] = '\0'; //Erase code
+            SetState(SPECTRUM);
             break;
         }
         if (WaitSpectrum) WaitSpectrum = 0;
@@ -2909,7 +2918,8 @@ static void OnKeyDownStill(KEY_Code_t key) {
 
 
 static void RenderFreqInput() {
-  UI_PrintString(freqInputString, 2, 127, 0, 8);
+  UI_PrintString("ENTER FREQ", 2, 127, 1, 8);  
+  UI_PrintString(freqInputString, 2, 127, 3, 8);
 }
 
 static void RenderStatus() {
@@ -2964,7 +2974,7 @@ static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step)
 
 static void MyDrawFrameLines(void)
 {
-    if (currentState == STILL) return;
+    if (currentState == STILL || currentState == FREQ_INPUT) return;
     if (ShowLines ==1 || ShowLines ==3) {
         MyDrawVLine(0,   0, 17, 1);   // Left vertical solid line (top section)
         MyDrawVLine(127, 0, 17, 1);   // Right vertical solid line (top section)
@@ -2976,7 +2986,7 @@ static void MyDrawFrameLines(void)
         MyDrawShortHLine(17, 120, 127, 1, false); // Mid-top short horizontal line (right)
         MyDrawShortHLine(21, 0, 10, 1, false);    // Mid-bottom short horizontal line (left)
         MyDrawShortHLine(21, 120, 127, 1, false); // Mid-bottom short horizontal line (right)
-        MyDrawHLine(47,0);  // Black horizontal line at y=49
+        MyDrawHLine(47,0);  // Black horizontal line 
         MyDrawVLine(0,   21, 47, 1);  // Left vertical solid line (bottom section)
         MyDrawVLine(127, 21, 47, 1);  // Right vertical solid line (bottom section)
     }
@@ -3884,7 +3894,11 @@ void LoadSettings()
         BK4819_WriteRegister(BK4819_REG_43, eepromData.R43);
         BK4819_WriteRegister(BK4819_REG_2B, eepromData.R2B);
     #endif
-    BK4819_WriteRegister(BK4819_REG_73,0x6141 ); //TEST FROM KOLYAN
+    //0xA001 -OK! SPEED0 
+    //0x6141-fast ok but too fast 
+    //0xA141 - NEW GOOD SPEED 10 BAD FOR SUBTONE!!!0x5001-BEST! 
+    //0xA3C1- AFC SPEED 30
+    BK4819_WriteRegister(BK4819_REG_73,0xA3C1 );
     if (!historyLoaded) {
         LoadHistory();
         historyLoaded = true;
@@ -4270,10 +4284,9 @@ static void GetScanListRow(uint16_t displayIndex, ListRow *row) {
 }
 
 static void GetBandRow(uint16_t index, ListRow *row) {
-    uint8_t bandIndex = GetBandIndexForRow((uint8_t)index);
-    snprintf(row->left, sizeof(row->left), "%d:%s", bandIndex + 1, BParams[bandIndex].BandName);
-    if (settings.bandEnabled[bandIndex]) { snprintf(row->right, sizeof(row->right), "<====");}
-    else                                   row->right[0] = '\0';
+    snprintf(row->left, sizeof(row->left), "%d:%s", index + 1, BParams[index].BandName);
+    if (settings.bandEnabled[index]) { snprintf(row->right, sizeof(row->right), "<====");}
+    else                               row->right[0] = '\0';
 }
 
 static void GetParametersRow(uint16_t index, ListRow *row) {
