@@ -109,29 +109,16 @@ extern const uint16_t        key_debounce_10ms;
 extern const uint8_t         scan_delay_10ms;
 
 extern const uint16_t        battery_save_count_10ms;
-
 extern const uint16_t        power_save1_10ms;
-extern const uint16_t        power_save2_10ms;
-
 
 extern const uint16_t        NOAA_countdown_10ms;
-extern const uint16_t        NOAA_countdown_2_10ms;
-extern const uint16_t        NOAA_countdown_3_10ms;
 
 extern const uint16_t        dual_watch_count_after_tx_10ms;
 extern const uint16_t        dual_watch_count_after_rx_10ms;
-extern const uint16_t        dual_watch_count_after_1_10ms;
 extern const uint16_t        dual_watch_count_after_2_10ms;
 extern const uint16_t        dual_watch_count_toggle_10ms;
 extern const uint16_t        dual_watch_count_noaa_10ms;
 
-extern const uint16_t        scan_pause_delay_in_1_10ms;
-extern const uint16_t        scan_pause_delay_in_2_10ms;
-extern const uint16_t        scan_pause_delay_in_3_10ms;
-extern const uint16_t        scan_pause_delay_in_4_10ms;
-extern const uint16_t        scan_pause_delay_in_5_10ms;
-extern const uint16_t        scan_pause_delay_in_6_10ms;
-extern const uint16_t        scan_pause_delay_in_7_10ms;
 extern const uint8_t         gMicGain_dB2[9];
 extern uint8_t               gSetting_F_LOCK;
 extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
@@ -160,11 +147,6 @@ extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     #ifdef ENABLE_FEAT_F4HWN_DEBUG
         extern int16_t        gDebug;
     #endif
-    extern uint8_t            gDW;
-    extern uint8_t            gCB;
-    extern bool               gSaveRxMode;
-    extern uint8_t            crc[15];
-    extern bool               gAirCopyBootMode;
     extern int8_t dBmCorrTable[7];
 #endif
 
@@ -175,11 +157,9 @@ extern uint8_t               gSetting_battery_text;
 
 extern bool                  gMonitor;
 
-extern const uint32_t        gDefaultAesKey[4];
 extern uint32_t              gCustomAesKey[4];
 extern bool                  bHasCustomAesKey;
 extern uint32_t              gChallenge[4];
-extern uint8_t               gTryCount;
 
 extern uint16_t              gEEPROM_RSSI_CALIB[7][4];
 
@@ -253,11 +233,6 @@ extern volatile uint16_t     gBatterySaveCountdown_10ms;
 
 extern volatile bool         gPowerSaveCountdownExpired;
 extern volatile bool         gSchedulePowerSave;
-
-extern volatile bool         gScheduleDualWatch;
-
-extern volatile uint16_t     gDualWatchCountdown_10ms;
-extern bool                  gDualWatchActive;
 
 extern volatile uint8_t      gSerialConfigCountDown_500ms;
 extern volatile uint32_t     gGlobalSysTickCounter;
@@ -355,22 +330,18 @@ extern ReceptionMode_t       gRxReceptionMode;
 
  //TRUE when dual watch is momentarly suspended and RX_VFO is locked to either last TX or RX
 extern bool                  gRxVfoIsActive;
-extern uint8_t               gAlarmToneCounter;
-extern uint16_t              gAlarmRunningCounter;
 extern bool                  gKeyBeingHeld;
 extern bool                  gPttIsPressed;
 extern uint8_t               gPttDebounceCounter;
 extern uint8_t               gMenuListCount;
 extern uint8_t               gBackup_CROSS_BAND_RX_TX;
 extern uint8_t               gScanDelay_10ms;
-extern uint8_t               gFSKWriteIndex;
 extern volatile bool         gNextTimeslice;
 extern bool                  gUpdateDisplay;
 extern bool                  gF_LOCK;
 #ifdef ENABLE_FMRADIO
     extern uint8_t           gFM_ChannelPosition;
 #endif
-extern uint8_t               gShowChPrefix;
 extern volatile uint8_t      gFoundCDCSSCountdown_10ms;
 extern volatile uint8_t      gFoundCTCSSCountdown_10ms;
 extern volatile bool         gNextTimeslice40ms;
@@ -392,8 +363,8 @@ extern volatile uint8_t      boot_counter_10ms;
     extern uint8_t               gPttOnePushCounter;
     extern uint32_t              gBlinkCounter;
 
-    extern uint16_t gVfoSaveCountdown_10ms;
-    extern bool gScheduleVfoSave;
+    extern volatile uint16_t gVfoSaveCountdown_10ms;
+    extern volatile bool     gScheduleVfoSave;
     extern bool gVfoStateChanged;
 
     extern char gListName[MR_CHANNELS_LIST][10];

@@ -521,17 +521,12 @@ void RADIO_ApplyOffset(VFO_Info_t *pInfo)
 
 static void RADIO_SelectCurrentVfo(void)
 {
-    // if crossband is active and DW not the gCurrentVfo is gTxVfo (gTxVfo/TX_VFO is only ever changed by the user)
-    // otherwise it is set to gRxVfo which is set to gTxVfo in RADIO_SelectVfos
-    // so in the end gCurrentVfo is equal to gTxVfo unless dual watch changes it on incomming transmition (again, this can only happen when XB off)
-    // note: it is called only in certain situations so could be not up-to-date
-    gCurrentVfo = (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF || gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) ? gRxVfo : gTxVfo;
+    gCurrentVfo = gTxVfo;
 }
 
 void RADIO_SelectVfos(void)
 {
-    // if crossband without DW is used then RX_VFO is the opposite to the TX_VFO
-    gEeprom.RX_VFO = (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF || gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) ? gEeprom.TX_VFO : !gEeprom.TX_VFO;
+    gEeprom.RX_VFO = gEeprom.TX_VFO;
 
     gTxVfo = &gEeprom.VfoInfo[gEeprom.TX_VFO];
     gRxVfo = &gEeprom.VfoInfo[gEeprom.RX_VFO];
@@ -863,8 +858,7 @@ void RADIO_SetVfoState(VfoState_t State)
         VfoState[0] = VFO_STATE_VOLTAGE_HIGH;
         VfoState[1] = VFO_STATE_TX_DISABLE;
     } else {
-        // 1of11
-        const unsigned int vfo = (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF) ? gEeprom.RX_VFO : gEeprom.TX_VFO;
+        const unsigned int vfo = gEeprom.TX_VFO;
         VfoState[vfo] = State;
     }
 
@@ -875,24 +869,6 @@ void RADIO_SetVfoState(VfoState_t State)
 void RADIO_PrepareTX(void)
 {
     VfoState_t State = VFO_STATE_NORMAL;  // default to OK to TX
-
-    if (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF)
-    {   // dual-RX is enabled
-
-        gDualWatchCountdown_10ms = dual_watch_count_after_tx_10ms;
-        gScheduleDualWatch       = false;
-
-        if (!gRxVfoIsActive)
-        {   // use the current RX vfo
-            gEeprom.RX_VFO = gEeprom.TX_VFO;
-            gRxVfo         = gTxVfo;
-            gRxVfoIsActive = true;
-        }
-
-        // let the user see that DW is not active
-        gDualWatchActive = false;
-        gUpdateStatus    = true;
-    }
 
     RADIO_SelectCurrentVfo();
 

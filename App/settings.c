@@ -608,11 +608,6 @@ void SETTINGS_SaveSettings(void)
     State[4] = gEeprom.DUAL_WATCH;
 
     #ifdef ENABLE_FEAT_F4HWN
-        if(!gSaveRxMode)
-        {
-            State[2] = gCB;
-            State[4] = gDW;
-        }
         if(gBackLight)
         {
             State[5] = gBacklightTimeOriginal;

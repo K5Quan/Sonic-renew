@@ -46,7 +46,6 @@ const t_menu_item MenuList[] =
     {"Step",        MENU_STEP          },
     {"Sql",         MENU_SQL           },
     {"Mode",        MENU_AM            },
-    {"RxMode",      MENU_TDR           },
     {"RxDCS",       MENU_R_DCS         },
     {"RxCTCS",      MENU_R_CTCS        },
     {"TxDCS",       MENU_T_DCS         },
@@ -626,29 +625,6 @@ void UI_DisplayMenu(void)
 
         case MENU_SAVE:
             sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "1:%u", gSubMenuSelection);
-            break;
-
-        case MENU_TDR:
-            strcpy(String, gSubMenu_RXMode[gSubMenuSelection]);
-            // 0=MAIN ONLY, 1=DUAL RX RESPOND, 2=MAIN TX DUAL RX
-            switch (gSubMenuSelection) {
-                case 0:
-                    gEeprom.DUAL_WATCH       = DUAL_WATCH_OFF;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-                case 1:
-                    gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-                case 2:
-                    gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_CHAN_A;
-                    break;
-            }
-            #ifdef ENABLE_FEAT_F4HWN
-                gDW = gEeprom.DUAL_WATCH;
-                gSaveRxMode = true;
-            #endif
             break;
 
         case MENU_TOT:

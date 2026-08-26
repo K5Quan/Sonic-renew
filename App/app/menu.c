@@ -123,12 +123,6 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMax = ARRAY_SIZE(gSubMenu_SFT_D) - 1;
             break;
 
-        case MENU_TDR:
-            //*pMin = 0;
-            *pMax = ARRAY_SIZE(gSubMenu_RXMode) - 1;
-            break;
-
-
         case MENU_ROGER:
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_ROGER) - 1;
@@ -433,34 +427,6 @@ void MENU_AcceptSetting(void)
             gSetting_backlight_on_tx_rx = gSubMenuSelection;
             break;
 
-        case MENU_TDR:
-            // 0=MAIN ONLY, 1=DUAL RX RESPOND, 2=MAIN TX DUAL RX
-            switch (gSubMenuSelection) {
-                case 0:
-                    gEeprom.DUAL_WATCH       = DUAL_WATCH_OFF;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-                case 1:
-                    gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-                case 2:
-                    gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_CHAN_A;
-                    break;
-                default:
-                    gEeprom.DUAL_WATCH       = DUAL_WATCH_OFF;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-            }
-            #ifdef ENABLE_FEAT_F4HWN
-                gDW = gEeprom.DUAL_WATCH;
-                gSaveRxMode = true;
-            #endif
-            gFlagReconfigureVfos = true;
-            gUpdateStatus        = true;
-            break;
-
         case MENU_TOT:
             gEeprom.TX_TIMEOUT_TIMER = gSubMenuSelection;
             break;
@@ -734,17 +700,6 @@ void MENU_ShowCurrentSetting(void)
 
         case MENU_ABR_ON_TX_RX:
             gSubMenuSelection = gSetting_backlight_on_tx_rx;
-            break;
-
-        case MENU_TDR:
-            // 0=MAIN ONLY, 1=DUAL RX RESPOND, 2=MAIN TX DUAL RX
-            if (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF) {
-                gSubMenuSelection = 0;
-            } else if (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF) {
-                gSubMenuSelection = 1; // DUAL RX RESPOND
-            } else {
-                gSubMenuSelection = 2; // MAIN TX DUAL RX
-            }
             break;
 
         case MENU_TOT:

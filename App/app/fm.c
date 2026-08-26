@@ -376,7 +376,6 @@ void FM_TurnOff(void)
 
 void FM_Start(void)
 {
-    gDualWatchActive          = false;
     gFmRadioMode              = true;
     gFM_ScanState             = FM_SCAN_OFF;
     gFM_RestoreCountdown_10ms = 0;

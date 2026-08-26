@@ -356,11 +356,6 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     gRequestDisplayScreen = DISPLAY_MAIN;
                     return;
                 }
-                if (Key == KEY_2 && gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) {
-                    gVfoConfigureMode = VFO_CONFIGURE;
-                    COMMON_SwitchVFOs();
-                    return;
-                }
                 if (Key == KEY_3) {
                     gVfoConfigureMode = VFO_CONFIGURE;
                     COMMON_SwitchVFOMode();

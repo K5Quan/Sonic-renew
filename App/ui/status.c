@@ -70,55 +70,24 @@ void UI_DisplayStatus()
    
 
     
-        uint8_t dw = (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) + (gEeprom.CROSS_BAND_RX_TX != CROSS_BAND_OFF) * 2;
-        if (dw == 1 || dw == 3) {
-            if (gDualWatchActive) {
-                if (dw == 1) { // DW
-                    gStatusLine[POS_MOD++] = 0x7F;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x49;
-                    gStatusLine[POS_MOD++] = 0x08;
-                    gStatusLine[POS_MOD++] = 0x49;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x7F;
-                } else { // DWR
-                    gStatusLine[POS_MOD++] = 0x7F;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x4D;
-                    gStatusLine[POS_MOD++] = 0x0E;
-                    gStatusLine[POS_MOD++] = 0x4D;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x7F;
-                }
-            } else { // HL (HOLD)
-                gStatusLine[POS_MOD++] = 0x7F;
-                gStatusLine[POS_MOD++] = 0x41;
-                gStatusLine[POS_MOD++] = 0x77;
-                gStatusLine[POS_MOD++] = 0x77;
-                gStatusLine[POS_MOD++] = 0x77;
-                gStatusLine[POS_MOD++] = 0x41;
-                gStatusLine[POS_MOD++] = 0x7F;
-            }
-        } else { // MO — main only, иконка зависит от активного VFO
-            if (gEeprom.TX_VFO == 0) {
-                // VFO A — нормальная иконка MO
-                gStatusLine[POS_MOD++] |= 0x7F;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x7F;
-            } else {
-                // VFO B — иконка MO повёрнута на 180°
-                gStatusLine[POS_MOD++] = 0x7F;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x7F;
-            }
+        if (gEeprom.TX_VFO == 0) {
+            // VFO A — normal MO icon
+            gStatusLine[POS_MOD++] |= 0x7F;
+            gStatusLine[POS_MOD++] |= 0x71;
+            gStatusLine[POS_MOD++] |= 0x71;
+            gStatusLine[POS_MOD++] |= 0x71;
+            gStatusLine[POS_MOD++] |= 0x71;
+            gStatusLine[POS_MOD++] |= 0x71;
+            gStatusLine[POS_MOD++] |= 0x7F;
+        } else {
+            // VFO B — MO icon rotated 180°
+            gStatusLine[POS_MOD++] = 0x7F;
+            gStatusLine[POS_MOD++] = 0x47;
+            gStatusLine[POS_MOD++] = 0x47;
+            gStatusLine[POS_MOD++] = 0x47;
+            gStatusLine[POS_MOD++] = 0x47;
+            gStatusLine[POS_MOD++] = 0x47;
+            gStatusLine[POS_MOD++] = 0x7F;
         }
     
 

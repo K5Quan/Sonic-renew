@@ -50,9 +50,9 @@ int8_t gSmeterLevel = 0;
     static int8_t RxLine = -1;
     static uint32_t RxOnVfofrequency;
 
-    static bool isMainOnly()
+    static inline bool isMainOnly(void)
     {
-        return (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF) && (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF);
+        return true;
     }
 #endif
 
