@@ -78,7 +78,7 @@ build_preset() {
   docker run --rm -v "$PWD":/src -w /src "$IMAGE" \
     arm-none-eabi-size "./build/${preset}/${target}.elf"
 
-  echo "✅ Done: ${preset}"
+  echo "✅ Done: ${preset} : $(date +'%H:%M:%S')"
 }
 
 # ---------------------------------------------
@@ -115,11 +115,10 @@ if [[ "$PRESET" == "All" ]]; then
   done
   echo ""
   echo "🎉 All presets built successfully!"
-
   # Si 'All' est compilé, on flashe uniquement le preset USB
   flash_preset "USB"
 else
   build_preset "$PRESET"
   flash_preset "$PRESET"
 fi
-echo "End at : $(date +'%H:%M:%S')"
+
