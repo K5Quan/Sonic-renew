@@ -70,16 +70,25 @@
                 "ENABLE_AGC_SHOW_DATA": false,
                 "ENABLE_UART_RW_BK_REGS": false,
                 "ENABLE_SWD": false,
-                "VERSION_STRING_1": "V52",
-                "VERSION_STRING_2": "V52"
+                "VERSION_STRING_1": "V52b",
+                "VERSION_STRING_2": "V52b"
             }
         },
        
 {
     "name": "RS232","inherits": "default","cacheVariables": {
         "EDITION_STRING": "RS232",
+        "ENABLE_USB": false,
         "ENABLE_UART": true,
-        "TARGET": "f4hwn.sonic.RS232.V52"
+        "TARGET": "f4hwn.sonic.RS232.V52b"
+    }
+},
+{
+    "name": "NOCOM","inherits": "default","cacheVariables": {
+        "EDITION_STRING": "NOCOM",
+        "ENABLE_USB": false,
+        "ENABLE_UART": false,
+        "TARGET": "f4hwn.sonic.NOCOM.V52b"
     }
 },
 {
@@ -87,12 +96,13 @@
         "ENABLE_USB": true,
         "ENABLE_UART": false,
         "EDITION_STRING": "Sonic",
-        "TARGET": "f4hwn.sonic.USB.V52"
+        "TARGET": "f4hwn.sonic.USB.V52b"
     }
 }
 ],
 "buildPresets": [
     {"name": "RS232","configurePreset": "RS232"},
+    {"name": "NOCOM","configurePreset": "NOCOM"},
     {"name": "USB","configurePreset": "USB"}
 ]
 }

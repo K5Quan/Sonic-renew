@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    RS232|USB|All)
+    RS232|NOCOM|USB|All)
       PRESET="$1"
       shift
       ;;
@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
-PRESET=${PRESET:-RS232}
+PRESET=${PRESET:-USB}
 
 # ---------------------------------------------
 # Nettoyage si l'option est activée
@@ -41,9 +41,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(RS232|USB|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(RS232|NOCOM|USB|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: RS232 USB All"
+  echo "Valid presets are: RS232 NOCOM USB All"
   exit 1
 fi
 
@@ -62,10 +62,12 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
-  local target="f4hwn.sonic.USB.V52"
-  if [[ "$preset" == "RS232" ]]; then
-    target="f4hwn.sonic.RS232.V52"
-  fi
+  local target
+  case "$preset" in
+    RS232) target="f4hwn.sonic.rs232.V52b" ;;
+    NOCOM) target="f4hwn.sonic.NOCOM.V52b" ;;
+    *)     target="f4hwn.sonic.USB.V52b" ;; # Valeur par défaut
+  esac
   echo -e "\n 🚀 Building: ${preset}"
   docker run --rm -u $(id -u):$(id -g) -v "$PWD":/src -w /src "$IMAGE" \
   bash -c "cmake --preset ${preset} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
@@ -86,9 +88,9 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.V52" ;;
-    RS232) target="f4hwn.sonic.RS232.V52" ;;
-    *)     target="f4hwn.sonic.USB.V52" ;; # Valeur par défaut
+    RS232) target="f4hwn.sonic.rs232.V52b" ;;
+    NOCOM) target="f4hwn.sonic.NOCOM.V52b" ;;
+    *)     target="f4hwn.sonic.USB.V52b" ;; # Valeur par défaut
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -107,7 +109,7 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(RS232 USB)
+  PRESETS=(RS232 NOCOM USB)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
