@@ -64,9 +64,9 @@ static uint16_t historyListIndex = 0;
 static int historyScrollOffset = 0;
 static bool gHistoryScan = false;
 static uint32_t CodeFreq = 0;
-static uint16_t cachedChannels[6];      // Stocke les numéros de canaux trouvés
-static uint16_t cachedAbsoluteIdx[6];   // Mémorise à quel index d'historique ils appartiennent
-static uint8_t  cacheWriteHead = 0;     // Tête d'écriture circulaire
+static uint16_t cachedChannels[6];      // Stores the numbers of found channels
+static uint16_t cachedAbsoluteIdx[6];   // Remembers which history index they belong to
+static uint8_t  cacheWriteHead = 0;     // Circular write head
 static int lastHistoryScrollOffset = -1;
 // ============================================================
 
@@ -95,7 +95,7 @@ static bool     SoundBoost = 0;
 static uint8_t  PttEmission = 0;            
 static bool     gMonitorScan = true;       
 
-// Configuration des index du menu des paramètres
+// Parameter menu index configuration
 #define PARAM_PTT_EMISSION      0
 #define PARAM_SPECTRUM_DELAY    1
 #define PARAM_MAX_LISTEN_TIME   2
@@ -182,7 +182,7 @@ struct FrequencyBandInfo {
 };
 static uint32_t cdcssFreq;
 static uint16_t ctcssFreq;
-//static uint8_t refresh = 0; // СУБТОНО ЗАПРОС ВСЕГДА
+//static uint8_t refresh = 0; // ALWAYS REQUEST SUBTONE
 #define F_MAX frequencyBandTable[ARRAY_SIZE(frequencyBandTable) - 1].upper
 #define Bottom_print 50
 static Mode appMode;
@@ -231,72 +231,72 @@ static bandparameters   *BParams = NULL;
 #define  MAX_SCAN_CHANNELS 975
 
 /* ------------------------------------------------------------------------
- * Stockage compact des fréquences (24 bits en RAM au lieu de 32)
- * Utilisé par ScanFrequencies (canaux MR du scan) ET par HFreqs (historique)
+ * Compact frequency storage (24 bits in RAM instead of 32)
+ * Used by ScanFrequencies (MR scan channels) AND HFreqs (history)
  *
- *   Bandes couvertes (bornes incluses, x10 Hz) :
- *       14 MHz  -  88 MHz   : pas 250 Hz
- *      108 MHz  - 118 MHz   : pas 250 Hz
- *      118 MHz  - 136 MHz   : pas ICAO 8,33 kHz EXACT (25/3 kHz), seule
- *                              bande sur ce pas ; motif répété tous les 3
- *                              canaux (+0 / +8,33 / +16,67 kHz), ré-ancré
- *                              sur chaque palier de 25kHz -> aucune dérive
- *                              cumulative (contrairement à un pas fixe
- *                              arrondi à 8330Hz, qui dériverait d'environ
- *                              7,2kHz au sommet de la bande)
- *      136 MHz  - 580 MHz   : pas 250 Hz
- *      760 MHz  - 1160 MHz  : pas 250 Hz
- *   Bandes retirées (aucune fréquence n'y est stockée) :
- *      88-108 MHz (FM), 580-760 MHz, et tout ce qui est hors 14-1160 MHz.
- *      Une fréquence tombant dans un trou, ou hors de la plage globale,
- *      est ramenée (clampée) au point de grille valide le plus proche.
+ *   Covered bands (inclusive bounds, x10 Hz):
+ *       14 MHz  -  88 MHz   : 250 Hz step
+ *      108 MHz  - 118 MHz   : 250 Hz step
+ *      118 MHz  - 136 MHz   : EXACT ICAO 8.33 kHz step (25/3 kHz), the only
+ *                              band at this step; pattern repeated every 3
+ *                              channels (+0 / +8.33 / +16.67 kHz), re-anchored
+ *                              at each 25kHz level -> no cumulative drift
+ *                              (unlike a fixed step rounded to 8330Hz,
+ *                              which would drift by about 7.2kHz at the top
+ *                              of the band)
+ *      136 MHz  - 580 MHz   : 250 Hz step
+ *      760 MHz  - 1160 MHz  : 250 Hz step
+ *   Excluded bands (no frequency is stored there):
+ *      88-108 MHz (FM), 580-760 MHz, and everything outside 14-1160 MHz.
+ *      A frequency falling into a gap, or outside the global range,
+ *      is clamped to the nearest valid grid point.
  *
- *   Chaque bande est une table de points régulièrement espacés (son propre
- *   pas). Les bandes sont numérotées bout à bout et stockées comme un seul
- *   indice 1..N sur 24 bits (0 = case vide, compatible memset/== 0 comme
- *   avant). Il n'y a donc plus besoin de bits dédiés au pas : le pas se
- *   déduit de la bande à laquelle appartient l'indice.
+ *   Each band is a table of regularly spaced points (with its own
+ *   step). Bands are numbered consecutively and stored as one
+ *   index 1..N on 24 bits (0 = empty slot, compatible with memset/== 0 as
+ *   before). Dedicated step bits are therefore unnecessary: the step is
+ *   inferred from the band to which the index belongs.
  *
- *   Nombre total de points sur les 5 bandes : 3 714 163, très inférieur à
- *   la capacité de 24 bits (16 777 215 valeurs hors case vide).
+ *   Total points across the 5 bands: 3,714,163, well below
+ *   the 24-bit capacity (16,777,215 values excluding the empty slot).
  *
- *   Gain RAM : 25% vs uint32_t (3 octets/entrée au lieu de 4)
+ *   RAM saving: 25% vs uint32_t (3 bytes/entry instead of 4)
  *              MAX_SCAN_CHANNELS=500 -> 1500 o (au lieu de 2000 o)
  *              HISTORY_SIZE=100      ->  300 o (au lieu de  400 o)
  * ------------------------------------------------------------------------ */
 typedef struct __attribute__((packed)) {
-    uint8_t b[3];   // valeur 24 bits stockée little-endian sur 3 octets
+    uint8_t b[3];   // 24-bit value stored little-endian in 3 bytes
 } Freq24_t;
 
 typedef struct {
-    uint32_t start;   // x10 Hz, premier point de la bande (inclus)
-    uint32_t count;   // nombre de points de grille dans la bande
-    uint16_t step;    // x10 Hz (informatif seulement si is833 : voir plus bas)
-    uint8_t  is833;   // 1 => grille ICAO 8,33kHz exacte (25/3 kHz), 0 => pas linéaire fixe
+    uint32_t start;   // x10 Hz, first point of the band (inclusive)
+    uint32_t count;   // number of grid points in the band
+    uint16_t step;    // x10 Hz (informational only if is833; see below)
+    uint8_t  is833;   // 1 => exact ICAO 8.33kHz grid (25/3 kHz), 0 => fixed linear step
 } FreqBand_t;
 
-// Bandes à pas linéaire fixe (250Hz) : count calculé par le préprocesseur.
+// Bands with a fixed linear step (250Hz): count calculated by the preprocessor.
 #define FBAND(start, end, step)  { (start), (((end) - (start)) / (step)) + 1, (step), 0 }
 
-// Bande aviation 8,33kHz : le VRAI espacement ICAO est 25/3 kHz = 8333,33... Hz,
-// pas 8,33kHz pile. Un pas linéaire arrondi à 8330Hz dérive sur la largeur de
-// bande (haut de bande à 135,9928MHz au lieu de 136,000MHz avec 2160 canaux).
-// On utilise donc un motif répétitif sur 3 canaux (0 / +8,33kHz / +16,67kHz),
-// ré-ancré exactement tous les 25kHz -> aucune dérive cumulative.
-// count = nb de "tiers de pas" couverts par (end-start), voir Freq24_Set/Get.
+// Aviation band 8.33kHz: the TRUE ICAO spacing is 25/3 kHz = 8333.33... Hz,
+// Exact 8.33kHz step. A linear step rounded to 8330Hz drifts across the
+// band (band top at 135.9928MHz instead of 136.000MHz with 2160 channels).
+// Therefore, use a repeating pattern over 3 channels (0 / +8.33kHz / +16.67kHz),
+// re-anchored exactly every 25kHz -> no cumulative drift.
+// count = number of "step thirds" covered by (end-start), see Freq24_Set/Get.
 #define FBAND833(start, end)      { (start), (((6UL*((end)-(start))+2500UL))/5000UL) + 1, 833, 1 }
 
 static const FreqBand_t kFreqBands[] = {
-    FBAND(     FMIN,  8799975UL,  25),  // 14  - 88MHz (250Hz)   [88MHz exclu, cf trou FM]
-    FBAND(    10800000UL, 11799975UL,  25),  // 108 - 118MHz (250Hz)  [118MHz exclu, cf bande aviation]
-    FBAND833( 11800000UL, 13600000UL),        // 118 - 136MHz (8,33kHz ICAO exact, aviation)
+    FBAND(     FMIN,  8799975UL,  25),  // 14  - 88MHz (250Hz)   [88MHz excluded, see FM gap]
+    FBAND(    10800000UL, 11799975UL,  25),  // 108 - 118MHz (250Hz)  [118MHz excluded, see aviation band]
+    FBAND833( 11800000UL, 13600000UL),        // 118 - 136MHz (exact 8.33kHz ICAO, aviation)
     FBAND(    13600000UL, 58000000UL,  25),  // 136 - 580MHz (250Hz)
     FBAND(    76000000UL,FMAX,  25),  // 760 - 1160MHz (250Hz)
 };
 #define FREQ24_BAND_COUNT   (sizeof(kFreqBands) / sizeof(kFreqBands[0]))
 
-// Décodage exact d'un index 8,33kHz local k (0..count-1) vers un offset x10Hz
-// depuis band->start, sans dérive : offset(k) = round(k * 2500/3).
+// Exact decoding of a local 8.33kHz index k (0..count-1) to an x10Hz offset
+// from band->start, without drift: offset(k) = round(k * 2500/3).
 /* static inline uint32_t Freq833_OffsetOfIndex(uint32_t k) {
     return (5000UL * k + 3UL) / 6UL;
 }
@@ -305,7 +305,7 @@ static inline uint32_t Freq833_OffsetOfIndex(uint32_t k) {
     return (5000UL * k) / 6UL; 
 }
 
-// Encodage exact : trouve le k le plus proche pour un offset x10Hz donné.
+// Exact encoding: find the nearest k for a given x10Hz offset.
 static inline uint32_t Freq833_IndexOfOffset(uint32_t deltaX10Hz) {
     return (6UL * deltaX10Hz + 2500UL) / 5000UL;
 }
@@ -317,8 +317,8 @@ static inline uint32_t FreqBand_LastPoint(const FreqBand_t *band) {
     return band->start + (band->count - 1) * band->step;
 }
 
-// freqX10 == 0 est la valeur sentinelle "case vide" (compatible avec les
-// comparaisons/assignations existantes à 0 et avec memset(...,0,...)).
+// freqX10 == 0 is the "empty slot" sentinel (compatible with existing
+// comparisons/assignments to 0 and with memset(...,0,...)).
 static inline void Freq24_Set(Freq24_t *slot, uint32_t freqX10) {
     uint32_t packed = 0;
 
@@ -328,16 +328,16 @@ static inline void Freq24_Set(Freq24_t *slot, uint32_t freqX10) {
         if (freqX10 < lo) freqX10 = lo;
         if (freqX10 > hi) freqX10 = hi;
 
-        uint32_t offset = 0;   // somme des "count" des bandes précédentes
+        uint32_t offset = 0;   // sum of the "count" values of previous bands
         for (uint8_t i = 0; i < FREQ24_BAND_COUNT; i++) {
             const FreqBand_t *band = &kFreqBands[i];
             uint32_t bandEnd = FreqBand_LastPoint(band);
 
             if (freqX10 < band->start) {
-                // Tombe dans le trou juste avant cette bande : on choisit
-                // le point valide le plus proche (fin de bande précédente
-                // ou début de celle-ci). "offset" ici == somme des count
-                // des bandes 0..i-1, donc l'indice de départ de la bande i.
+                // Falls into the gap just before this band: choose
+                // the nearest valid point (end of the previous band
+                // or start of this one). "offset" here == sum of the counts
+                // of bands 0..i-1, therefore the starting index of band i.
                 if (i > 0) {
                     const FreqBand_t *prev = &kFreqBands[i - 1];
                     uint32_t prevOffset = offset - prev->count;
@@ -379,7 +379,7 @@ static inline uint32_t Freq24_Get(const Freq24_t *slot) {
     uint32_t packed = (uint32_t)slot->b[0]
                      | ((uint32_t)slot->b[1] << 8)
                      | ((uint32_t)slot->b[2] << 16);
-    if (packed == 0) return 0;   // case vide
+    if (packed == 0) return 0;   // empty slot
 
     uint32_t idx0 = packed - 1;
     for (uint8_t i = 0; i < FREQ24_BAND_COUNT; i++) {
@@ -392,12 +392,12 @@ static inline uint32_t Freq24_Get(const Freq24_t *slot) {
         }
         idx0 -= band->count;
     }
-    return 0;   // indice invalide (ne devrait pas arriver)
+    return 0;   // invalid index (should not happen)
 }
 
-// Fréquence brute telle qu'elle serait relue après un aller-retour
-// encodage/décodage : sert à comparer une fréquence "live" (peak.f,
-// scanInfo.f...) à une valeur déjà stockée sans faux-négatif d'arrondi.
+// Raw frequency as it would be read after an encode/decode round trip:
+// used to compare a "live" frequency (peak.f, scanInfo.f...) with an already
+// stored value without rounding false negatives.
 static inline uint32_t Freq24_Quantize(uint32_t freqX10) {
     Freq24_t tmp;
     Freq24_Set(&tmp, freqX10);
@@ -563,7 +563,7 @@ typedef struct {
     uint32_t offset;     // 0x04
     uint8_t  rxcode;     // 0x08
     uint8_t  txcode;     // 0x09
-    uint8_t  codeflags;  // 0x0A (regroupement des bitfields pour simplifier la lecture)
+    uint8_t  codeflags;  // 0x0A (bitfield grouping to simplify reading)
     uint8_t  mod_dir;    // 0x0B
     uint8_t  settings;   // 0x0C
     uint8_t  dtmf;       // 0x0D
@@ -738,8 +738,8 @@ static void LoadMonitorFrequencies(void)
 }
 
 #ifdef ENABLE_SPECTRUM_LINES
-static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t step, bool white); //ПРОСТОЙ РЕЖИМ ЛИНИИ
-static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step); //ПРОСТОЙ РЕЖИМ ЛИНИИ
+static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t step, bool white); // SIMPLE LINE MODE
+static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step); // SIMPLE LINE MODE
 #endif
 
 const RegisterSpec allRegisterSpecs[] = {
@@ -834,13 +834,13 @@ KEY_Code_t GetKey() {
         PTT_released = 0;
         SpectrumPauseCount = 2000;
     } else {
-        // Si le PTT était appuyé au cycle précédent mais ne l'est plus
+        // If PTT was pressed during the previous cycle but is no longer pressed
         if (last_ptt_state) {
             PTT_released = 1;
         }
     }
 
-    last_ptt_state = ptt_pressed; // Mise à jour pour le prochain appel
+    last_ptt_state = ptt_pressed; // Update for the next call
 
     if (gSetting_nav_invert) {
         if (btn == KEY_UP)        btn = KEY_DOWN;
@@ -959,11 +959,11 @@ static uint32_t GetBW() { return GetStepsCount() * GetScanStep(); }
 static uint16_t GetRandomChannel(uint16_t maxChannels) {
     if (maxChannels == 0) { return 1; }
 
-    // État persistant injecté avec le temps système actuel
+    // Persistent state injected with the current system time
     static uint32_t seed = 0xA5A5A5A5;
     seed ^= gGlobalSysTickCounter;
 
-    // Standard LCG / xorshift pour faire tourner la graine
+    // Standard LCG / xorshift for rotating the seed
     seed ^= seed << 13;
     seed ^= seed >> 17;
     seed ^= seed << 5;
@@ -1337,19 +1337,19 @@ static void FillfreqHistory(void)
     bool foundBlacklisted = false;
     uint8_t foundCode = 0xFF;
     
-    // Recherche si la fréquence existe déjà dans l'historique
+    // Check whether the frequency already exists in the history
     uint32_t qf = Freq24_Quantize(f);
     for (uint16_t i = 0; i < indexFs; i++) {
         if (GetHistoryFreq(i) == qf) {
             foundIndex = i;
             foundTime = HTimeS[i];
             foundBlacklisted = HBlacklisted[i];
-            foundCode = HCode[i]; // On conserve le code déjà enregistré
+            foundCode = HCode[i]; // Keep the already stored code
             break;
         }
     }
 
-    // Si un nouveau code a été détecté à l'instant, il remplace l'ancien
+    // If a new code was just detected, replace the old one
     if (CodeFreq == f && code != 0xFF) {
         foundCode = code;
     }
@@ -1364,7 +1364,7 @@ static void FillfreqHistory(void)
         return;
     }
 
-    // Supprimer l'ancienne position pour la remettre en haut
+    // Remove the old position so it can be moved to the top
     if (foundIndex != 0xFFFF) {
         for (uint16_t i = foundIndex; i + 1 < indexFs; i++) {
             HFreqs[i]       = HFreqs[i + 1];
@@ -1375,7 +1375,7 @@ static void FillfreqHistory(void)
         if (indexFs > 0) indexFs--;
     }
 
-    // Décaler le tableau vers la droite
+    // Shift the array to the right
     uint16_t limit = (indexFs < HISTORY_SIZE) ? indexFs : (HISTORY_SIZE - 1);
     for (int i = limit; i > 0; i--) {
         HFreqs[i]       = HFreqs[i - 1];
@@ -1387,7 +1387,7 @@ static void FillfreqHistory(void)
     // Insertion en position 0
     SetHistoryFreq(0, f);
     HBlacklisted[0] = foundBlacklisted;
-    HCode[0]        = foundCode; // Le code est préservé ou mis à jour correctement
+    HCode[0]        = foundCode; // The code is preserved or updated correctly
     HTimeS[0]       = foundTime;
 
     if (indexFs < HISTORY_SIZE) indexFs++;
@@ -2707,7 +2707,7 @@ static void HandleKeySpectrum(uint8_t key) {
             } else {
                 switch (appMode) {
                     case SCAN_BAND_MODE:
-                        // Déplacement vers le haut avec gestion du Scroll Offset
+                        // Move upward while handling the scroll offset
                         if (bandListSelectedIndex > 0) {
                             bandListSelectedIndex--;
                             if (bandListSelectedIndex < bandListScrollOffset) {
@@ -2735,7 +2735,7 @@ static void HandleKeySpectrum(uint8_t key) {
                         } 
                         BuildValidScanListIndices();
                         if (validScanListCount > 0) {
-                            // Déplacement vers le haut avec gestion du Scroll Offset
+                            // Move upward while handling the scroll offset
                             if (scanListSelectedIndex > 0) {
                                 scanListSelectedIndex--;
                                 if (scanListSelectedIndex < scanListScrollOffset) {
@@ -2776,7 +2776,7 @@ static void HandleKeySpectrum(uint8_t key) {
             } else {
                 switch (appMode) {
                     case SCAN_BAND_MODE:
-                        // Déplacement vers le bas avec gestion du Scroll Offset
+                        // Move downward while handling the scroll offset
                         if (bandListSelectedIndex < bandCount - 1) {
                             bandListSelectedIndex++;
                             if (bandListSelectedIndex >= bandListScrollOffset + MAX_VISIBLE_LINES) {
@@ -2804,7 +2804,7 @@ static void HandleKeySpectrum(uint8_t key) {
                         } 
                         BuildValidScanListIndices();
                         if (validScanListCount > 0) {
-                            // Déplacement vers le bas avec gestion du Scroll Offset
+                            // Move downward while handling the scroll offset
                             if (scanListSelectedIndex < validScanListCount - 1) {
                                 scanListSelectedIndex++;
                                 if (scanListSelectedIndex >= scanListScrollOffset + MAX_VISIBLE_LINES) {
@@ -3124,12 +3124,12 @@ static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t 
     uint8_t bit_mask = 1U << (y % 8);
 
     for (uint8_t x = x_start; x <= x_end; x++) {
-        if (step > 1 && (x % step) != 0) continue;  // пунктир
+        if (step > 1 && (x % step) != 0) continue;  // dashed
 
         if (white) {
-            gFrameBuffer[byte_idx][x] &= ~bit_mask;  // белая
+            gFrameBuffer[byte_idx][x] &= ~bit_mask;  // white
         } else {
-            gFrameBuffer[byte_idx][x] |= bit_mask;   // чёрная
+            gFrameBuffer[byte_idx][x] |= bit_mask;   // black
         }
     }
 }
@@ -3646,7 +3646,7 @@ static void UpdateScan() {
 
     if (gMonitorScan && gNextTimeslice_Monitor && monitorChannelsCount) { 
         gNextTimeslice_Monitor = false;
-        savedScanF = scanInfo.f; // Sauvegarde avant interruption
+        savedScanF = scanInfo.f; // Save before interruption
         MonitorIndex = monitorChannelsCount + 1;
     }
     if (MonitorIndex) {
@@ -3730,7 +3730,7 @@ static void UpdateListening(void) {
         return;
     }
 
-    // --- Gestion du pic ---
+    // --- Peak handling ---
     if (gIsPeak) {
         WaitSpectrum = SpectrumDelay;   // reset timer
         return;
@@ -3743,7 +3743,7 @@ static void UpdateListening(void) {
         WaitSpectrum -= 200;
         return;
     }
-    // timer écoulé
+    // timer expired
     WaitSpectrum = 0;
     ResetScanStats();
 
@@ -3805,7 +3805,7 @@ static void Tick() {
     }
 
     if (SPECTRUM_PAUSED && (SpectrumPauseCount == 0)) {
-        // fin de la pause
+        // end of pause
         SPECTRUM_PAUSED = false;
         BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
         BK4819_RX_TurnOn(); //Wake up
@@ -4338,7 +4338,7 @@ static void RenderUnifiedList(
         bool needsTwoLines = ((strlen(row.left) + strlen(row.right)) > 19);
         uint8_t itemHeight = needsTwoLines ? 2 : 1;
 
-        if (currentLine + itemHeight > 7) break; // Sécurité limite physique LCD
+        if (currentLine + itemHeight > 7) break; // LCD physical limit safeguard
 
         bool sel = (itemIndex == selectedIndex);
         bool inv = sel && invertSelected;
@@ -4358,9 +4358,9 @@ static void RenderUnifiedList(
     ST7565_BlitFullScreen();
 }
 
-// === Effectue un unique balayage pour les 6 lignes visibles au départ ===
+// === Perform a single scan for the 6 initially visible lines ===
 void PreloadHistoryChannels(uint16_t startScrollIndex, uint16_t totalCount) {
-    // 1. Initialisation propre du cache
+    // 1. Clean cache initialization
     for (uint8_t i = 0; i < 6; i++) {
         cachedChannels[i] = 0xFFFF;
         cachedAbsoluteIdx[i] = 0xFFFF; 
@@ -4369,7 +4369,7 @@ void PreloadHistoryChannels(uint16_t startScrollIndex, uint16_t totalCount) {
 
     if (!inv || totalCount == 0) return;
 
-    // 2. Un seul parcours de tous les canaux de la radio pour le bloc visible
+    // 2. One pass through all radio channels for the visible block
     for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
         ChannelInfo_t freqcmp = FetchChannelFrequency(ch);
         if (freqcmp.frequency == 0 || freqcmp.frequency == 0xFFFFFFFF) continue;
@@ -4387,7 +4387,7 @@ void PreloadHistoryChannels(uint16_t startScrollIndex, uint16_t totalCount) {
     }
 }
 
-// === Récupère la ligne et gère le cache tournant si la ligne est hors-cache ===
+// === Retrieve the line and handle the rotating cache if the line is out of cache ===
 static void GetHistoryRow(uint16_t index, ListRow *row) {
     row->left[0]  = '\0';
     row->right[0] = '\0';
@@ -4412,10 +4412,10 @@ static void GetHistoryRow(uint16_t index, ListRow *row) {
             }
         }
         if (!foundInCache) {
-            ch = BOARD_gMR_fetchChannel(f); // Recherche unique
+            ch = BOARD_gMR_fetchChannel(f); // Single lookup
             cachedAbsoluteIdx[cacheWriteHead] = index;
             cachedChannels[cacheWriteHead] = ch;
-            cacheWriteHead = (cacheWriteHead + 1) % 6; // Avance la tête de 0 à 5
+            cacheWriteHead = (cacheWriteHead + 1) % 6; // Advance the head from 0 to 5
         }
         if (ch != 0xFFFF) {
             SETTINGS_FetchChannelName(Name, ch);

@@ -46,7 +46,7 @@ typedef enum  {
 extern const freq_band_table_t frequencyBandTable[7];
 
 typedef enum {
-    // Ordre croissant de fréquence
+    // Ascending frequency order
     STEP_0_01kHz,   // 1
     STEP_0_05kHz,   // 5
     STEP_0_1kHz,    // 10
@@ -71,7 +71,7 @@ typedef enum {
     STEP_200kHz,    // 20000
     STEP_250kHz,    // 25000
     STEP_500kHz,    // 50000
-    STEP_N_ELEM     // Nombre d'éléments (24)
+    STEP_N_ELEM     // Number of elements (24)
 } STEP_Setting_t;
 
 

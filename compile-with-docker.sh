@@ -4,7 +4,7 @@ set -euo pipefail
 
 IMAGE=uvk1-uvk5v3
 
-# Initialisation des variables par défaut
+# Initialize default variables
 CLEAN_BUILD=false
 EXTRA_ARGS=()
 PRESET=""
@@ -27,11 +27,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
+# If no preset was detected in the arguments, use the default value
 PRESET=${PRESET:-USB}
 
 # ---------------------------------------------
-# Nettoyage si l'option est activée
+# Clean up if the option is enabled
 # ---------------------------------------------
 if [ "$CLEAN_BUILD" = true ]; then
   echo " 🧹 Cleaning build directory..."
@@ -66,7 +66,7 @@ build_preset() {
   case "$preset" in
     RS232) target="f4hwn.sonic.rs232.V52b" ;;
     NOCOM) target="f4hwn.sonic.NOCOM.V52b" ;;
-    *)     target="f4hwn.sonic.USB.V52b" ;; # Valeur par défaut
+    *)     target="f4hwn.sonic.USB.V52b" ;; # Default value
   esac
   echo -e "\n 🚀 Building: ${preset}"
   docker run --rm -u $(id -u):$(id -g) -v "$PWD":/src -w /src "$IMAGE" \
@@ -90,7 +90,7 @@ flash_preset() {
   case "$preset" in
     RS232) target="f4hwn.sonic.rs232.V52b" ;;
     NOCOM) target="f4hwn.sonic.NOCOM.V52b" ;;
-    *)     target="f4hwn.sonic.USB.V52b" ;; # Valeur par défaut
+    *)     target="f4hwn.sonic.USB.V52b" ;; # Default value
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -115,10 +115,9 @@ if [[ "$PRESET" == "All" ]]; then
   done
   echo ""
   echo "🎉 All presets built successfully!"
-  # Si 'All' est compilé, on flashe uniquement le preset USB
+  # If 'All' is compiled, flash only the USB preset
   flash_preset "USB"
 else
   build_preset "$PRESET"
   flash_preset "$PRESET"
 fi
-

@@ -184,8 +184,8 @@ const char gSubMenu_RESET[][5] =
 
 const char * const gSubMenu_F_LOCK[] =
 {
-    "UNLOCK\nALL",      // 0 = F_LOCK_NONE    — TX везде
-    "LOCK\nALL",        // 1 = F_LOCK_ALL     — TX заблокирован
+    "UNLOCK\nALL",      // 0 = F_LOCK_NONE    — TX everywhere
+    "LOCK\nALL",        // 1 = F_LOCK_ALL     — TX blocked
     "136-174\n400-500", // 2 = F_LOCK_136_500
     "PMR+\nLPD",        // 3 = F_LOCK_PMR_LPD
 };
@@ -695,7 +695,7 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_RESET[gSubMenuSelection]);
             break;
 
-        case MENU_F_LOCK: // разрешить всё
+        case MENU_F_LOCK: // allow everything
             strcpy(String, gSubMenu_F_LOCK[gSubMenuSelection]);
             break;
 
@@ -877,10 +877,10 @@ void UI_DisplayMenu(void)
         UI_PrintStringSmallBold(pPrintStr, menu_item_x1, menu_item_x2, 4);
     }
 
-//*******************ЛИНИИ-LINES***************** */
+//*******************LINES***************** */
 
         for (uint8_t y = 4; y <= 57; y += 2) {
-            UI_DrawLineBuffer(gFrameBuffer, 49, y, 49, y, 1); // Левая вертикальная пунктирная(X = 30)
+            UI_DrawLineBuffer(gFrameBuffer, 49, y, 49, y, 1); // Left vertical dashed line (X = 30)
         }
     
         for (uint8_t i = 0; i <= 127; i += 2) {

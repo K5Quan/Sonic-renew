@@ -1386,9 +1386,9 @@ static void play_mario() {
 //###########################################################################################
 
 static void play_ambulance() {
-    play_note(960, 150); // Note haute (La)
-    play_note(635, 150); // Note basse (Ré)
-    play_note(960, 150); // Note haute (La)
+    play_note(960, 150); // High note (A)
+    play_note(635, 150); // Low note (D)
+    play_note(960, 150); // High note (A)
 
 }
 
@@ -1434,7 +1434,7 @@ static void Roger2(void) {
 } */
 //###########################################################################################
 
-// OURO — глубокий протяжный гудок ~340 Гц (из OURO.mp3)
+// OURO — deep sustained tone ~340 Hz (from OURO.mp3)
 static void roger_beep_OURO(void) {
 play_note(1100, 40);
     play_note(1300, 40);
@@ -1442,7 +1442,7 @@ play_note(1100, 40);
     play_note(1800, 60);
 }
 
-// KLAC — механический клик-бёрст (из KLAC.mp3)
+// KLAC — mechanical click burst (from KLAC.mp3)
 static void roger_beep_KLAC(void) {
     play_note(1800, 10);
     play_note(700,  10);
@@ -1465,7 +1465,7 @@ static void roger_beep_KLAC(void) {
 
 //###########################################################################################
 
-// PIU — лазер: восходящий свип 400→800→1600 Гц (из PIU.mp3)
+// PIU — laser: rising sweep 400→800→1600 Hz (from PIU.mp3)
 void roger_beep_PIU(void) {
     play_note(400,  160);
     play_note(800,  100);

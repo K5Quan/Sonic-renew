@@ -86,7 +86,7 @@ void Main(void)
     PY25Q16_SetProfileBase(MB_ProfileBase(MB_BootResolveProfile()));
 #endif
 
-    // Читаем кнопку СРАЗУ при старте, до долгой инициализации
+    // Read the button IMMEDIATELY at startup, before lengthy initialization
 
     boot_counter_10ms = 75;
 
@@ -126,11 +126,11 @@ void Main(void)
     }
 #endif
 
-    // Erase режимы — обрабатываем немедленно, до любой инициализации настроек
+    // Erase modes: process immediately, before any settings initialization
     if (BootMode == BOOT_MODE_ERASE_NO_CALIB || BootMode == BOOT_MODE_ERASE)
     {
         BOOT_ProcessMode(BootMode);
-        // Если вернулись (отмена) — продолжаем нормальную загрузку
+        // If we returned (cancelled), continue normal boot
         BootMode = BOOT_MODE_NORMAL;
     }
     // count the number of menu items

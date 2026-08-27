@@ -84,7 +84,7 @@ static void CheckForIncoming(void)
 {
 #ifdef ENABLE_FMRADIO
     if (gFmRadioMode && gFM_Mute)
-        return;          // FM MUTE: приём рации полностью заблокирован
+        return;          // FM MUTE: radio reception is completely blocked
 #endif
 
     if (!g_SquelchLost)
@@ -308,7 +308,7 @@ void APP_StartListening(FUNCTION_Type_t function)
     }
 
 #ifdef ENABLE_FLASHLIGHT
-    // Мигание фонарика при входящем сигнале
+    // Flashlight blinking on an incoming signal
     if (gEeprom.FlashlightOnRX &&
         (function == FUNCTION_RECEIVE || function == FUNCTION_INCOMING)) {
         for (int i = 0; i < 2; i++) {
@@ -1047,7 +1047,7 @@ void APP_TimeSlice500ms(void)
     if (!gPttIsPressed && gVFOStateResumeCountdown_500ms > 0 && --gVFOStateResumeCountdown_500ms == 0) {
             RADIO_SetVfoState(VFO_STATE_NORMAL);
 #ifdef ENABLE_FMRADIO
-        // Только если RestoreCountdown уже не ждёт — иначе двойной BK1080_Init вешает I2C
+        // Only if RestoreCountdown is no longer waiting; otherwise a second BK1080_Init hangs I2C
         if (gFmRadioMode && !FUNCTION_IsRx() && gFM_RestoreCountdown_10ms == 0) {
             FM_Start();
             GUI_SelectNextDisplay(DISPLAY_FM);
@@ -1352,4 +1352,3 @@ Skip:
 
     gUpdateDisplay = true;
 }
-

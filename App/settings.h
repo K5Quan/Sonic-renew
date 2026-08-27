@@ -33,8 +33,8 @@ enum POWER_OnDisplayMode_t {
 typedef enum POWER_OnDisplayMode_t POWER_OnDisplayMode_t;
 
 enum TxLockModes_t {
-    F_LOCK_NONE,       // 0 = UNLOCK ALL   — TX на всех частотах
-    F_LOCK_ALL,        // 1 = DISABLE ALL  — TX заблокирован везде
+    F_LOCK_NONE,       // 0 = UNLOCK ALL   — TX on all frequencies
+    F_LOCK_ALL,        // 1 = DISABLE ALL  — TX blocked everywhere
     F_LOCK_136_500,    // 2 = 136-500 MHz only
     F_LOCK_PMR_LPD,    // 3 = PMR446 + LPD433 only
     F_LOCK_LEN
@@ -160,7 +160,7 @@ typedef struct {
     bool                  KEY_LOCK_PTT;
     bool                  SET_NAV;
 #endif
-    bool                  FlashlightOnRX;     // мигание фонарика при входящем
+    bool                  FlashlightOnRX;     // flashlight blinking on incoming signal
     uint8_t               CHANNEL_DISPLAY_MODE;
     bool                  TAIL_TONE_ELIMINATION;
     bool                  VFO_OPEN;
