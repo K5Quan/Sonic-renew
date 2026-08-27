@@ -32,7 +32,6 @@
 #include "misc.h"
 #include "driver/py25q16.h"
 #include "version.h"
-#include <stdlib.h>
 #include "settings.h"
 // ============================================================
 // SECTION: Compile-time configuration
@@ -226,9 +225,9 @@ typedef struct {
 typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 
 /***************************BIG RAM******************************************/
-static bandparameters   *BParams = NULL;
 #define HISTORY_SIZE 100
-#define  MAX_SCAN_CHANNELS 975
+#define MAX_SCAN_CHANNELS 975
+static bandparameters BParams[MAX_BANDS];
 
 /* ------------------------------------------------------------------------
  * Compact frequency storage (24 bits in RAM instead of 32)
@@ -3882,9 +3881,7 @@ void APP_RunSpectrum(void) {
         }
         LoadActiveScanFrequencies();
         if(mode == SCAN_BAND_MODE){
-            if (BParams == NULL) {
-                BParams = (bandparameters *)malloc((MAX_BANDS) * sizeof(bandparameters));}
-            if(BParams) LoadActiveBands();
+            LoadActiveBands();
         }
 #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
         gEeprom.CURRENT_STATE = 4;
@@ -3936,7 +3933,6 @@ void APP_RunSpectrum(void) {
             RestoreRegisters();
             break;
         }
-        if (BParams)         { free(BParams);         BParams = NULL; }
         break;
     } 
 }
