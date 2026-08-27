@@ -51,15 +51,12 @@
 #define IS_MR_CHANNEL(x)       ((x) >= MR_CHANNEL_FIRST && (x) <= MR_CHANNEL_LAST)
 #define IS_FREQ_CHANNEL(x)     ((x) >= FREQ_CHANNEL_FIRST && (x) <= FREQ_CHANNEL_LAST)
 #define IS_VALID_CHANNEL(x)    ((x) < LAST_CHANNEL)
-#define IS_NOAA_CHANNEL(x)     ((x) >= NOAA_CHANNEL_FIRST && (x) <= NOAA_CHANNEL_LAST)
 
 enum {
     MR_CHANNEL_FIRST   = 0,
     MR_CHANNEL_LAST    = MR_CHANNELS_MAX - 1,
     FREQ_CHANNEL_FIRST = MR_CHANNELS_MAX,
     FREQ_CHANNEL_LAST  = MR_CHANNELS_MAX + 6,
-    NOAA_CHANNEL_FIRST = MR_CHANNELS_MAX + 7,
-    NOAA_CHANNEL_LAST  = MR_CHANNELS_MAX + 16,
     LAST_CHANNEL
 };
 
@@ -110,15 +107,6 @@ extern const uint8_t         scan_delay_10ms;
 
 extern const uint16_t        battery_save_count_10ms;
 extern const uint16_t        power_save1_10ms;
-
-extern const uint16_t        NOAA_countdown_10ms;
-
-extern const uint16_t        dual_watch_count_after_tx_10ms;
-extern const uint16_t        dual_watch_count_after_rx_10ms;
-extern const uint16_t        dual_watch_count_after_2_10ms;
-extern const uint16_t        dual_watch_count_toggle_10ms;
-extern const uint16_t        dual_watch_count_noaa_10ms;
-
 extern const uint8_t         gMicGain_dB2[9];
 extern uint8_t               gSetting_F_LOCK;
 extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
@@ -334,7 +322,6 @@ extern bool                  gKeyBeingHeld;
 extern bool                  gPttIsPressed;
 extern uint8_t               gPttDebounceCounter;
 extern uint8_t               gMenuListCount;
-extern uint8_t               gBackup_CROSS_BAND_RX_TX;
 extern uint8_t               gScanDelay_10ms;
 extern volatile bool         gNextTimeslice;
 extern bool                  gUpdateDisplay;
@@ -356,7 +343,6 @@ extern volatile uint8_t      boot_counter_10ms;
 #ifdef ENABLE_FEAT_F4HWN
     extern bool                  gK5startup;
     extern bool                  gBackLight;
-    extern bool                  gMute;
     extern uint8_t               gBacklightTimeOriginal;
     extern uint8_t               gBacklightBrightnessOld;
     extern uint8_t               gSquelchLevelOriginal;

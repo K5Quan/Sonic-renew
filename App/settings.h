@@ -40,26 +40,6 @@ enum TxLockModes_t {
     F_LOCK_LEN
 };
 
-/*
-enum {
-    SCAN_RESUME_TO = 0,
-    SCAN_RESUME_CO,
-    SCAN_RESUME_SE
-};
-*/
-
-enum {
-    CROSS_BAND_OFF = 0,
-    CROSS_BAND_CHAN_A,
-    CROSS_BAND_CHAN_B
-};
-
-enum {
-    DUAL_WATCH_OFF = 0,
-    DUAL_WATCH_CHAN_A,
-    DUAL_WATCH_CHAN_B
-};
-
 enum {
     TX_OFFSET_FREQUENCY_DIRECTION_OFF = 0,
     TX_OFFSET_FREQUENCY_DIRECTION_ADD,
@@ -164,8 +144,6 @@ typedef struct {
     uint8_t               CHANNEL_DISPLAY_MODE;
     bool                  TAIL_TONE_ELIMINATION;
     bool                  VFO_OPEN;
-    uint8_t               DUAL_WATCH;
-    uint8_t               CROSS_BAND_RX_TX;
     uint8_t               BATTERY_SAVE;
     uint8_t               BACKLIGHT_TIME;
     uint8_t               SCAN_RESUME_MODE;

@@ -785,14 +785,6 @@ void UI_DisplayMain(void)
 
         uint32_t frequency = gEeprom.VfoInfo[vfo_num].pRX->Frequency;
 
-        if(TX_freq_check(frequency) != 0 && gEeprom.VfoInfo[vfo_num].BUSY_CHANNEL_LOCK == true)
-        {
-            if(isMainOnly())
-                memcpy(p_line0 + 14, BITMAP_VFO_Lock, sizeof(BITMAP_VFO_Lock));
-            else
-                memcpy(p_line0 + 24, BITMAP_VFO_Lock, sizeof(BITMAP_VFO_Lock));
-        }
-
         if (gCurrentFunction == FUNCTION_TRANSMIT)
         {   // transmitting
 
