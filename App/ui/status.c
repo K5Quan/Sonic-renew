@@ -61,17 +61,9 @@ void UI_DisplayStatus()
     char str[12] = "";
     gUpdateStatus = false;
     memset(gStatusLine, 0, sizeof(gStatusLine));
-
-    // YOUR COORDINATES (X)
-     uint8_t POS_MOD  = 1;   // DW, XB, MO (glyphs)
+    uint8_t POS_MOD  = 1;   // DW, XB, MO (glyphs)
     const uint8_t POS_LOCK = 83;   // Lock (glyph)
     const uint8_t POS_F    = 83;   // Letter F (glyph)
-
-   
-    // 3. TIMER + S-METER (always 3px after the timer)
-     uint8_t POS_MOD  = 1;   // DW, XB, MO (глифы)
-    const uint8_t POS_LOCK = 83;   // Замок (глиф)
-    const uint8_t POS_F    = 83;   // Буква F (глиф)
 
 #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
     if (gSetting_set_tmr) {      
