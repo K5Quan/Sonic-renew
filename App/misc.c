@@ -38,25 +38,9 @@ const uint16_t    key_debounce_10ms                =    20 / 10;   // 20ms
 
 const uint8_t     scan_delay_10ms                  =   210 / 10;   // 210ms
 
-#ifdef ENABLE_FEAT_F4HWN
-    const uint16_t    dual_watch_count_after_tx_10ms   =  420;         // 4.2 sec after TX ends
-    const uint16_t    dual_watch_count_after_rx_10ms   =  1000 / 10;   // 1 sec after RX ends ?
-    const uint16_t    dual_watch_count_after_2_10ms    =  420;         // 4.2 sec
-    const uint16_t    dual_watch_count_noaa_10ms       =    70 / 10;   // 70ms
-#else
-    const uint16_t    dual_watch_count_after_tx_10ms   =  3600 / 10;   // 3.6 sec after TX ends
-    const uint16_t    dual_watch_count_after_rx_10ms   =  1000 / 10;   // 1 sec after RX ends ?
-    const uint16_t    dual_watch_count_after_2_10ms    =  3600 / 10;   // 3.6 sec
-    const uint16_t    dual_watch_count_noaa_10ms       =    70 / 10;   // 70ms
-#endif
-
-const uint16_t    dual_watch_count_toggle_10ms     =   100 / 10;   // 100ms between VFO toggles
-
 const uint16_t    battery_save_count_10ms          = 10000 / 10;   // 10 seconds
 
 const uint16_t    power_save1_10ms                 =   100 / 10;   // 100ms
-
-const uint16_t    NOAA_countdown_10ms              =  5000 / 10;   // 5 seconds
 
 const uint8_t     gMicGain_dB2[9]                  = {3, 8, 16, 24, 32, 40, 48, 56, 63}; // BK4819 {3, 8, 16, 24, 31};
 uint8_t           gSetting_F_LOCK;
@@ -207,7 +191,6 @@ bool              gKeyBeingHeld;
 bool              gPttIsPressed;
 uint8_t           gPttDebounceCounter;
 uint8_t           gMenuListCount;
-uint8_t           gBackup_CROSS_BAND_RX_TX;
 uint8_t           gScanDelay_10ms;
 bool              gUpdateDisplay;
 
@@ -230,7 +213,6 @@ uint8_t           gIsLocked = 0xFF;
 #ifdef ENABLE_FEAT_F4HWN
     bool          gK5startup = true;
     bool          gBackLight = false;
-    bool          gMute = false;
     uint8_t       gBacklightTimeOriginal;
     uint8_t       gBacklightBrightnessOld;
     uint8_t       gSquelchLevelOriginal = 10;

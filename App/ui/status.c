@@ -61,39 +61,10 @@ void UI_DisplayStatus()
     char str[12] = "";
     gUpdateStatus = false;
     memset(gStatusLine, 0, sizeof(gStatusLine));
-
-    // ТВОИ КООРДИНАТЫ (X)
      uint8_t POS_MOD  = 1;   // DW, XB, MO (глифы)
     const uint8_t POS_LOCK = 83;   // Замок (глиф)
     const uint8_t POS_F    = 83;   // Буква F (глиф)
 
-   
-
-    
-        if (gEeprom.TX_VFO == 0) {
-            // VFO A — normal MO icon
-            gStatusLine[POS_MOD++] |= 0x7F;
-            gStatusLine[POS_MOD++] |= 0x71;
-            gStatusLine[POS_MOD++] |= 0x71;
-            gStatusLine[POS_MOD++] |= 0x71;
-            gStatusLine[POS_MOD++] |= 0x71;
-            gStatusLine[POS_MOD++] |= 0x71;
-            gStatusLine[POS_MOD++] |= 0x7F;
-        } else {
-            // VFO B — MO icon rotated 180°
-            gStatusLine[POS_MOD++] = 0x7F;
-            gStatusLine[POS_MOD++] = 0x47;
-            gStatusLine[POS_MOD++] = 0x47;
-            gStatusLine[POS_MOD++] = 0x47;
-            gStatusLine[POS_MOD++] = 0x47;
-            gStatusLine[POS_MOD++] = 0x47;
-            gStatusLine[POS_MOD++] = 0x7F;
-        }
-    
-
-
-
-    // 3. ТАЙМЕР + S-МЕТР (всегда через 3px после таймера)
 #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
     if (gSetting_set_tmr) {      
         if (gCurrentFunction == FUNCTION_TRANSMIT){
@@ -169,16 +140,6 @@ void UI_DisplayStatus()
     }
 
 
-
-
-    #ifdef ENABLE_FEAT_F4HWN
-    if (gMute) {
-        // Вывод Mute (например на позиции 100, чтоб не мешал)
-        memcpy(gStatusLine + 100, gFontMute, sizeof(gFontMute));
-    }
-    #endif
-
-    // 8. БАТАРЕЯ (Твой оригинал)
     if (gSetting_battery_text == 0);
     else if (gSetting_battery_text == 1) {
         sprintf(str, "%u.%02uV", gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100);
