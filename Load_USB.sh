@@ -1,2 +1,5 @@
 #!/usr/bin/env bash
-python flash.py  /c/Perso/Sonic/build/USB/f4hwn.sonic.USB.V52b.bin -p COM14
+
+source load_settings.sh
+
+python flash.py $DEFAULT_LOAD_FILE -p $UPLOAD_PORT

@@ -2,16 +2,21 @@
 clear
 set -euo pipefail
 
-IMAGE=uvk1-uvk5v3
+source load_settings.sh
 
 # Initialize default variables
 CLEAN_BUILD=false
 EXTRA_ARGS=()
 PRESET=""
+FLASH=true
 
 # Boucle pour analyser TOUS les arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --no-auto-flash)
+      FLASH=false
+      shift
+      ;;
     -c|--clean)
       CLEAN_BUILD=true
       shift
@@ -62,21 +67,28 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
+
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.V52b" ;;
-    NOCOM) target="f4hwn.sonic.NOCOM.V52b" ;;
-    *)     target="f4hwn.sonic.USB.V52b" ;; # Default value
+    RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
+    NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.USB.${VERSION_NO}" ;; # Default value
   esac
   echo -e "\n 🚀 Building: ${preset}"
-  docker run --rm -u $(id -u):$(id -g) -v "$PWD":/src -w /src "$IMAGE" \
-  bash -c "cmake --preset ${preset} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
-           cmake --build --preset ${preset} -j" \
+  docker run \
+    --rm \
+    -u $(id -u):$(id -g) \
+    -v "$PWD":/src \
+    -w /src \
+    -e VERSION_STRING_2=${VERSION_NO} \
+    "$IMAGE" \
+    bash -c "cmake --preset ${preset} -DTARGET=${target} -DVERSION_STRING_1=${VERSION_NO} -DVERSION_STRING_2=${VERSION_NO} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
+             cmake --build --preset ${preset} -j" \
   2>&1 | sed "s|/src/|C:/Perso/Sonic/|g" \
        | sed -E '/^[[:space:]]+[A-Za-z0-9_]+(:[A-Za-z]+)?=/d; /--( Configuring|Generating) done/d; /-- Build files have been written to/d'
 
   docker run --rm -v "$PWD":/src -w /src "$IMAGE" \
-    arm-none-eabi-size "./build/${preset}/${target}.elf"
+    arm-none-eabi-size ./build/${preset}/${target}.elf
 
   echo "✅ Done: ${preset} : $(date +'%H:%M:%S')"
 }
@@ -88,16 +100,16 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.V52b" ;;
-    NOCOM) target="f4hwn.sonic.NOCOM.V52b" ;;
-    *)     target="f4hwn.sonic.USB.V52b" ;; # Default value
+    RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
+    NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.USB.${VERSION_NO}" ;; # Default value
   esac
   local ifile="./build/${preset}/${target}.bin"
 
-  echo -e "\n⚡ Flashing ${preset} firmware on COM14..."
+  echo -e "\n⚡ Flashing ${preset} firmware on ${UPLOAD_PORT}..."
 
   if [[ -f "$ifile" ]]; then
-      python flash.py "$ifile" -p COM14
+      python flash.py "$ifile" -p ${UPLOAD_PORT}
       echo "✅ Flash ${preset} terminé avec succès !"
   else
       echo "❌ Erreur : Le fichier binaire est introuvable : $ifile"
@@ -119,5 +131,7 @@ if [[ "$PRESET" == "All" ]]; then
   flash_preset "USB"
 else
   build_preset "$PRESET"
-  flash_preset "$PRESET"
+  if [ "$FLASH" = true ]; then
+    flash_preset "$PRESET"
+  fi;
 fi
