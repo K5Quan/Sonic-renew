@@ -33,31 +33,11 @@ enum POWER_OnDisplayMode_t {
 typedef enum POWER_OnDisplayMode_t POWER_OnDisplayMode_t;
 
 enum TxLockModes_t {
-    F_LOCK_NONE,       // 0 = UNLOCK ALL   — TX на всех частотах
-    F_LOCK_ALL,        // 1 = DISABLE ALL  — TX заблокирован везде
+    F_LOCK_NONE,       // 0 = UNLOCK ALL   — TX on all frequencies
+    F_LOCK_ALL,        // 1 = DISABLE ALL  — TX blocked everywhere
     F_LOCK_136_500,    // 2 = 136-500 MHz only
     F_LOCK_PMR_LPD,    // 3 = PMR446 + LPD433 only
     F_LOCK_LEN
-};
-
-/*
-enum {
-    SCAN_RESUME_TO = 0,
-    SCAN_RESUME_CO,
-    SCAN_RESUME_SE
-};
-*/
-
-enum {
-    CROSS_BAND_OFF = 0,
-    CROSS_BAND_CHAN_A,
-    CROSS_BAND_CHAN_B
-};
-
-enum {
-    DUAL_WATCH_OFF = 0,
-    DUAL_WATCH_CHAN_A,
-    DUAL_WATCH_CHAN_B
 };
 
 enum {
@@ -160,12 +140,10 @@ typedef struct {
     bool                  KEY_LOCK_PTT;
     bool                  SET_NAV;
 #endif
-    bool                  FlashlightOnRX;     // мигание фонарика при входящем
+    bool                  FlashlightOnRX;     // flashlight blinking on incoming signal
     uint8_t               CHANNEL_DISPLAY_MODE;
     bool                  TAIL_TONE_ELIMINATION;
     bool                  VFO_OPEN;
-    uint8_t               DUAL_WATCH;
-    uint8_t               CROSS_BAND_RX_TX;
     uint8_t               BATTERY_SAVE;
     uint8_t               BACKLIGHT_TIME;
     uint8_t               SCAN_RESUME_MODE;
@@ -219,7 +197,7 @@ void SETTINGS_SaveSettings(void);
 void SETTINGS_SaveChannelName(uint16_t channel, const char * name);
 void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode);
 void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration);
-void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep, bool check, bool save);
+void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep);
 void SETTINGS_WriteBuildOptions(void);
 #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
     void SETTINGS_WriteCurrentState(void);

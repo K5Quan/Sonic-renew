@@ -388,15 +388,15 @@ void PY25Q16_InvalidateCache(void)
 // Without this, SectorErase is silently ignored if protection is enabled by locked firmware.
 void PY25Q16_ClearBlockProtect(void)
 {
-    // Читаем текущий Status Register 1
+    // Read the current Status Register 1
     uint8_t sr1 = ReadStatusReg(0);
 
-    // Если биты защиты уже сброшены — ничего не делаем
-    // BP0=бит2, BP1=бит3, BP2=бит4, SRWD=бит7
+    // If the protection bits are already cleared, do nothing
+    // BP0=bit 2, BP1=bit 3, BP2=bit 4, SRWD=bit 7
     if ((sr1 & 0x9C) == 0)
         return;
 
-    // Сбрасываем биты защиты: BP0, BP1, BP2, SRWD → 0
+    // Clear the protection bits: BP0, BP1, BP2, SRWD → 0
     uint8_t new_sr1 = sr1 & ~0x9C;
 
     WriteEnable();
@@ -404,7 +404,7 @@ void PY25Q16_ClearBlockProtect(void)
 
     CS_Assert();
     SPI_WriteByte(0x01);      // Write Status Register command
-    SPI_WriteByte(new_sr1);   // SR1 с обнулёнными битами защиты
+    SPI_WriteByte(new_sr1);   // SR1 with cleared protection bits
     CS_Release();
 
     WaitWIP();

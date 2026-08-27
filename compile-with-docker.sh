@@ -4,7 +4,7 @@ set -euo pipefail
 
 source load_settings.sh
 
-# Initialisation des variables par défaut
+# Initialize default variables
 CLEAN_BUILD=false
 EXTRA_ARGS=()
 PRESET=""
@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    NOCOM|CHIRP|All)
+    RS232|NOCOM|USB|All)
       PRESET="$1"
       shift
       ;;
@@ -32,11 +32,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Si aucun preset n'a été détecté dans les arguments, on met la valeur par défaut
-PRESET=${PRESET:-CHIRP}
+# If no preset was detected in the arguments, use the default value
+PRESET=${PRESET:-USB}
 
 # ---------------------------------------------
-# Nettoyage si l'option est activée
+# Clean up if the option is enabled
 # ---------------------------------------------
 if [ "$CLEAN_BUILD" = true ]; then
   echo " 🧹 Cleaning build directory..."
@@ -46,9 +46,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(NOCOM|CHIRP|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(RS232|NOCOM|USB|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: NOCOM CHIRP All"
+  echo "Valid presets are: RS232 NOCOM USB All"
   exit 1
 fi
 
@@ -67,10 +67,13 @@ export MSYS_NO_PATHCONV=1
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
-  local target="f4hwn.sonic.chirp.${VERSION_NO}"
-  if [[ "$preset" == "NOCOM" ]]; then
-    target="f4hwn.sonic.nocom.${VERSION_NO}"
-  fi
+
+  local target
+  case "$preset" in
+    RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
+    NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.USB.${VERSION_NO}" ;; # Default value
+  esac
   echo -e "\n 🚀 Building: ${preset}"
   docker run \
     --rm \
@@ -87,7 +90,7 @@ build_preset() {
   docker run --rm -v "$PWD":/src -w /src "$IMAGE" \
     arm-none-eabi-size ./build/${preset}/${target}.elf
 
-  echo "✅ Done: ${preset}"
+  echo "✅ Done: ${preset} : $(date +'%H:%M:%S')"
 }
 
 # ---------------------------------------------
@@ -98,8 +101,8 @@ flash_preset() {
   local target
   case "$preset" in
     RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
-    NOCOM) target="f4hwn.sonic.nocom.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.chirp.${VERSION_NO}" ;; # Valeur par défaut
+    NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.USB.${VERSION_NO}" ;; # Default value
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -118,17 +121,14 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(NOCOM CHIRP)
+  PRESETS=(RS232 NOCOM USB)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
   echo ""
   echo "🎉 All presets built successfully!"
-
-  # Si 'All' est compilé, on flashe uniquement le preset USB
-  if [ "$FLASH" = true ]; then
-    flash_preset "CHIRP"
-  fi;
+  # If 'All' is compiled, flash only the USB preset
+  flash_preset "USB"
 else
   build_preset "$PRESET"
   if [ "$FLASH" = true ]; then

@@ -41,23 +41,67 @@
     } while (0)
 
 
-// we come here every 10ms
+// we come here every 10ms (100Hz tick)
 void SysTick_Handler(void)
 {
+    static uint8_t  cnt_500ms   = 50;
+    static uint8_t  cnt_200ms   = 20;
+    static uint8_t  cnt_150ms   = 15;
+    static uint8_t  cnt_1000ms  = 100;
+    static uint16_t cnt_scan_led = 500;
+    static uint8_t  cnt_470ms   = 47;
+    static uint16_t cnt_autoptt = 0;
+
     gGlobalSysTickCounter++;
     
     gNextTimeslice = true;
     gNextTimeslice_10ms = true;
-    if ((gGlobalSysTickCounter % 50) == 0)  {gNextTimeslice_ShowNames = true;} 
-    if ((gGlobalSysTickCounter % 20) == 0)  {gNextTimeslice_listening = true;} 
-    if ((gGlobalSysTickCounter % 15) == 0)  {gNextTimeslice_display = true;}
-    if ((gGlobalSysTickCounter % 100) == 0) {gNextTimeslice_HTimeS = true;}
-    if ((gGlobalSysTickCounter % 500) == 0) {gNextTimeslice_SCAN_LED = true;}
-    if ((gGlobalSysTickCounter % 500) == 30){gNextTimeslice_SCAN_LED_OFF = true;}
-    if ((gGlobalSysTickCounter % 50) == 0)  {gNextTimeslice_history = true;}
-    if ((gGlobalSysTickCounter % 47) == 0)  {gNextTimeslice_Monitor = true;}
-    if ((gGlobalSysTickCounter % (gAutoPtt_Time*100)) == 0) {gNextTimeslice_AutoPtt = true;}
-    if ((gGlobalSysTickCounter % 50) == 0)  {
+
+    // 200ms task (listening)
+    if (--cnt_200ms == 0) {
+        cnt_200ms = 20;
+        gNextTimeslice_listening = true;
+    }
+
+    // 150ms task (display refresh trigger)
+    if (--cnt_150ms == 0) {
+        cnt_150ms = 15;
+        gNextTimeslice_display = true;
+    }
+
+    // 470ms task (Monitor check)
+    if (--cnt_470ms == 0) {
+        cnt_470ms = 47;
+        gNextTimeslice_Monitor = true;
+    }
+
+    // 1000ms task (HTimes)
+    if (--cnt_1000ms == 0) {
+        cnt_1000ms = 100;
+        gNextTimeslice_HTimeS = true;
+    }
+
+    // 5000ms scan led beacon
+    if (--cnt_scan_led == 0) {
+        cnt_scan_led = 500;
+        gNextTimeslice_SCAN_LED = true;
+    } else if (cnt_scan_led == 470) {
+        gNextTimeslice_SCAN_LED_OFF = true;
+    }
+
+    // AutoPTT tick down-counter (avoiding division with variable time)
+    if (gAutoPtt_Time > 0) {
+        if (++cnt_autoptt >= (uint16_t)(gAutoPtt_Time * 100)) {
+            cnt_autoptt = 0;
+            gNextTimeslice_AutoPtt = true;
+        }
+    }
+
+    // 500ms tasks (ShowNames, history, timers)
+    if (--cnt_500ms == 0) {
+        cnt_500ms = 50;
+        gNextTimeslice_ShowNames = true;
+        gNextTimeslice_history = true;
         gNextTimeslice_500ms = true;
 #ifdef ENABLE_FEAT_F4HWN
         DECREMENT_AND_TRIGGER(gVfoSaveCountdown_10ms, gScheduleVfoSave);
@@ -85,12 +129,6 @@ void SysTick_Handler(void)
     if (gCurrentFunction == FUNCTION_POWER_SAVE)
         DECREMENT_AND_TRIGGER(gPowerSave_10ms, gPowerSaveCountdownExpired);
 
-    if (!gCssBackgroundScan && gEeprom.DUAL_WATCH != DUAL_WATCH_OFF)
-        if (gCurrentFunction != FUNCTION_MONITOR && gCurrentFunction != FUNCTION_TRANSMIT && gCurrentFunction != FUNCTION_RECEIVE)
-            DECREMENT_AND_TRIGGER(gDualWatchCountdown_10ms, gScheduleDualWatch);
-
-
-    
     DECREMENT_AND_TRIGGER(gTailNoteEliminationCountdown_10ms, gFlagTailNoteEliminationComplete);
 
 

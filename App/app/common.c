@@ -28,14 +28,8 @@ void COMMON_SwitchVFOs()
         gHasVfoBackup = false;
     }
 
-    if (gEeprom.CROSS_BAND_RX_TX != CROSS_BAND_OFF)
-        gEeprom.CROSS_BAND_RX_TX = gEeprom.TX_VFO + 1;
-    if (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF)
-        gEeprom.DUAL_WATCH = gEeprom.TX_VFO + 1;
-
     gRequestSaveSettings  = 1;
     gFlagReconfigureVfos  = true;
-    gScheduleDualWatch = true;
 
     gRequestDisplayScreen = DISPLAY_MAIN;
 }

@@ -38,41 +38,9 @@ const uint16_t    key_debounce_10ms                =    20 / 10;   // 20ms
 
 const uint8_t     scan_delay_10ms                  =   210 / 10;   // 210ms
 
-#ifdef ENABLE_FEAT_F4HWN
-    const uint16_t    dual_watch_count_after_tx_10ms   =  420;         // 4.2 sec after TX ends
-    const uint16_t    dual_watch_count_after_rx_10ms   =  1000 / 10;   // 1 sec after RX ends ?
-    const uint16_t    dual_watch_count_after_1_10ms    =  5000 / 10;   // 5 sec
-    const uint16_t    dual_watch_count_after_2_10ms    =  420;         // 4.2 sec
-    const uint16_t    dual_watch_count_noaa_10ms       =    70 / 10;   // 70ms
-#else
-    const uint16_t    dual_watch_count_after_tx_10ms   =  3600 / 10;   // 3.6 sec after TX ends
-    const uint16_t    dual_watch_count_after_rx_10ms   =  1000 / 10;   // 1 sec after RX ends ?
-    const uint16_t    dual_watch_count_after_1_10ms    =  5000 / 10;   // 5 sec
-    const uint16_t    dual_watch_count_after_2_10ms    =  3600 / 10;   // 3.6 sec
-    const uint16_t    dual_watch_count_noaa_10ms       =    70 / 10;   // 70ms
-#endif
-
-const uint16_t    dual_watch_count_toggle_10ms     =   100 / 10;   // 100ms between VFO toggles
-
-const uint16_t    scan_pause_delay_in_1_10ms       =  5000 / 10;   // 5 seconds
-const uint16_t    scan_pause_delay_in_2_10ms       =   500 / 10;   // 500ms
-const uint16_t    scan_pause_delay_in_3_10ms       =   200 / 10;   // 200ms
-const uint16_t    scan_pause_delay_in_4_10ms       =   300 / 10;   // 300ms
-const uint16_t    scan_pause_delay_in_5_10ms       =  1000 / 10;   // 1 sec
-const uint16_t    scan_pause_delay_in_6_10ms       =   100 / 10;   // 100ms
-const uint16_t    scan_pause_delay_in_7_10ms       =  3600 / 10;   // 3.6 seconds
-
 const uint16_t    battery_save_count_10ms          = 10000 / 10;   // 10 seconds
 
 const uint16_t    power_save1_10ms                 =   100 / 10;   // 100ms
-const uint16_t    power_save2_10ms                 =   200 / 10;   // 200ms
-
-
-const uint16_t    NOAA_countdown_10ms              =  5000 / 10;   // 5 seconds
-const uint16_t    NOAA_countdown_2_10ms            =   500 / 10;   // 500ms
-const uint16_t    NOAA_countdown_3_10ms            =   200 / 10;   // 200ms
-
-const uint32_t    gDefaultAesKey[4]                = {0x4AA5CC60, 0x0312CC5F, 0xFFD2DABB, 0x6BBA7F92};
 
 const uint8_t     gMicGain_dB2[9]                  = {3, 8, 16, 24, 32, 40, 48, 56, 63}; // BK4819 {3, 8, 16, 24, 31};
 uint8_t           gSetting_F_LOCK;
@@ -103,11 +71,6 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     #ifdef ENABLE_FEAT_F4HWN_DEBUG
         int16_t   gDebug;
     #endif
-    uint8_t       gDW = 0;
-    uint8_t       gCB = 0;
-    bool          gSaveRxMode = false;
-    uint8_t       crc[15] = { 0 };
-    bool          gAirCopyBootMode = 0;
     int8_t dBmCorrTable[7] = {-15, -25, -20, -4, -7, -6, -1}; // KA52 calibration
 #endif
 
@@ -121,7 +84,6 @@ bool              gMonitor = false;           // true opens the squelch
 uint32_t          gCustomAesKey[4];
 bool              bHasCustomAesKey;
 uint32_t          gChallenge[4];
-uint8_t           gTryCount;
 
 uint16_t          gEEPROM_RSSI_CALIB[7][4];
 
@@ -140,11 +102,6 @@ volatile uint16_t gBatterySaveCountdown_10ms = battery_save_count_10ms;
 
 volatile bool     gPowerSaveCountdownExpired;
 volatile bool     gSchedulePowerSave;
-
-volatile bool     gScheduleDualWatch = true;
-
-volatile uint16_t gDualWatchCountdown_10ms;
-bool              gDualWatchActive           = false;
 
 volatile uint8_t  gSerialConfigCountDown_500ms;
 volatile uint32_t gGlobalSysTickCounter;
@@ -234,16 +191,10 @@ bool              gKeyBeingHeld;
 bool              gPttIsPressed;
 uint8_t           gPttDebounceCounter;
 uint8_t           gMenuListCount;
-uint8_t           gBackup_CROSS_BAND_RX_TX;
 uint8_t           gScanDelay_10ms;
-uint8_t           gFSKWriteIndex;
-
-
 bool              gUpdateDisplay;
 
 bool              gF_LOCK = false;
-
-uint8_t           gShowChPrefix;
 
 volatile bool     gNextTimeslice;
 volatile uint8_t  gFoundCDCSSCountdown_10ms;
@@ -262,14 +213,13 @@ uint8_t           gIsLocked = 0xFF;
 #ifdef ENABLE_FEAT_F4HWN
     bool          gK5startup = true;
     bool          gBackLight = false;
-    bool          gMute = false;
     uint8_t       gBacklightTimeOriginal;
     uint8_t       gBacklightBrightnessOld;
     uint8_t       gSquelchLevelOriginal = 10;
     uint8_t       gPttOnePushCounter = 0;
     uint32_t      gBlinkCounter = 0;
-    uint16_t      gVfoSaveCountdown_10ms = 0;
-    bool          gScheduleVfoSave = false;
+    volatile uint16_t gVfoSaveCountdown_10ms = 0;
+    volatile bool     gScheduleVfoSave = false;
     bool          gVfoStateChanged = false;
     char          gListName[MR_CHANNELS_LIST][10];
 #endif

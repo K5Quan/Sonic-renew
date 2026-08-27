@@ -35,7 +35,7 @@
 #include "ui/status.h"
 
 #ifdef ENABLE_FEAT_F4HWN
-// S-уровень, обновляется в ui/main.c при приёме
+// S-level, updated in ui/main.c during reception
 extern int8_t gSmeterLevel;
 #endif
 
@@ -61,70 +61,10 @@ void UI_DisplayStatus()
     char str[12] = "";
     gUpdateStatus = false;
     memset(gStatusLine, 0, sizeof(gStatusLine));
+    uint8_t POS_MOD  = 1;   // DW, XB, MO (glyphs)
+    const uint8_t POS_LOCK = 83;   // Lock (glyph)
+    const uint8_t POS_F    = 83;   // Letter F (glyph)
 
-    // ТВОИ КООРДИНАТЫ (X)
-     uint8_t POS_MOD  = 1;   // DW, XB, MO (глифы)
-    const uint8_t POS_LOCK = 83;   // Замок (глиф)
-    const uint8_t POS_F    = 83;   // Буква F (глиф)
-
-   
-
-    
-        uint8_t dw = (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) + (gEeprom.CROSS_BAND_RX_TX != CROSS_BAND_OFF) * 2;
-        if (dw == 1 || dw == 3) {
-            if (gDualWatchActive) {
-                if (dw == 1) { // DW
-                    gStatusLine[POS_MOD++] = 0x7F;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x49;
-                    gStatusLine[POS_MOD++] = 0x08;
-                    gStatusLine[POS_MOD++] = 0x49;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x7F;
-                } else { // DWR
-                    gStatusLine[POS_MOD++] = 0x7F;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x4D;
-                    gStatusLine[POS_MOD++] = 0x0E;
-                    gStatusLine[POS_MOD++] = 0x4D;
-                    gStatusLine[POS_MOD++] = 0x6B;
-                    gStatusLine[POS_MOD++] = 0x7F;
-                }
-            } else { // HL (HOLD)
-                gStatusLine[POS_MOD++] = 0x7F;
-                gStatusLine[POS_MOD++] = 0x41;
-                gStatusLine[POS_MOD++] = 0x77;
-                gStatusLine[POS_MOD++] = 0x77;
-                gStatusLine[POS_MOD++] = 0x77;
-                gStatusLine[POS_MOD++] = 0x41;
-                gStatusLine[POS_MOD++] = 0x7F;
-            }
-        } else { // MO — main only, иконка зависит от активного VFO
-            if (gEeprom.TX_VFO == 0) {
-                // VFO A — нормальная иконка MO
-                gStatusLine[POS_MOD++] |= 0x7F;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x71;
-                gStatusLine[POS_MOD++] |= 0x7F;
-            } else {
-                // VFO B — иконка MO повёрнута на 180°
-                gStatusLine[POS_MOD++] = 0x7F;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x47;
-                gStatusLine[POS_MOD++] = 0x7F;
-            }
-        }
-    
-
-
-
-    // 3. ТАЙМЕР + S-МЕТР (всегда через 3px после таймера)
 #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
     if (gSetting_set_tmr) {      
         if (gCurrentFunction == FUNCTION_TRANSMIT){
@@ -154,7 +94,7 @@ void UI_DisplayStatus()
     }
 #endif
 
-    // 6. ФОНАРИК (FlashlightOnRX) - мигание при RX включено
+    // 6. FLASHLIGHT (FlashlightOnRX) - blinking enabled during RX
     if (gEeprom.FlashlightOnRX) {
         POS_MOD += 3;
         gStatusLine[POS_MOD++] |= 0x70;
@@ -166,7 +106,7 @@ void UI_DisplayStatus()
         gStatusLine[POS_MOD++] |= 0x70;
     }
 
-    // 7. ПОДСВЕТКА (B) - В СТОЛБИК, сдвигается правее если фонарик тоже включён
+    // 7. BACKLIGHT (B) - VERTICAL, shifted right when the flashlight is also enabled
     if (gBackLight) {
         POS_MOD += 3;
         gStatusLine[POS_MOD++] |= 0x0C;
@@ -179,7 +119,7 @@ void UI_DisplayStatus()
     }
 
 
-    // 7. F-KEY И ЗАМОК - РАЗДЕЛЬНО
+    // 7. F-KEY AND LOCK - SEPARATE
     if (gWasFKeyPressed) {
         gStatusLine[POS_F + 0] = 0x7F;
         gStatusLine[POS_F + 1] = 0x41;
@@ -200,16 +140,6 @@ void UI_DisplayStatus()
     }
 
 
-
-
-    #ifdef ENABLE_FEAT_F4HWN
-    if (gMute) {
-        // Вывод Mute (например на позиции 100, чтоб не мешал)
-        memcpy(gStatusLine + 100, gFontMute, sizeof(gFontMute));
-    }
-    #endif
-
-    // 8. БАТАРЕЯ (Твой оригинал)
     if (gSetting_battery_text == 0);
     else if (gSetting_battery_text == 1) {
         sprintf(str, "%u.%02uV", gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100);

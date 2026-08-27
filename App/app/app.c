@@ -84,54 +84,15 @@ static void CheckForIncoming(void)
 {
 #ifdef ENABLE_FMRADIO
     if (gFmRadioMode && gFM_Mute)
-        return;          // FM MUTE: приём рации полностью заблокирован
+        return;          // FM MUTE: radio reception is completely blocked
 #endif
 
     if (!g_SquelchLost)
         return;          // squelch is closed
 
-    // squelch is open
-
-  // not RF scanning
-        if (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF)
-        {   // dual watch is disabled
-
-            if (gCurrentFunction != FUNCTION_INCOMING)
-            {
-                FUNCTION_Select(FUNCTION_INCOMING);
-                //gUpdateDisplay = true;
-            }
-
-            return;
-        }
-
-        // dual watch is enabled and we're RX'ing a signal
-
-        if (gRxReceptionMode != RX_MODE_NONE)
-        {
-            if (gCurrentFunction != FUNCTION_INCOMING)
-            {
-                FUNCTION_Select(FUNCTION_INCOMING);
-                //gUpdateDisplay = true;
-            }
-            return;
-        }
-
-        gDualWatchCountdown_10ms = dual_watch_count_after_rx_10ms;
-        gScheduleDualWatch       = false;
-
-        // let the user see DW is not active
-        gDualWatchActive = false;
-        gUpdateStatus    = true;
-
-
-
-    gRxReceptionMode = RX_MODE_DETECTED;
-
     if (gCurrentFunction != FUNCTION_INCOMING)
     {
         FUNCTION_Select(FUNCTION_INCOMING);
-        //gUpdateDisplay = true;
     }
 }
 
@@ -347,7 +308,7 @@ void APP_StartListening(FUNCTION_Type_t function)
     }
 
 #ifdef ENABLE_FLASHLIGHT
-    // Мигание фонарика при входящем сигнале
+    // Flashlight blinking on an incoming signal
     if (gEeprom.FlashlightOnRX &&
         (function == FUNCTION_RECEIVE || function == FUNCTION_INCOMING)) {
         for (int i = 0; i < 2; i++) {
@@ -360,31 +321,6 @@ void APP_StartListening(FUNCTION_Type_t function)
 #endif
 
 
-
-    if (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF)
-    {   // not scanning, dual watch is enabled
-
-        //gDualWatchCountdown_10ms = dual_watch_count_after_2_10ms;
-
-        const bool isMainTxDualRx =
-        (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) &&
-        (gEeprom.CROSS_BAND_RX_TX != CROSS_BAND_OFF);
-
-        // Use a short hold only for MAIN TX DUAL RX, keep legacy hold otherwise
-        gDualWatchCountdown_10ms = isMainTxDualRx
-            ? dual_watch_count_after_2_10ms / 4 // Short timer = 420 / 4 ...
-            : dual_watch_count_after_2_10ms;
-
-        gScheduleDualWatch       = false;
-
-        // when crossband is active only the main VFO should be used for TX
-        if(gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF)
-            gRxVfoIsActive = true;
-
-        // let the user see DW is not active
-        gDualWatchActive = false;
-        gUpdateStatus    = true;
-    }
 
     BK4819_WriteRegister(BK4819_REG_48,
         (11u << 12)                |     // ??? .. 0 to 15, doesn't seem to make any difference
@@ -427,24 +363,6 @@ uint32_t APP_SetFreqByStepAndLimits(VFO_Info_t *pInfo, int8_t direction, uint32_
 uint32_t APP_SetFrequencyByStep(VFO_Info_t *pInfo, int8_t direction)
 {
     return APP_SetFreqByStepAndLimits(pInfo, direction, frequencyBandTable[pInfo->Band].lower, frequencyBandTable[pInfo->Band].upper);
-}
-
-static void DualwatchAlternate(void)
-{
-    {   // toggle between VFO's
-        gEeprom.RX_VFO = !gEeprom.RX_VFO;
-        gRxVfo         = &gEeprom.VfoInfo[gEeprom.RX_VFO];
-
-        if (!gDualWatchActive)
-        {   // let the user see DW is active
-            gDualWatchActive = true;
-            gUpdateStatus    = true;
-        }
-    }
-
-    RADIO_SetupRegisters(false);
-
-        gDualWatchCountdown_10ms = dual_watch_count_toggle_10ms;
 }
 
 static void CheckRadioInterrupts(void)
@@ -634,26 +552,6 @@ void APP_Update(void)
         return;
 #endif
 
-    // toggle between the VFO's if dual watch is enabled
-    if (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF
-        && gScheduleDualWatch
-        && !gPttIsPressed
-        && gCurrentFunction != FUNCTION_POWER_SAVE
-#ifdef ENABLE_FMRADIO
-        && !gFmRadioMode
-#endif
-    ) {
-        DualwatchAlternate();    // toggle between the two VFO's
-
-        if (gRxVfoIsActive && gScreenToDisplay == DISPLAY_MAIN) {
-            GUI_SelectNextDisplay(DISPLAY_MAIN);
-        }
-
-        gRxVfoIsActive     = false;
-        gRxReceptionMode   = RX_MODE_NONE;
-        gScheduleDualWatch = false;
-    }
-
 #ifdef ENABLE_FMRADIO
     if (gScheduleFM && gFM_ScanState != FM_SCAN_OFF && !FUNCTION_IsRx()) {
         // switch to FM radio mode
@@ -682,42 +580,22 @@ void APP_Update(void)
 
     if (gPowerSaveCountdownExpired && gCurrentFunction == FUNCTION_POWER_SAVE
     ) {
-        static bool goToSleep;
         // wake up, enable RX then go back to sleep
         if (gRxIdleMode)
         {
             BK4819_Conditional_RX_TurnOn_and_GPIO6_Enable();
-
-            if (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF &&
-                !gCssBackgroundScan)
-            {   // dual watch mode, toggle between the two VFO's
-                DualwatchAlternate();
-                goToSleep = false;
-            }
 
             FUNCTION_Init();
 
             gPowerSave_10ms = power_save1_10ms; // come back here in a bit
             gRxIdleMode     = false;            // RX is awake
         }
-        else if (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF || gCssBackgroundScan || goToSleep)
-        {   // dual watch mode off or scanning or rssi update request
-            // go back to sleep
-
+        else
+        {   // go back to sleep
             gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
             gRxIdleMode     = true;
-            goToSleep = false;
             BK4819_Sleep();
             BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
-
-            // Authentic device checked removed
-
-        }
-        else {
-            // toggle between the two VFO's
-            DualwatchAlternate();
-            gPowerSave_10ms   = power_save1_10ms;
-            goToSleep = true;
         }
 
         gPowerSaveCountdownExpired = false;
@@ -810,9 +688,6 @@ void CheckKeys(void)
         }
         else { 
             gPttDebounceCounter = 0;
-            #ifndef ENABLE_USB
-            if (gComeBack) APP_RunSpectrum(); //Robzyl mod for Ninja
-            #endif
         }
     }
 
@@ -1172,7 +1047,7 @@ void APP_TimeSlice500ms(void)
     if (!gPttIsPressed && gVFOStateResumeCountdown_500ms > 0 && --gVFOStateResumeCountdown_500ms == 0) {
             RADIO_SetVfoState(VFO_STATE_NORMAL);
 #ifdef ENABLE_FMRADIO
-        // Только если RestoreCountdown уже не ждёт — иначе двойной BK1080_Init вешает I2C
+        // Only if RestoreCountdown is no longer waiting; otherwise a second BK1080_Init hangs I2C
         if (gFmRadioMode && !FUNCTION_IsRx() && gFM_RestoreCountdown_10ms == 0) {
             FM_Start();
             GUI_SelectNextDisplay(DISPLAY_FM);
@@ -1477,4 +1352,3 @@ Skip:
 
     gUpdateDisplay = true;
 }
-

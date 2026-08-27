@@ -104,7 +104,7 @@ void BACKLIGHT_InitHardware()
 
 static void BACKLIGHT_Sound(void)
 {
-    // Звук при загрузке убран - beep только при активации USB (см. App/main.c)
+    // Startup sound removed; beep only when USB is activated (see App/main.c)
     gK5startup = false;
 }
 

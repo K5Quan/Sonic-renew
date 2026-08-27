@@ -225,62 +225,14 @@ void ACTION_FM(void)
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN
-void ACTION_Update(void)
-{
-    gSaveRxMode          = false;
-    gFlagReconfigureVfos = true;
-    gUpdateStatus        = true;
-}
-
 void ACTION_RxMode(void)
 {
-    // 3 режима как в меню RxMode:
-    // 0 = MAIN ONLY    (DUAL_WATCH=OFF,  CROSS_BAND=OFF)
-    // 1 = DUAL RESPOND (DUAL_WATCH=on,   CROSS_BAND=OFF)
-    // 2 = MAIN TX DUAL (DUAL_WATCH=on,   CROSS_BAND=CHAN_A)
-    uint8_t mode;
-    if      (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF)        mode = 0;
-    else if (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF)  mode = 1;
-    else                                                   mode = 2;
-
-    mode = (mode + 1) % 3;
-
-    switch (mode) {
-        case 0:
-            gEeprom.DUAL_WATCH       = DUAL_WATCH_OFF;
-            gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-            break;
-        case 1:
-            gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-            gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-            break;
-        case 2:
-            gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-            gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_CHAN_A;
-            break;
-    }
-    ACTION_Update();
+    // Single VFO mode: No-op
 }
 
 void ACTION_MainOnly(void)
 {
-    static bool cycle = 0;
-    static uint8_t dw = 0;
-    static uint8_t cb = 0;
-
-    if (cycle) {
-        gEeprom.DUAL_WATCH = dw;
-        gEeprom.CROSS_BAND_RX_TX = cb;
-    } else {
-        dw = gEeprom.DUAL_WATCH;
-        cb = gEeprom.CROSS_BAND_RX_TX;
-
-        gEeprom.DUAL_WATCH = 0;
-        gEeprom.CROSS_BAND_RX_TX = 0;
-    }
-
-    cycle = !cycle;
-    ACTION_Update();
+    // Single VFO mode: No-op
 }
 
 #ifdef ENABLE_FEAT_F4HWN_AUDIO
@@ -299,7 +251,6 @@ void ACTION_Ptt(void)
 {
     gSetting_set_ptt_session = !gSetting_set_ptt_session;
 
-    ACTION_Update();
 }
 
 void ACTION_Wn(void)

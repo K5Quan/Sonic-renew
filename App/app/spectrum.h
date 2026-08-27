@@ -209,7 +209,6 @@ typedef struct ChannelInfo_t {
     uint32_t offset;
 } __attribute__((packed)) ChannelInfo_t;
 
-extern bool gComeBack;
 void APP_RunSpectrum(void);
 void APP_RunSpectrumMode(uint8_t mode); // 0=FREQ, 1=SCANLIST, 2=RANGE, 3=BAND
 void ClearSettings(void);

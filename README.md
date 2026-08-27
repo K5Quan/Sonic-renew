@@ -27,6 +27,6 @@ The USB and RS232 builds expose the Fusion-compatible commands `0x0720` through
 overwritten or erased by these host commands.
 
 Build artifacts follow the shared metadata convention
-`f4hwn.<name>.<variant>.v<version>.bin`: Sonic v50 is emitted as
-`f4hwn.sonic.usb.v50.bin` or `f4hwn.sonic.rs232.v50.bin`. UVStudio derives the
+`f4hwn.<name>.<variant>.v<version>.bin`: Sonic V52b is emitted as
+`f4hwn.sonic.usb.V52b.bin` or `f4hwn.sonic.rs232.V52b.bin`. UVStudio derives the
 slot name from `<name>` and stores `v<version>` in the slot header.

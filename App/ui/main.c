@@ -40,7 +40,7 @@
 
 center_line_t center_line = CENTER_LINE_NONE;
 
-// Глобальный S-уровень для статус-бара (0..13, обновляется в DisplayRSSIBar)
+// Global S-level for the status bar (0..13, updated in DisplayRSSIBar)
 int8_t gSmeterLevel = 0;
 
 #ifdef ENABLE_FEAT_F4HWN
@@ -50,9 +50,9 @@ int8_t gSmeterLevel = 0;
     static int8_t RxLine = -1;
     static uint32_t RxOnVfofrequency;
 
-    static bool isMainOnly()
+    static inline bool isMainOnly(void)
     {
-        return (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF) && (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF);
+        return true;
     }
 #endif
 
@@ -218,8 +218,8 @@ void UI_DisplayAudioScope(void)
     memset(p_line, 0, LCD_WIDTH);
 
 #ifdef ENABLE_FEAT_F4HWN
-    // В main-only скоп на line=5; очищаем ТОЛЬКО 1 нижний пиксель (bit 7)
-    // строки выше, чтобы не было артефакта — полная очистка строки не нужна
+    // In main-only scope on line=5; clear ONLY one bottom pixel (bit 7)
+    // of the lines above to avoid artifacts; clearing the entire line is unnecessary
     if (isMainOnly() && line > 0) {
         for (uint8_t x = 0; x < LCD_WIDTH; x++)
             gFrameBuffer[line - 1][x] &= ~0x80u;
@@ -544,7 +544,7 @@ void UI_DisplayMain(void)
                 sprintf(String, "M%u", gEeprom.ScreenChannel[vfo_num] + 1);
             else
                 sprintf(String, "M%.3s", INPUTBOX_GetAscii());
-            UI_PrintString(String, 18 - (strlen(String) * 4), 0, 1, 8);
+            UI_PrintStringSmallBold(String, 0, 0, 2);
 
             const ChannelAttributes_t* att = MR_GetChannelAttributes(gEeprom.ScreenChannel[vfo_num]);
             if (att && att->scanlist > 0 && att->scanlist <= MR_CHANNELS_LIST) {
@@ -717,7 +717,7 @@ void UI_DisplayMain(void)
             GUI_DisplaySmallestDark("MOD",  110,42, false, false);
         }
 
-        // ── TX / RX ИНДИКАТОР ────────────────────────────────────────
+        // ── TX / RX INDICATOR ────────────────────────────────────────
         if (gCurrentFunction == FUNCTION_TRANSMIT)
             GUI_DisplaySmallestDark("TX", 2, 25, false, false);
         else if (FUNCTION_IsRx())
@@ -785,14 +785,6 @@ void UI_DisplayMain(void)
 
         uint32_t frequency = gEeprom.VfoInfo[vfo_num].pRX->Frequency;
 
-        if(TX_freq_check(frequency) != 0 && gEeprom.VfoInfo[vfo_num].BUSY_CHANNEL_LOCK == true)
-        {
-            if(isMainOnly())
-                memcpy(p_line0 + 14, BITMAP_VFO_Lock, sizeof(BITMAP_VFO_Lock));
-            else
-                memcpy(p_line0 + 24, BITMAP_VFO_Lock, sizeof(BITMAP_VFO_Lock));
-        }
-
         if (gCurrentFunction == FUNCTION_TRANSMIT)
         {   // transmitting
 
@@ -800,7 +792,7 @@ void UI_DisplayMain(void)
                 if (activeTxVFO == vfo_num)
 {   // show the TX symbol
     mode = VFO_MODE_TX;
-    // UI_PrintStringSmallBold("TX", 8, 0, line);  <-- ЭТУ СТРОКУ УДАЛИТЬ
+    // UI_PrintStringSmallBold("TX", 8, 0, line);  <-- DELETE THIS LINE
 }
             }
         }
@@ -966,7 +958,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
 
                     case MDF_NAME:        
                     case MDF_NAME_FREQ:   
-                        // --- 1. ИМЯ КАНАЛА (Верхняя строка VFO) ---
+                        // --- 1. CHANNEL NAME (Top VFO line) ---
                         SETTINGS_FetchChannelName(String, gEeprom.ScreenChannel[vfo_num]);
                         if (String[0] == 0) {
                             sprintf(String, "CH-%03u", gEeprom.ScreenChannel[vfo_num] + 1);
@@ -982,7 +974,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
                             }
                             else {
 #endif
-                                // Имя: Жирное для активного, обычное для неактивного
+                                // Name: bold for active, normal for inactive
                                 if(activeTxVFO == vfo_num) 
                                     UI_PrintStringSmallBold(String, 32 + 4, 0, line);
                                 else
@@ -991,15 +983,15 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
                             }
 #endif
 
-                            // --- 2. НОМЕР КАНАЛА (Нижняя строка, Y = line + 1, X = 2) ---
+                            // --- 2. CHANNEL NUMBER (Bottom line, Y = line + 1, X = 2) ---
                             sprintf(String, "M%u", gEeprom.ScreenChannel[vfo_num] + 1);
                             if (activeTxVFO == vfo_num) {
-                                UI_PrintStringSmallBold(String, 2, 0, line + 1);   // ЖИРНЫЙ номер
+                                UI_PrintStringSmallBold(String, 2, 0, line + 1);   // BOLD number
                             } else {
-                                UI_PrintStringSmallNormal(String, 2, 0, line + 1); // ТОНКИЙ номер
+                                UI_PrintStringSmallNormal(String, 2, 0, line + 1); // THIN number
                             }
 
-                            // --- 3. ЧАСТОТА (Нижняя строка, Y = line + 1, X = 36) ---
+                            // --- 3. FREQUENCY (Bottom line, Y = line + 1, X = 36) ---
                             sprintf(String, "%03u.%05u", frequency / 100000, frequency % 100000);
 #ifdef ENABLE_FEAT_F4HWN
                             if (isMainOnly()) {
@@ -1013,7 +1005,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
                             }
                             else {
 #endif
-                                // Частота: Жирная для активного, обычная для неактивного
+                                // Frequency: bold for active, normal for inactive
                                 if(activeTxVFO == vfo_num)
                                     UI_PrintStringSmallBold(String, 32 + 4, 0, line + 1);
                                 else
@@ -1075,7 +1067,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
                 if (code_type < ARRAY_SIZE(code_list))
                     s = code_list[code_type];
 #ifdef ENABLE_FEAT_F4HWN
-                t = gModulationStr[mod]; // модуляция всегда видна, в т.ч. при TX
+                t = gModulationStr[mod]; // modulation is always visible, including during TX
 #endif
                 break;
             }
@@ -1132,19 +1124,18 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
         }
         else
         {
-            // MODERN dual-screen: фиксированные координаты X для строки параметров
-            // Порядок: [SQL x=23] [ПОЛОСА x=45] [ШАГ/КОД x=68] [МОЩНОСТЬ x=97] [s x=110] [МОДУЛЯЦИЯ/+- x=119]
+            // MODERN dual-screen: fixed X coordinates for the parameter line
+            // Order: [SQL x=23] [BANDWIDTH x=45] [STEP/CODE x=68] [POWER x=97] [s x=110] [MODULATION/+- x=119]
             const uint8_t y_line = line == 0 ? 17 : 49; // Y: VFO0=17, VFO1=49
 
-            // [ШАГ/CTCSS/DCS] — фиксированный x=68 (убрали динамический shift)
-            GUI_DisplaySmallest(String, 68, y_line, false, true); // [ШАГ/КОД] x=68
+            // [STEP/CTCSS/DCS] — fixed x=68 (dynamic shift removed)
+            GUI_DisplaySmallest(String, 68, y_line, false, true); // [STEP/CODE] x=68
 
-            // [КОД s: CT/DC] — фиксированный x=110
-            // [CT/DC] — удалён, значение субтона на x=68 и так понятно
-
-            // [МОДУЛЯЦИЯ t: FM/AM/USB] — фиксированный x=119
+            // [CODE s: CT/DC] — fixed x=110
+            // [CT/DC] — removed; the tone value at x=68 is clear enough
+            // [MODULATION t: FM/AM/USB] — fixed x=119
             if ((t != NULL) && (t[0] != '\0')) {
-                GUI_DisplaySmallest(t, 117, y_line, false, true); // [МОДУЛЯЦИЯ t] x=119
+                GUI_DisplaySmallest(t, 117, y_line, false, true); // [MODULATION t] x=119
             }
 
             //sprintf(String, "%d.%02u", vfoInfo->StepFrequency / 100, vfoInfo->StepFrequency % 100);
@@ -1170,15 +1161,15 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
 
             if (gSetting_set_gui)
             {
-                // При TX-запрете (X) сдвигаем влево: меняй цифру 5 для подгонки
+                // When TX is disabled (X), shift left: adjust digit 5 to fit
                 uint8_t pwr_x_bold = LCD_WIDTH + 80;
                 UI_PrintStringSmallBold(pwr_gui, pwr_x_bold, 0, line + 1);
             }
             else
             {
-                // При TX-запрете (X) сдвигаем влево: меняй цифру 3 для подгонки
+                // When TX is disabled (X), shift left: adjust digit 3 to fit
                 uint8_t pwr_x_small = 97;
-                GUI_DisplaySmallest(pwr_text, pwr_x_small, line == 0 ? 17 : 49, false, true); // [МОЩНОСТЬ] x=97
+                GUI_DisplaySmallest(pwr_text, pwr_x_small, line == 0 ? 17 : 49, false, true); // [POWER] x=97
             }
 
         }
@@ -1195,7 +1186,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
         }
         else
         {
-            GUI_DisplaySmallest(dir_list[i], 40, line == 0 ? 17 : 49, false, true); // [СМЕЩЕНИЕ +/-] x=128 (независимый, меняй только здесь)
+            GUI_DisplaySmallest(dir_list[i], 40, line == 0 ? 17 : 49, false, true); // [OFFSET +/-] x=128 (independent; change only here)
         }
 #else
             UI_PrintStringSmallNormal(dir_list[i], LCD_WIDTH + 54, 0, line + 1);
@@ -1203,7 +1194,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
         }
 
         // show the TX/RX reverse symbol
-        // [R реверс] — удалён, кроссбенд не используется
+        // [R reverse] — removed; cross-band is not used
         // if (vfoInfo->FrequencyReverse) ...
 
 #if ENABLE_FEAT_F4HWN
@@ -1223,7 +1214,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
             else
             {
                 const char *bandWidthNames[] = {"WIDE", "NAR", "NAR+"};
-                GUI_DisplaySmallest(bandWidthNames[vfoInfo->CHANNEL_BANDWIDTH + narrower], 45, line == 0 ? 17 : 49, false, true); // [ПОЛОСА] x=45
+                GUI_DisplaySmallest(bandWidthNames[vfoInfo->CHANNEL_BANDWIDTH + narrower], 45, line == 0 ? 17 : 49, false, true); // [BANDWIDTH] x=45
             }
         #else
             if (gSetting_set_gui)
@@ -1233,7 +1224,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
             else
             {
                 const char *bandWidthNames[] = {"WIDE", "NAR"};
-                GUI_DisplaySmallest(bandWidthNames[vfoInfo->CHANNEL_BANDWIDTH], 45, line == 0 ? 17 : 49, false, true); // [ПОЛОСА] x=45
+                GUI_DisplaySmallest(bandWidthNames[vfoInfo->CHANNEL_BANDWIDTH], 45, line == 0 ? 17 : 49, false, true); // [BANDWIDTH] x=45
             }
         #endif
 #else
@@ -1318,7 +1309,7 @@ if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
     }
 
 #ifdef ENABLE_FEAT_F4HWN
-    // TX / RX индикатор поверх всего, чтобы аудиобар его не затирал
+    // TX / RX indicator drawn over everything so the audio bar does not overwrite it
     if (gCurrentFunction == FUNCTION_TRANSMIT)
     {
         uint8_t y_tx = (isMainOnly() || activeTxVFO == 0) ? 1 : 33;

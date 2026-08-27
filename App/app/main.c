@@ -43,28 +43,28 @@ static void SaveFreqToFreeChannel(void)
     int freeCh = -1;
     int firstEmptyCh = -1;
 
-    // Une seule boucle pour trouver soit un doublon, soit le premier canal vide
+    // One loop to find either a duplicate or the first empty channel
     for (uint16_t i = MR_CHANNEL_FIRST; i <= MR_CHANNEL_LAST; i++) {
         uint32_t chf = SETTINGS_FetchChannelFrequency(i);
         
-        // Si la fréquence existe déjà, c'est notre cible prioritaire (on écrase)
+        // If the frequency already exists, it is our priority target (overwrite it)
         if (chf == f) {
             freeCh = (int)i;
             break; 
         }
         
-        // On mémorise le premier canal vide trouvé (au cas où la fréquence n'existe nulle part)
+        // Remember the first empty channel found (if the frequency does not exist anywhere)
         if (firstEmptyCh == -1 && (chf == 0xFFFFFFFF || chf == 0)) {
             firstEmptyCh = (int)i;
         }
     }
 
-    // Si la fréquence n'a pas été trouvée, on utilise le premier canal vide mémorisé
+    // If the frequency was not found, use the remembered first empty channel
     if (freeCh == -1) {
         freeCh = firstEmptyCh;
     }
 
-    // Sauvegarde et affichage du Pop-up
+    // Save and display the pop-up
     if (freeCh >= 0) {
         SETTINGS_SaveChannel((uint16_t)freeCh, gEeprom.TX_VFO, gTxVfo, 2);
         MR_InvalidateChannelAttributesCache();
@@ -134,7 +134,7 @@ static void DeleteChannelWithConfirm(void)
     }
 
     if (confirmed) {
-        SETTINGS_UpdateChannel(ch, NULL, false, false, true);
+        SETTINGS_UpdateChannel(ch, NULL, false);
         MR_InvalidateChannelAttributesCache();
         gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
         gFlagResetVfos    = true;
@@ -166,7 +166,7 @@ static void toggle_chan_scanlist(void)
         if (scanlist > MR_CHANNELS_LIST + 1)
             scanlist = 0;
         gTxVfo->SCANLIST_PARTICIPATION = scanlist;
-        SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true, true, true);
+        SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true);
     }
 
     gVfoConfigureMode = VFO_CONFIGURE;
@@ -221,7 +221,6 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
         case KEY_4:
         case KEY_5:
             break;
-#ifndef ENABLE_USB
         case KEY_6:
             APP_RunSpectrumMode(2);
             gRequestDisplayScreen = DISPLAY_MAIN;
@@ -241,7 +240,6 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
             APP_RunSpectrumMode(0);
             gRequestDisplayScreen = DISPLAY_MAIN;
             break;
-#endif
         case KEY_UP:
             gEeprom.SQUELCH_LEVEL = (gEeprom.SQUELCH_LEVEL < 9) ? gEeprom.SQUELCH_LEVEL + 1 : 9;
             gVfoConfigureMode     = VFO_CONFIGURE;
@@ -336,7 +334,7 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
                 HideFKeyIcon();
 
-                // Долгое 7: фонарик при RX
+                // Long 7: flashlight during RX
                 if (Key == KEY_7) {
                     gEeprom.FlashlightOnRX = !gEeprom.FlashlightOnRX;
                     gRequestSaveSettings   = true;
@@ -344,7 +342,7 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     gRequestDisplayScreen  = DISPLAY_MAIN;
                     return;
                 }
-                // Долгое 9: подсветка
+                // Long 9: backlight
                 if (Key == KEY_9) {
                     if (gBackLight)
                         ACTION_BackLight();
@@ -352,15 +350,10 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                         ACTION_BackLightOnDemand();
                     return;
                 }
-                // Долгое 0: модуляция
+                // Long 0: modulation
                 if (Key == KEY_0) {
                     ACTION_SwitchDemodul();
                     gRequestDisplayScreen = DISPLAY_MAIN;
-                    return;
-                }
-                if (Key == KEY_2 && gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) {
-                    gVfoConfigureMode = VFO_CONFIGURE;
-                    COMMON_SwitchVFOs();
                     return;
                 }
                 if (Key == KEY_3) {
@@ -393,19 +386,19 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     return;
                 }
 
-                // Долгое 6: цикл мощности L→M→H→U→L
+                // Long 6: power cycle L→M→H→U→L
                 if (Key == KEY_6) {
                     ACTION_Power();
                     gRequestDisplayScreen = DISPLAY_MAIN;
                     return;
                 }
 
-                // Долгое 8: ничего (спектр бендов только по F+8)
+                // Long 8: nothing (band spectrum is only available with F+8)
                 if (Key == KEY_8) {
                     return;
                 }
 
-                // Остальные долгие (1) → processFKeyFunction(Key, true)
+                // Other long presses (1) → processFKeyFunction(Key, true)
                 processFKeyFunction(Key, true);
             }
         }
@@ -495,7 +488,7 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         return;
     }
 
-    // F + цифра
+    // F + digit
     HideFKeyIcon();
     processFKeyFunction(Key, true);  // beep=true = F-key press (not long press)
 }

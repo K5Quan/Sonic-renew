@@ -41,8 +41,8 @@ extern uint16_t          gFM_FrequencyDeviation;
 extern bool              gFM_FoundFrequency;
 extern uint16_t          gFM_RestoreCountdown_10ms;
 extern bool              gFM_ManualMode;   // false = AUTO seek, true = MANUAL step
-extern bool              gFM_Mute;         // true = RX не прерывает радио
-extern uint16_t          gFM_Memory[6];    // 6 слотов памяти частот (0 = пусто)
+extern bool              gFM_Mute;         // true = RX does not interrupt radio
+extern uint16_t          gFM_Memory[6];    // six frequency memory slots (0 = empty)
 
 void    FM_Memory_Load(void);
 void    FM_Memory_Save(uint8_t slot);

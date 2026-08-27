@@ -46,7 +46,6 @@ const t_menu_item MenuList[] =
     {"Step",        MENU_STEP          },
     {"Sql",         MENU_SQL           },
     {"Mode",        MENU_AM            },
-    {"RxMode",      MENU_TDR           },
     {"RxDCS",       MENU_R_DCS         },
     {"RxCTCS",      MENU_R_CTCS        },
     {"TxDCS",       MENU_T_DCS         },
@@ -185,8 +184,8 @@ const char gSubMenu_RESET[][5] =
 
 const char * const gSubMenu_F_LOCK[] =
 {
-    "UNLOCK\nALL",      // 0 = F_LOCK_NONE    — TX везде
-    "LOCK\nALL",        // 1 = F_LOCK_ALL     — TX заблокирован
+    "UNLOCK\nALL",      // 0 = F_LOCK_NONE    — TX everywhere
+    "LOCK\nALL",        // 1 = F_LOCK_ALL     — TX blocked
     "136-174\n400-500", // 2 = F_LOCK_136_500
     "PMR+\nLPD",        // 3 = F_LOCK_PMR_LPD
 };
@@ -323,7 +322,7 @@ void UI_DisplayMenu(void)
     const unsigned int menu_item_x2    = LCD_WIDTH - 1;
     unsigned int       i;
     char               String[64];  // bigger cuz we can now do multi-line in one string (use '\n' char)
-    //const int m = UI_MENU_GetCurrentMenuId();
+    const int m = UI_MENU_GetCurrentMenuId();
     UI_DisplayClear();
 
 #ifndef ENABLE_CUSTOM_MENU_LAYOUT
@@ -412,7 +411,7 @@ void UI_DisplayMenu(void)
         uint8_t gaugeMax = 0;
     //#endif
 
-    switch (UI_MENU_GetCurrentMenuId())
+    switch (m)
     {
         case MENU_SQL:
             sprintf(String, "%d", gSubMenuSelection);
@@ -628,29 +627,6 @@ void UI_DisplayMenu(void)
             sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "1:%u", gSubMenuSelection);
             break;
 
-        case MENU_TDR:
-            strcpy(String, gSubMenu_RXMode[gSubMenuSelection]);
-            // 0=MAIN ONLY, 1=DUAL RX RESPOND, 2=MAIN TX DUAL RX
-            switch (gSubMenuSelection) {
-                case 0:
-                    gEeprom.DUAL_WATCH       = DUAL_WATCH_OFF;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-                case 1:
-                    gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_OFF;
-                    break;
-                case 2:
-                    gEeprom.DUAL_WATCH       = gEeprom.TX_VFO + 1;
-                    gEeprom.CROSS_BAND_RX_TX = CROSS_BAND_CHAN_A;
-                    break;
-            }
-            #ifdef ENABLE_FEAT_F4HWN
-                gDW = gEeprom.DUAL_WATCH;
-                gSaveRxMode = true;
-            #endif
-            break;
-
         case MENU_TOT:
             sprintf(String, "%02dm:%02ds", (((gSubMenuSelection + 1) * 5) / 60), (((gSubMenuSelection + 1) * 5) % 60));
             //#if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
@@ -719,7 +695,7 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_RESET[gSubMenuSelection]);
             break;
 
-        case MENU_F_LOCK: // разрешить всё
+        case MENU_F_LOCK: // allow everything
             strcpy(String, gSubMenu_F_LOCK[gSubMenuSelection]);
             break;
 
@@ -852,7 +828,7 @@ void UI_DisplayMenu(void)
             y = (6 - (lines < 6 ? lines : 6)) / 2;
 
             // only for SysInf
-            if(UI_MENU_GetCurrentMenuId() == MENU_VOL)
+            if(m == MENU_VOL)
             {
                 sprintf(edit, "%u.%02uV %u%%",
                     gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100,
@@ -889,22 +865,22 @@ void UI_DisplayMenu(void)
         }
     }
 
-    if ((UI_MENU_GetCurrentMenuId() == MENU_R_CTCS || UI_MENU_GetCurrentMenuId() == MENU_R_DCS) && gCssBackgroundScan)
+    if ((m == MENU_R_CTCS || m == MENU_R_DCS) && gCssBackgroundScan)
         UI_PrintStringSmallBold("SCAN", menu_item_x1, menu_item_x2, 4);
 
-    if ((UI_MENU_GetCurrentMenuId() == MENU_RESET    ||
-         UI_MENU_GetCurrentMenuId() == MENU_MEM_CH   ||
-         UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME ||
-         UI_MENU_GetCurrentMenuId() == MENU_DEL_CH) && gAskForConfirmation)
+    if ((m == MENU_RESET    ||
+         m == MENU_MEM_CH   ||
+         m == MENU_MEM_NAME ||
+         m == MENU_DEL_CH) && gAskForConfirmation)
     {     
         char *pPrintStr = (gAskForConfirmation == 1) ? "SURE?" : "WAIT!";
         UI_PrintStringSmallBold(pPrintStr, menu_item_x1, menu_item_x2, 4);
     }
 
-//*******************ЛИНИИ-LINES***************** */
+//*******************LINES***************** */
 
         for (uint8_t y = 4; y <= 57; y += 2) {
-            UI_DrawLineBuffer(gFrameBuffer, 49, y, 49, y, 1); // Левая вертикальная пунктирная(X = 30)
+            UI_DrawLineBuffer(gFrameBuffer, 49, y, 49, y, 1); // Left vertical dashed line (X = 30)
         }
     
         for (uint8_t i = 0; i <= 127; i += 2) {

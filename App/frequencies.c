@@ -19,13 +19,13 @@
 #include "settings.h"
 #include <assert.h>
 
-// the BK4819 has 2 bands it covers, 18MHz ~ 630MHz and 760MHz ~ 1300MHz
+// the BK4819 has 2 bands it covers,  14 MHz ~ 580 MHz, 760 MHz ~ 1160 MHz
 
 #define BX4819_band1_lower 1400000
-#define BX4819_band2_upper 130000000
+#define BX4819_band2_upper 116000000
 
-const freq_band_table_t BX4819_band1 = {BX4819_band1_lower,  63000000};
-const freq_band_table_t BX4819_band2 = {84000000, BX4819_band2_upper};
+const freq_band_table_t BX4819_band1 = {BX4819_band1_lower,  58000000};
+const freq_band_table_t BX4819_band2 = {76000000, BX4819_band2_upper};
 
 const freq_band_table_t frequencyBandTable[] =
 {
