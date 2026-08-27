@@ -27,7 +27,7 @@ void UI_DisplayFM(void)
 
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
 
-    // Частота большим диджитал шрифтом
+    // Frequency in a large digital font
     memset(String, 0, sizeof(String));
     sprintf(String, "%3d.%d",
             gEeprom.FM_FrequencyPlaying / 10,
@@ -41,7 +41,7 @@ void UI_DisplayFM(void)
     if (!gFM_No_Rx) GUI_DisplaySmallestDark("RX MON", 86, 38, false, true);
     GUI_DisplaySmallestDark("SONIC", 86, 45, false, true);
 
-    // ── 6 ячеек памяти частот ───────────────────────────────────────────
+    // ── Six frequency memory slots ──────────────────────────────────────
     char mb[8];
     uint16_t f;
 

@@ -265,16 +265,16 @@ void UI_PrintStringSmallBold(const char *pString, uint8_t Start, uint8_t End, ui
     UI_PrintStringSmall(pString, Start, End, Line, char_width, font);
 }
 
-// Жирный шрифт инвертированный - сначала рисуем, потом XOR
+// Inverted bold font: draw first, then XOR
 void UI_PrintStringSmallBoldInverse(const char *pString, uint8_t Start, uint8_t End, uint8_t Line)
 {
     if (pString == NULL) return;
     if (Line >= ARRAY_SIZE(gFrameBuffer)) return;
 
-    // Сначала рисуем жирный текст обычно
+    // First draw the bold text normally
     UI_PrintStringSmallBold(pString, Start, End, Line);
 
-    // Вычисляем ширину текста
+    // Calculate the text width
     const uint8_t char_width = ARRAY_SIZE(gFontSmallBold[0]);
     const size_t  Length     = strlen(pString);
     size_t        text_width = 0;
@@ -296,7 +296,7 @@ void UI_PrintStringSmallBoldInverse(const char *pString, uint8_t Start, uint8_t 
     uint8_t x_end   = (uint8_t)((size_t)x_start + text_width);
     if (x_end >= LCD_WIDTH) x_end = LCD_WIDTH - 1;
 
-    // XOR всей строки = инвертируем нарисованный текст
+    // XOR the entire line to invert the drawn text
     for (uint8_t x = x_start; x <= x_end; x++)
         gFrameBuffer[Line][x] ^= 0xFF;
 }
@@ -570,7 +570,7 @@ void GUI_DisplaySmallestDark(const char *pString, uint8_t x, uint8_t y, bool sta
     uint8_t c;
     const uint8_t *p = (const uint8_t *)pString;
 
-    // Définition d'une macro locale pour simplifier les appels de dessin
+    // Define a local macro to simplify drawing calls
     #define DRAW_PIXEL(px, py, color) \
         if (statusbar) PutPixelStatus((px), (py), (color)); \
         else PutPixel((px), (py), (color))
@@ -584,7 +584,7 @@ void GUI_DisplaySmallestDark(const char *pString, uint8_t x, uint8_t y, bool sta
 
         c -= 0x20;
 
-        // Ligne supérieure : Changée en BLANC (false) pour le mode positif
+        // Top line: changed to WHITE (false) for positive mode
         if (y > 0)
         {
             for (uint8_t dx = 0; dx < char_width; dx++)
@@ -593,7 +593,7 @@ void GUI_DisplaySmallestDark(const char *pString, uint8_t x, uint8_t y, bool sta
             }
         }
 
-        // Fond : Changé en BLANC (false)
+        // Background: changed to WHITE (false)
         for (uint8_t dy = 0; dy < char_height; dy++)
         {
             for (uint8_t dx = 0; dx < char_width; dx++)
@@ -602,7 +602,7 @@ void GUI_DisplaySmallestDark(const char *pString, uint8_t x, uint8_t y, bool sta
             }
         }
 
-        // Lettres : Changées en NOIR (true)
+        // Letters: changed to BLACK (true)
         const uint8_t *glyph = gFont3x5[c];
         for (uint8_t col = 0; col < 3; col++)
         {
@@ -621,7 +621,7 @@ void GUI_DisplaySmallestDark(const char *pString, uint8_t x, uint8_t y, bool sta
         end_x += char_width;
     }
 
-    // Lignes verticales de bordure : Changées en BLANC (false) pour se fondre dans le nouveau fond
+    // Vertical border lines: changed to WHITE (false) to blend into the new background
     for (uint8_t dy = 0; dy <= char_height; dy++)
     {
         uint8_t line_y = y + dy - 1;
@@ -633,5 +633,5 @@ void GUI_DisplaySmallestDark(const char *pString, uint8_t x, uint8_t y, bool sta
         }
     }
 
-    #undef DRAW_PIXEL // Nettoyage de la macro locale
+    #undef DRAW_PIXEL // Clean up the local macro
 }

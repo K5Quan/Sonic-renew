@@ -25,7 +25,7 @@ void PY25Q16_Init();
 void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size);
 void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, bool Append);
 void PY25Q16_SectorErase(uint32_t Address);
-void PY25Q16_ClearBlockProtect(void);  // сбросить Block Protect биты перед стиранием
+void PY25Q16_ClearBlockProtect(void);  // clear Block Protect bits before erasing
 
 /* Drop the internal write cache after raw multiboot slot/profile operations,
  * and before multiboot reuses the cache storage as a RAM overlay. */

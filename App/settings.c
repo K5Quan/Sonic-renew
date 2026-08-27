@@ -85,7 +85,7 @@ void SETTINGS_InitEEPROM(void)
                 PY25Q16_WriteBuffer(0x00A0A8, btnBuf, sizeof(btnBuf), false);
             }
 
-            // 2c. Force POWER_ON_DISPLAY_MODE to ALL (аллигатор + вольтаж) on firmware update
+            // 2c. Force POWER_ON_DISPLAY_MODE to ALL (alligator + voltage) on firmware update
             // Address: 0xA0A8 + byte[7] = 0xA0AF
             {
                 uint8_t dispBuf[8] = {0};
@@ -904,4 +904,3 @@ State[1] = 0
         PY25Q16_WriteBuffer(0x00A130, State, sizeof(State), false);
     }
 #endif
-

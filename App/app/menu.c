@@ -492,7 +492,7 @@ void MENU_AcceptSetting(void)
 
         case MENU_F_LOCK: {
             gSetting_F_LOCK = gSubMenuSelection;
-            gUnlockAllTxConfCnt = 0;   // сбрасываем счётчик
+            gUnlockAllTxConfCnt = 0;   // reset counter
             break;
         }
 

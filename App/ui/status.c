@@ -35,7 +35,7 @@
 #include "ui/status.h"
 
 #ifdef ENABLE_FEAT_F4HWN
-// S-уровень, обновляется в ui/main.c при приёме
+// S-level, updated in ui/main.c during reception
 extern int8_t gSmeterLevel;
 #endif
 
@@ -61,6 +61,14 @@ void UI_DisplayStatus()
     char str[12] = "";
     gUpdateStatus = false;
     memset(gStatusLine, 0, sizeof(gStatusLine));
+
+    // YOUR COORDINATES (X)
+     uint8_t POS_MOD  = 1;   // DW, XB, MO (glyphs)
+    const uint8_t POS_LOCK = 83;   // Lock (glyph)
+    const uint8_t POS_F    = 83;   // Letter F (glyph)
+
+   
+    // 3. TIMER + S-METER (always 3px after the timer)
      uint8_t POS_MOD  = 1;   // DW, XB, MO (глифы)
     const uint8_t POS_LOCK = 83;   // Замок (глиф)
     const uint8_t POS_F    = 83;   // Буква F (глиф)
@@ -94,7 +102,7 @@ void UI_DisplayStatus()
     }
 #endif
 
-    // 6. ФОНАРИК (FlashlightOnRX) - мигание при RX включено
+    // 6. FLASHLIGHT (FlashlightOnRX) - blinking enabled during RX
     if (gEeprom.FlashlightOnRX) {
         POS_MOD += 3;
         gStatusLine[POS_MOD++] |= 0x70;
@@ -106,7 +114,7 @@ void UI_DisplayStatus()
         gStatusLine[POS_MOD++] |= 0x70;
     }
 
-    // 7. ПОДСВЕТКА (B) - В СТОЛБИК, сдвигается правее если фонарик тоже включён
+    // 7. BACKLIGHT (B) - VERTICAL, shifted right when the flashlight is also enabled
     if (gBackLight) {
         POS_MOD += 3;
         gStatusLine[POS_MOD++] |= 0x0C;
@@ -119,7 +127,7 @@ void UI_DisplayStatus()
     }
 
 
-    // 7. F-KEY И ЗАМОК - РАЗДЕЛЬНО
+    // 7. F-KEY AND LOCK - SEPARATE
     if (gWasFKeyPressed) {
         gStatusLine[POS_F + 0] = 0x7F;
         gStatusLine[POS_F + 1] = 0x41;

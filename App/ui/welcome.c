@@ -71,7 +71,7 @@ void UI_DisplayWelcome(void)
         return;
     }
 
-    // NONE / SOUND → пустой экран
+    // NONE / SOUND → blank screen
     if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_NONE)
     {
         ST7565_FillScreen(0x00);

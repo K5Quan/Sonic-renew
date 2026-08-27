@@ -49,10 +49,10 @@ bool              gFM_ManualMode = false;
 bool              gFM_Mute       = false;
 bool              gFM_No_Rx      = false;
 
-// ── FM 6-слотовая память ────────────────────────────────────────────────
-// 0 = пусто, иначе — частота (875..1080)
-// EEPROM: 0xA070 (слоты 0-3) и 0xA078 (слоты 4-5)
-// Лежат в неиспользованной части FM-каналов 0xA028..0xA0A7 (eeprom_compat)
+// ── FM six-slot memory ──────────────────────────────────────────────────
+// 0 = empty; otherwise, frequency (875..1080)
+// EEPROM: 0xA070 (slots 0-3) and 0xA078 (slots 4-5)
+// Stored in the unused part of the FM channels 0xA028..0xA0A7 (eeprom_compat)
 #define FM_MEMORY_EEPROM_ADDR0  0xA070
 #define FM_MEMORY_EEPROM_ADDR1  0xA078
 
@@ -254,7 +254,7 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
     uint8_t state = bKeyPressed + 2 * bKeyHeld;
 
-    // ── Длинное нажатие 1-6: сохранить частоту в слот ─────────────────
+    // ── Long press 1-6: save the frequency to a slot ───────────────────
     if (bKeyHeld && bKeyPressed) {
         uint8_t slot = 0xFF;
         switch (Key) {
@@ -274,7 +274,7 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         }
     }
 
-    // ── Короткое нажатие 1-6: вызвать частоту из слота ────────────────
+    // ── Short press 1-6: recall the frequency from a slot ──────────────
     if (state == BUTTON_EVENT_SHORT) {
         uint8_t slot = 0xFF;
         switch (Key) {
@@ -319,11 +319,11 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             break;
         case KEY_STAR:
             if (state == BUTTON_EVENT_HELD) {
-                // Долгое нажатие — переключить mute
+                // Long press: toggle mute
                 gFM_Mute = !gFM_Mute;
                 gRequestDisplayScreen = DISPLAY_FM;
             } else if (state == BUTTON_EVENT_SHORT) {
-                // Короткое нажатие — переключить auto/manual
+                // Short press: toggle auto/manual
                 gFM_ManualMode = !gFM_ManualMode;
                 gRequestDisplayScreen = DISPLAY_FM;
             }
@@ -404,7 +404,7 @@ void FM_Start(void)
     BK1080_Init(gEeprom.FM_FrequencyPlaying, FM_BAND);
     BK4819_PickRXFilterPathBasedOnFrequency(10320000);
 
-    FM_Memory_Load();   // загрузить ячейки памяти из EEPROM
+    FM_Memory_Load();   // load memory slots from EEPROM
 
     GPIO_EnableAudioPath();
     gEnableSpeaker = true;
