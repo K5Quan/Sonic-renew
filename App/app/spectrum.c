@@ -227,189 +227,13 @@ typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 /***************************BIG RAM******************************************/
 #define HISTORY_SIZE 100
 #define MAX_SCAN_CHANNELS 975
+#define SCAN_CHANNEL_BITMAP_BYTES ((MAX_SCAN_CHANNELS + 7) / 8)
 static bandparameters BParams[MAX_BANDS];
+static uint8_t scanChannelBitmap[SCAN_CHANNEL_BITMAP_BYTES];
 
-/* ------------------------------------------------------------------------
- * Compact frequency storage (24 bits in RAM instead of 32)
- * Used by ScanFrequencies (MR scan channels) AND HFreqs (history)
- *
- *   Covered bands (inclusive bounds, x10 Hz):
- *       14 MHz  -  88 MHz   : 250 Hz step
- *      108 MHz  - 118 MHz   : 250 Hz step
- *      118 MHz  - 136 MHz   : EXACT ICAO 8.33 kHz step (25/3 kHz), the only
- *                              band at this step; pattern repeated every 3
- *                              channels (+0 / +8.33 / +16.67 kHz), re-anchored
- *                              at each 25kHz level -> no cumulative drift
- *                              (unlike a fixed step rounded to 8330Hz,
- *                              which would drift by about 7.2kHz at the top
- *                              of the band)
- *      136 MHz  - 580 MHz   : 250 Hz step
- *      760 MHz  - 1160 MHz  : 250 Hz step
- *   Excluded bands (no frequency is stored there):
- *      88-108 MHz (FM), 580-760 MHz, and everything outside 14-1160 MHz.
- *      A frequency falling into a gap, or outside the global range,
- *      is clamped to the nearest valid grid point.
- *
- *   Each band is a table of regularly spaced points (with its own
- *   step). Bands are numbered consecutively and stored as one
- *   index 1..N on 24 bits (0 = empty slot, compatible with memset/== 0 as
- *   before). Dedicated step bits are therefore unnecessary: the step is
- *   inferred from the band to which the index belongs.
- *
- *   Total points across the 5 bands: 3,714,163, well below
- *   the 24-bit capacity (16,777,215 values excluding the empty slot).
- *
- *   RAM saving: 25% vs uint32_t (3 bytes/entry instead of 4)
- *              MAX_SCAN_CHANNELS=500 -> 1500 o (au lieu de 2000 o)
- *              HISTORY_SIZE=100      ->  300 o (au lieu de  400 o)
- * ------------------------------------------------------------------------ */
-typedef struct __attribute__((packed)) {
-    uint8_t b[3];   // 24-bit value stored little-endian in 3 bytes
-} Freq24_t;
-
-typedef struct {
-    uint32_t start;   // x10 Hz, first point of the band (inclusive)
-    uint32_t count;   // number of grid points in the band
-    uint16_t step;    // x10 Hz (informational only if is833; see below)
-    uint8_t  is833;   // 1 => exact ICAO 8.33kHz grid (25/3 kHz), 0 => fixed linear step
-} FreqBand_t;
-
-// Bands with a fixed linear step (250Hz): count calculated by the preprocessor.
-#define FBAND(start, end, step)  { (start), (((end) - (start)) / (step)) + 1, (step), 0 }
-
-// Aviation band 8.33kHz: the TRUE ICAO spacing is 25/3 kHz = 8333.33... Hz,
-// Exact 8.33kHz step. A linear step rounded to 8330Hz drifts across the
-// band (band top at 135.9928MHz instead of 136.000MHz with 2160 channels).
-// Therefore, use a repeating pattern over 3 channels (0 / +8.33kHz / +16.67kHz),
-// re-anchored exactly every 25kHz -> no cumulative drift.
-// count = number of "step thirds" covered by (end-start), see Freq24_Set/Get.
-#define FBAND833(start, end)      { (start), (((6UL*((end)-(start))+2500UL))/5000UL) + 1, 833, 1 }
-
-static const FreqBand_t kFreqBands[] = {
-    FBAND(     FMIN,  8799975UL,  25),  // 14  - 88MHz (250Hz)   [88MHz excluded, see FM gap]
-    FBAND(    10800000UL, 11799975UL,  25),  // 108 - 118MHz (250Hz)  [118MHz excluded, see aviation band]
-    FBAND833( 11800000UL, 13600000UL),        // 118 - 136MHz (exact 8.33kHz ICAO, aviation)
-    FBAND(    13600000UL, 58000000UL,  25),  // 136 - 580MHz (250Hz)
-    FBAND(    76000000UL,FMAX,  25),  // 760 - 1160MHz (250Hz)
-};
-#define FREQ24_BAND_COUNT   (sizeof(kFreqBands) / sizeof(kFreqBands[0]))
-
-// Exact decoding of a local 8.33kHz index k (0..count-1) to an x10Hz offset
-// from band->start, without drift: offset(k) = round(k * 2500/3).
-/* static inline uint32_t Freq833_OffsetOfIndex(uint32_t k) {
-    return (5000UL * k + 3UL) / 6UL;
-}
- */
-static inline uint32_t Freq833_OffsetOfIndex(uint32_t k) { 
-    return (5000UL * k) / 6UL; 
-}
-
-// Exact encoding: find the nearest k for a given x10Hz offset.
-static inline uint32_t Freq833_IndexOfOffset(uint32_t deltaX10Hz) {
-    return (6UL * deltaX10Hz + 2500UL) / 5000UL;
-}
-
-static inline uint32_t FreqBand_LastPoint(const FreqBand_t *band) {
-    if (band->is833) {
-        return band->start + Freq833_OffsetOfIndex(band->count - 1);
-    }
-    return band->start + (band->count - 1) * band->step;
-}
-
-// freqX10 == 0 is the "empty slot" sentinel (compatible with existing
-// comparisons/assignments to 0 and with memset(...,0,...)).
-static inline void Freq24_Set(Freq24_t *slot, uint32_t freqX10) {
-    uint32_t packed = 0;
-
-    if (freqX10 != 0) {
-        uint32_t lo = kFreqBands[0].start;
-        uint32_t hi = FreqBand_LastPoint(&kFreqBands[FREQ24_BAND_COUNT - 1]);
-        if (freqX10 < lo) freqX10 = lo;
-        if (freqX10 > hi) freqX10 = hi;
-
-        uint32_t offset = 0;   // sum of the "count" values of previous bands
-        for (uint8_t i = 0; i < FREQ24_BAND_COUNT; i++) {
-            const FreqBand_t *band = &kFreqBands[i];
-            uint32_t bandEnd = FreqBand_LastPoint(band);
-
-            if (freqX10 < band->start) {
-                // Falls into the gap just before this band: choose
-                // the nearest valid point (end of the previous band
-                // or start of this one). "offset" here == sum of the counts
-                // of bands 0..i-1, therefore the starting index of band i.
-                if (i > 0) {
-                    const FreqBand_t *prev = &kFreqBands[i - 1];
-                    uint32_t prevOffset = offset - prev->count;
-                    uint32_t prevEnd    = FreqBand_LastPoint(prev);
-                    uint32_t distNext   = band->start - freqX10;
-                    uint32_t distPrev   = freqX10 - prevEnd;
-                    if (distPrev <= distNext) {
-                        packed = 1 + prevOffset + (prev->count - 1);
-                        break;
-                    }
-                }
-                packed = 1 + offset;
-                break;
-            }
-
-            if (freqX10 <= bandEnd) {
-                uint32_t delta = freqX10 - band->start;
-                uint32_t idx;
-                if (band->is833) {
-                    idx = Freq833_IndexOfOffset(delta);
-                } else {
-                    idx = (delta + (band->step >> 1)) / band->step;
-                }
-                if (idx >= band->count) idx = band->count - 1;
-                packed = 1 + offset + idx;
-                break;
-            }
-
-            offset += band->count;
-        }
-    }
-
-    slot->b[0] = (uint8_t)( packed        & 0xFF);
-    slot->b[1] = (uint8_t)((packed >> 8)  & 0xFF);
-    slot->b[2] = (uint8_t)((packed >> 16) & 0xFF);
-}
-
-static inline uint32_t Freq24_Get(const Freq24_t *slot) {
-    uint32_t packed = (uint32_t)slot->b[0]
-                     | ((uint32_t)slot->b[1] << 8)
-                     | ((uint32_t)slot->b[2] << 16);
-    if (packed == 0) return 0;   // empty slot
-
-    uint32_t idx0 = packed - 1;
-    for (uint8_t i = 0; i < FREQ24_BAND_COUNT; i++) {
-        const FreqBand_t *band = &kFreqBands[i];
-        if (idx0 < band->count) {
-            if (band->is833) {
-                return band->start + Freq833_OffsetOfIndex(idx0);
-            }
-            return band->start + idx0 * band->step;
-        }
-        idx0 -= band->count;
-    }
-    return 0;   // invalid index (should not happen)
-}
-
-// Raw frequency as it would be read after an encode/decode round trip:
-// used to compare a "live" frequency (peak.f, scanInfo.f...) with an already
-// stored value without rounding false negatives.
-static inline uint32_t Freq24_Quantize(uint32_t freqX10) {
-    Freq24_t tmp;
-    Freq24_Set(&tmp, freqX10);
-    return Freq24_Get(&tmp);
-}
-
-#define SetScanFrequency(idx, freqX10)  Freq24_Set(&ScanFrequencies[(idx)], (freqX10))
-#define GetScanFrequency(idx)           Freq24_Get(&ScanFrequencies[(idx)])
-#define SetHistoryFreq(idx, freqX10)    Freq24_Set(&HFreqs[(idx)], (freqX10))
-#define GetHistoryFreq(idx)             Freq24_Get(&HFreqs[(idx)])
-
-static Freq24_t          ScanFrequencies[MAX_SCAN_CHANNELS];
-static Freq24_t          HFreqs[HISTORY_SIZE];           //3 (etait 4)
+static uint32_t HFreqs[HISTORY_SIZE];
+#define SetHistoryFreq(idx, freq)       (HFreqs[(idx)] = (freq))
+#define GetHistoryFreq(idx)             HFreqs[(idx)]
 static uint8_t          HCode[HISTORY_SIZE];            //1
 static bool             HBlacklisted[HISTORY_SIZE];     //1
 static uint16_t         HTimeS[HISTORY_SIZE];           //2 Total 8 bytes
@@ -555,6 +379,21 @@ ChannelInfo_t FetchChannelFrequency(const uint16_t Channel) {
     return info;
 }
 
+static uint32_t GetScanFrequency(const uint16_t index)
+{
+    uint16_t position = 0;
+    for (uint16_t ch = MR_CHANNEL_FIRST; ch < MAX_SCAN_CHANNELS; ch++) {
+        if ((scanChannelBitmap[ch >> 3] & (1u << (ch & 7))) != 0) {
+            if (position++ == index) {
+                uint32_t frequency;
+                PY25Q16_ReadBuffer((uint32_t)ch * 16, &frequency, sizeof(frequency));
+                return frequency == 0xFFFFFFFF ? 0 : frequency;
+            }
+        }
+    }
+    return 0;
+}
+
 #define BLOCK_SIZE 16
 
 typedef struct {
@@ -635,29 +474,6 @@ static void ShowOSDPopup(const char *str)
     spectrumElapsedCount = 0;
 }
 
-static uint16_t CountValidFrequencies(void) {
-    uint16_t count = 0;
-    ChannelAttributes_t cache;
-
-    for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
-        MR_LoadChannelAttributesFromFlash(ch, &cache);
-        if (cache.scanlist > 0 && cache.scanlist <= MR_CHANNELS_LIST) {
-            if (FetchChannelFrequency(ch).frequency && settings.scanListEnabled[cache.scanlist - 1]) {
-                count++;
-            }
-        }
-    }
-
-    if (count == 0) { 
-        for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
-            if (FetchChannelFrequency(ch).frequency) {
-                count++;
-            }
-        }
-    }
-    return count;
-}
-
 uint8_t CountActiveBands(void) {
     uint8_t activeCount = 0;
     for (uint8_t i = 0; i < MAX_BANDS; i++) {
@@ -675,44 +491,34 @@ static void LoadActiveScanFrequencies(void)
     if (appMode == SCAN_RANGE_MODE) { sprintf(str, "RANGE"); }
     if (appMode == SCAN_BAND_MODE) { sprintf(str, "P%d BANDS:%d ", currentBandPreset + 1, CountActiveBands()); }
     if (appMode == CHANNEL_MODE) { 
-        uint16_t needed = CountValidFrequencies();
-        if (needed >= MAX_SCAN_CHANNELS) {
-            sprintf(str, "TOO MANY CH");
-        } else sprintf(str, "CHANNELS:%d", needed);
+        memset(scanChannelBitmap, 0, sizeof(scanChannelBitmap));
         scanChannelsCount = 0;
         ChannelAttributes_t cache;
 
-        for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
-        {
-            if (scanChannelsCount >= MAX_SCAN_CHANNELS) {
-                break;
-            }
-
+        for (uint16_t ch = MR_CHANNEL_FIRST; ch < MAX_SCAN_CHANNELS; ch++) {
             MR_LoadChannelAttributesFromFlash(ch, &cache);
-            if (cache.scanlist > 0 && cache.scanlist <= MR_CHANNELS_LIST) {
-                ChannelInfo_t freqs = FetchChannelFrequency(ch);
-                if (freqs.frequency) {
-                    if (settings.scanListEnabled[cache.scanlist - 1]) {
-                        SetScanFrequency(scanChannelsCount, freqs.frequency);
-                        scanChannelsCount++;
-                    }
-                }
+            uint32_t frequency;
+            PY25Q16_ReadBuffer((uint32_t)ch * 16, &frequency, sizeof(frequency));
+            if (cache.scanlist > 0 && cache.scanlist <= MR_CHANNELS_LIST &&
+                settings.scanListEnabled[cache.scanlist - 1] && frequency != 0xFFFFFFFF && frequency != 0) {
+                scanChannelBitmap[ch >> 3] |= 1u << (ch & 7);
+                scanChannelsCount++;
             }
         }
         if (!scanChannelsCount) {
-            for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
-            {
-                if (scanChannelsCount >= MAX_SCAN_CHANNELS) {
-                    break;
-                }
-
-                ChannelInfo_t freqs = FetchChannelFrequency(ch);
-                if (freqs.frequency) {
-                    SetScanFrequency(scanChannelsCount, freqs.frequency);
+            for (uint16_t ch = MR_CHANNEL_FIRST; ch < MAX_SCAN_CHANNELS; ch++) {
+                uint32_t frequency;
+                PY25Q16_ReadBuffer((uint32_t)ch * 16, &frequency, sizeof(frequency));
+                if (frequency != 0xFFFFFFFF && frequency != 0) {
+                    scanChannelBitmap[ch >> 3] |= 1u << (ch & 7);
                     scanChannelsCount++;
                 }
             }
         }
+        if (scanChannelsCount >= MAX_SCAN_CHANNELS)
+            sprintf(str, "TOO MANY CH");
+        else
+            sprintf(str, "CHANNELS:%d", scanChannelsCount);
     }
 uint16_t ch = BOARD_gMR_fetchChannel(GetScanFrequency(TX_Channel));
 SETTINGS_FetchChannelName(TxChannelName, ch);
@@ -1337,7 +1143,7 @@ static void FillfreqHistory(void)
     uint8_t foundCode = 0xFF;
     
     // Check whether the frequency already exists in the history
-    uint32_t qf = Freq24_Quantize(f);
+    uint32_t qf = f;
     for (uint16_t i = 0; i < indexFs; i++) {
         if (GetHistoryFreq(i) == qf) {
             foundIndex = i;
@@ -1794,7 +1600,7 @@ static void Skip() {
 }
 
 static bool IsBlacklisted(uint32_t f) {
-    uint32_t qf = Freq24_Quantize(f);
+    uint32_t qf = f;
     for (uint16_t i = 0; i < HISTORY_SIZE; i++) {
         if (GetHistoryFreq(i) == qf && HBlacklisted[i]) {
             return true;
@@ -1806,7 +1612,7 @@ static bool IsBlacklisted(uint32_t f) {
 static void Blacklist() {
     if (lastReceivingFreq == 0) return;
     Skip();
-    uint32_t qf = Freq24_Quantize(lastReceivingFreq);
+    uint32_t qf = lastReceivingFreq;
     for (uint16_t i = 0; i < HISTORY_SIZE; i++) {
         if (GetHistoryFreq(i) == qf) {
             HBlacklisted[i] = true;
@@ -2075,7 +1881,6 @@ static void DrawNums() {
         if((!PttEmission || PttEmission >2) && (ShowLines != 2)) {// Channel OR ROGER
             sprintf(Text, "%s", TxChannelName);
             //sprintf(Text, "%s %u.%05u", TxChannelName, 
-            //ScanFrequencies[TX_Channel] / 100000, ScanFrequencies[TX_Channel]  % 100000);
             GUI_DisplaySmallest(Text,60 , Bottom_print, false, true);
             Text[0] = '\0';
         }
@@ -2682,7 +2487,7 @@ static void HandleKeySpectrum(uint8_t key) {
                 const char *viewName           = "SPECTRUM";
 				if (ShowLines == 2) viewName   = "ULTRA WATCH";
 				if (ShowLines == 3) viewName   = "SMOOTH SPECTRUM";
-                DelayRssi = (ShowLines == 2)?750:1500;
+                DelayRssi = (ShowLines == 2)?800:1500;
                 ShowOSDPopup(viewName);
                 spectrumElapsedCount = 0;
             }
@@ -3712,7 +3517,7 @@ static void UpdateListening(void) {
     spectrumElapsedCount += 200; 
     if (peak.f >= FMIN && peak.f <= FMAX && gNextTimeslice_HTimeS) {
     gNextTimeslice_HTimeS = 0;
-    uint32_t qpeak = Freq24_Quantize(peak.f);
+    uint32_t qpeak = peak.f;
     for (uint16_t i = 0; i < indexFs; i++) {
         if (GetHistoryFreq(i) == qpeak) {
             if (HTimeS[i] < 3600) {
@@ -4035,7 +3840,7 @@ void LoadSettings()
     PttEmission = eepromData.PttEmission;
     validScanListCount = 0;
     ShowLines = eepromData.ShowLines;
-    DelayRssi = (ShowLines == 2)?750:1500;
+    DelayRssi = (ShowLines == 2)?800:1500;
     SpectrumDelay = eepromData.SpectrumDelay;
     IndexMaxLT = eepromData.IndexMaxLT;
     MaxListenTime = listenSteps[IndexMaxLT];
@@ -4370,7 +4175,7 @@ void PreloadHistoryChannels(uint16_t startScrollIndex, uint16_t totalCount) {
         ChannelInfo_t freqcmp = FetchChannelFrequency(ch);
         if (freqcmp.frequency == 0 || freqcmp.frequency == 0xFFFFFFFF) continue;
 
-        uint32_t qfreqcmp = Freq24_Quantize(freqcmp.frequency);
+        uint32_t qfreqcmp = freqcmp.frequency;
         for (uint8_t i = 0; i < 6; i++) {
             uint16_t historyIdx = startScrollIndex + i;
             if (historyIdx >= totalCount) break;
