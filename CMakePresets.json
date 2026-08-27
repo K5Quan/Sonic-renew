@@ -75,22 +75,34 @@
       }
     },
     {
-      "name": "CHIRP",
+      "name": "RS232",
+      "inherits": "default",
+      "cacheVariables": {
+        "ENABLE_UART": true,
+        "EDITION_STRING": "RS232"
+      }
+    },
+    {
+      "name": "USB",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
-        "ENABLE_UART": true,
         "EDITION_STRING": "Sonic"
       }
     }
   ],
-  "buildPresets": [{
+  "buildPresets": [
+    {
       "name": "NOCOM",
       "configurePreset": "NOCOM"
     },
     {
-      "name": "CHIRP",
-      "configurePreset": "CHIRP"
+      "name": "RS232",
+      "configurePreset": "RS232"
+    },
+    {
+      "name": "USB",
+      "configurePreset": "USB"
     }
   ]
 }
