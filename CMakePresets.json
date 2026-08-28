@@ -87,6 +87,7 @@
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
+        "ENABLE_UART": true,
         "EDITION_STRING": "Sonic"
       }
     }

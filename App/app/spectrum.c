@@ -162,6 +162,7 @@ static void RenderHistoryList();
 static void RenderScanListSelect();
 static void RenderParametersSelect();
 static void UpdateScan();
+static void UpdateSpectrumMonitorLeds();
 static uint8_t bandListSelectedIndex = 0;
 static int bandListScrollOffset = 0;
 static void RenderBandSelect();
@@ -225,7 +226,7 @@ typedef struct {
 typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 
 /***************************BIG RAM******************************************/
-#define HISTORY_SIZE 100
+#define HISTORY_SIZE 200
 #define MAX_SCAN_CHANNELS 975
 #define SCAN_CHANNEL_BITMAP_BYTES ((MAX_SCAN_CHANNELS + 7) / 8)
 static bandparameters BParams[MAX_BANDS];
@@ -1105,8 +1106,7 @@ static void UpdateCssDetection(void) {
         LCode = DCS_GetCdcssCode(cdcssFreq);
         if (LCode != 0xFF) {
             CodeFreq = peak.f;
-            snprintf(StringCode, sizeof(StringCode), " D%03oN ", DCS_Options[LCode]);
-            ShowOSDPopup(StringCode);
+            snprintf(StringCode, sizeof(StringCode), "D%03oN", DCS_Options[LCode]);
             code = LCode + 100;
             if (PttEmission == 2) { //Use received code to respond
                 gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_DIGITAL;
@@ -1118,16 +1118,17 @@ static void UpdateCssDetection(void) {
         LCode = DCS_GetCtcssCode(ctcssFreq);
         if (LCode != 0xFF) {
             CodeFreq = peak.f;
-            snprintf(StringCode, sizeof(StringCode), " %u.%uHz ", CTCSS_Options[LCode] / 10, CTCSS_Options[LCode] % 10);
-            ShowOSDPopup(StringCode);
+            snprintf(StringCode, sizeof(StringCode), "%u.%u", CTCSS_Options[LCode] / 10, CTCSS_Options[LCode] % 10);
+            
             code = LCode;
             if (PttEmission == 2) { //Use received code to respond
                 gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_CONTINUOUS_TONE;
                 gCurrentVfo->freq_config_TX.Code     = LCode;
             }
-            return;
+            
         }
     }
+    ShowOSDPopup(StringCode);
 }
 
 static void FillfreqHistory(void)
@@ -1240,6 +1241,20 @@ static void ToggleRX(bool on) {
         ToggleAFBit(on);
         audioState = on;
     }
+}
+
+static void UpdateSpectrumMonitorLeds(void) {
+    static uint8_t appliedSpectrumMonitor = 0xff;
+
+    if (SpectrumMonitor == 1) {
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, true);
+    } else if (appliedSpectrumMonitor == 1) {
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
+    }
+
+    appliedSpectrumMonitor = SpectrumMonitor;
 }
 
 #ifdef ENABLE_BENCH
@@ -1817,7 +1832,7 @@ static void DrawStatus() {
 
     unsigned perc = BATTERY_VoltsToPercent(voltage);
     sprintf(String,"%d%%", perc);
-    GUI_DisplaySmallest(String, 110, 0, true,true);
+    GUI_DisplaySmallest(String, 128, 0, true,true);
 }
 
 // ------------------ Frequency string ------------------
@@ -1895,7 +1910,7 @@ static void DrawNums() {
             GUI_DisplaySmallest(Text, 2, Bottom_print, false, true);
             Text[0] = '\0';
             sprintf(Text, "CH:%u", scanChannelsCount);
-            GUI_DisplaySmallest(Text, 101, Bottom_print, false, true);
+            GUI_DisplaySmallest(Text, 128, Bottom_print, false, true);
             Text[0] = '\0';
             return;
         }
@@ -1904,12 +1919,12 @@ static void DrawNums() {
         sprintf(Text, "%u.%05u", SpectrumRangeStart / 100000, SpectrumRangeStart % 100000);
         GUI_DisplaySmallest(Text, 2, Bottom_print, false, true);
         sprintf(Text, "%u.%05u", SpectrumRangeStop / 100000, SpectrumRangeStop % 100000);
-        GUI_DisplaySmallest(Text, 90, Bottom_print, false, true);
+        GUI_DisplaySmallest(Text, 128, Bottom_print, false, true);
         }
 }
 
 static void BlitLine(unsigned line) {
-    if (isListening && spectrumElapsedCount > 200) return; //No refresh in low noise mode
+    if (isListening && spectrumElapsedCount > 200 + + osdPopupTimer) return; //No refresh in low noise mode
     ST7565_BlitLine(line);
 }
 
@@ -1939,8 +1954,8 @@ static void DrawF(uint32_t f) {
     GUI_DisplaySmallest(bench, 40, Bottom_print, false, true);
 #endif
     if (appMode == SCAN_BAND_MODE) {
-        snprintf(prefix, sizeof(prefix), "B%u ", bl + 1);
-        GUI_DisplaySmallest(prefix, 113, 10, false, true);
+        snprintf(prefix, sizeof(prefix), "B%u", bl + 1);
+        GUI_DisplaySmallest(prefix, 128, 10, false, true);
         if (isListening && isKnownChannel) {
             snprintf(line2, sizeof(line2), " %s", channelName);
         } else {
@@ -1967,7 +1982,7 @@ static void DrawF(uint32_t f) {
         line1[8] = 0;
         UI_DisplayFrequency(line1, 2, 0, 1);
     }
-    GUI_DisplaySmallest(StringCode, 100, 0, false, true);
+    GUI_DisplaySmallest(StringCode, 128, 2, false, true);
     switch(ShowLines) {
             case 1:
             case 3:
@@ -2659,14 +2674,12 @@ static void HandleKeySpectrum(uint8_t key) {
                 scanInfo.f = lastReceivingFreq;
                 SetF(lastReceivingFreq);
         }
-    if (SpectrumMonitor == 2) ToggleRX(1);
-    {
-		char monitorText[32];
+        if (SpectrumMonitor == 2) {ToggleRX(1);}
+        char monitorText[32];
         const char *modes[] = {"NORMAL", "FREQ LOCK", "MONITOR"};
         sprintf(monitorText, "MODE: %s", modes[SpectrumMonitor]);
 	    ShowOSDPopup(monitorText);
-    }
-    break;
+        break;
     case KEY_SIDE2:
         if (historyListActive) {
             HBlacklisted[historyListIndex] = !HBlacklisted[historyListIndex];
@@ -2955,10 +2968,6 @@ static void MyDrawFrameLines(void)
     if (ShowLines ==1 || ShowLines ==3) {
         MyDrawVLine(0,   0, 17, 1);   // Left vertical solid line (top section)
         MyDrawVLine(127, 0, 17, 1);   // Right vertical solid line (top section)
-        MyDrawShortHLine(0, 0, 3, 1, false);      // Top short horizontal line (left edge)
-        MyDrawShortHLine(0, 4, 8, 2, false);      // Top short horizontal line (inner left)
-        MyDrawShortHLine(0, 124, 127, 1, false);  // Top short horizontal line (right edge)
-        MyDrawShortHLine(0, 118, 123, 2, false);  // Top short horizontal line (inner right)
         MyDrawShortHLine(17, 0, 10, 1, false);    // Mid-top short horizontal line (left)
         MyDrawShortHLine(17, 120, 127, 1, false); // Mid-top short horizontal line (right)
         MyDrawShortHLine(21, 0, 10, 1, false);    // Mid-bottom short horizontal line (left)
@@ -3307,21 +3316,16 @@ static void Render() {
     }
     switch (currentState) {
         case SPECTRUM:
-            if(isListening) {
-                DrawF(peak.f);
-                BlitLine(6);
-            }
+            if(isListening) { DrawF(peak.f);}
             else {
                     if (SpectrumMonitor) DrawF(lastReceivingFreq);
                     else DrawF(scanInfo.f);
             }
 
-            if (spectrumElapsedCount < 500) {
+            if (spectrumElapsedCount < 500 + osdPopupTimer) {
                 RenderSpectrum();
-                BlitLine(4);
-                BlitLine(5);
-                BlitLine(6);
-            } else return;
+                ST7565_BlitFullScreen();
+            }
             break;
         case FREQ_INPUT:
             RenderFreqInput();
@@ -3561,10 +3565,10 @@ static void Tick() {
         if (CloseCallActive) SCANNER_CustomScanFrequency();
         if (osdPopupTimer) {
             osdPopupTimer -= 20; 
-            if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';}
             UI_DisplayPopup(osdPopupText);
-            ST7565_BlitLine(2);
-            ST7565_BlitLine(3);
+            if (osdPopupTimer <= 0) {osdPopupText[0] = '\0';Render();}
+            ST7565_BlitFullScreen();
+            UpdateSpectrumMonitorLeds();
             return;
             }
 #ifdef ENABLE_BENCH
@@ -3663,6 +3667,8 @@ static void Tick() {
         SYSTEM_DelayMs(50);
         Spectrum_END_TX();
     }
+
+    UpdateSpectrumMonitorLeds();
 }
 void APP_RunSpectrumMode(uint8_t mode) {
     Spectrum_state = mode;

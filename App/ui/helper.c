@@ -442,29 +442,46 @@ static void sort(int16_t *a, int16_t *b)
       UI_DrawPixelBuffer(&gStatusLine, x, y, fill);
     }
 
-    void GUI_DisplaySmallest(const char *pString, uint8_t x, uint8_t y,
-                                    bool statusbar, bool fill) {
-      uint8_t c;
-      uint8_t pixels;
-      const uint8_t *p = (const uint8_t *)pString;
+#include <string.h>
 
-      while ((c = *p++) && c != '\0') {
+#include <string.h>
+#define END_SCREEN 126
+void GUI_DisplaySmallest(const char *pString, uint8_t x, uint8_t y,
+                        bool statusbar, bool fill) {
+    uint8_t c;
+    uint8_t pixels;
+    const uint8_t *p = (const uint8_t *)pString;
+
+    // Aligne à droite si x atteint le bord droit (128)
+    if (x == 128) {
+        size_t len = strlen(pString);
+        uint8_t total_width = (uint8_t)(len * 4);
+        
+        if (128 >= total_width) {
+            x = END_SCREEN - total_width;
+        } else {
+            x = 0; // Sécurité si le texte est plus large que l'écran
+        }
+    }
+
+    while ((c = *p++) && c != '\0') {
         c -= 0x20;
         for (int i = 0; i < 3; ++i) {
-          pixels = gFont3x5[c][i];
-          for (int j = 0; j < 6; ++j) {
-            if (pixels & 1) {
-              if (statusbar)
-                PutPixelStatus(x + i, y + j, fill);
-              else
-                PutPixel(x + i, y + j, fill);
+            pixels = gFont3x5[c][i];
+            for (int j = 0; j < 6; ++j) {
+                if (pixels & 1) {
+                    if (statusbar)
+                        PutPixelStatus(x + i, y + j, fill);
+                    else
+                        PutPixel(x + i, y + j, fill);
+                }
+                pixels >>= 1;
             }
-            pixels >>= 1;
-          }
         }
         x += 4;
-      }
     }
+}
+
     void UI_DisplayUnlockKeyboard(uint8_t shift) {
         if (gEeprom.KEY_LOCK && gKeypadLocked > 0)
         {   // tell user how to unlock the keyboard
