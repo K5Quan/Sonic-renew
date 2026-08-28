@@ -28,6 +28,7 @@
 #include "common.h"
 #include "action.h"
 #include "ui/main.h"
+#include "ui/inputbox.h"
 #include "scheduler.h"
 #include "misc.h"
 #include "driver/py25q16.h"
@@ -259,7 +260,7 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
 uint64_t bandPresetFlags[MAX_BAND_PRESETS] = {0};
 static uint8_t currentBandPreset = 0;  // 
 
-static uint32_t currentFreq, tempFreq;
+static uint32_t currentFreq;
 static uint8_t rssiHistory[128];
 #ifdef ENABLE_PERSIST
 static uint8_t  peakHoldY[128];       // Peak Y value per display column (0=top)
@@ -268,10 +269,6 @@ static uint8_t  peakHoldAge[64];      // Shared decay timer (1 per 2 columns)
 #define PEAK_HOLD_INIT   0xFF         // "no peak" sentinel (same as SPECTRUM_TOPY_SKIP)
 #endif
 static int ShowLines = 1;
-static uint8_t freqInputIndex = 0;
-static uint8_t freqInputDotIndex = 0;
-static KEY_Code_t freqInputArr[10];
-char freqInputString[11];
 static uint8_t nextBandToScanIndex = 0;
 static void LookupChannelModulation();
 
@@ -1537,67 +1534,17 @@ static void ToggleStepsCount() {
 }
 
 static void ResetFreqInput() {
-  tempFreq = 0;
-  for (int i = 0; i < 10; ++i) {
-    freqInputString[i] = '-';
-  }
+  INPUTBOX_FrequencyBegin();
 }
 
 static void FreqInput() {
-  freqInputIndex = 0;
-  freqInputDotIndex = 0;
   ResetFreqInput();
   SetState(FREQ_INPUT);
   Key_1_pressed = 1;
 }
 
 static void UpdateFreqInput(KEY_Code_t key) {
-  if (key != KEY_EXIT && freqInputIndex >= 10) {
-    return;
-  }
-  if (key == KEY_STAR) {
-    if (freqInputIndex == 0 || freqInputDotIndex) {
-      return;
-    }
-    freqInputDotIndex = freqInputIndex;
-  }
-  if (key == KEY_EXIT) { // Freq input
-    freqInputIndex--;
-    if(freqInputDotIndex==freqInputIndex)
-      freqInputDotIndex = 0;    
-  } else {
-    freqInputArr[freqInputIndex++] = key;
-  }
-
-  ResetFreqInput();
-
-  uint8_t dotIndex =
-      freqInputDotIndex == 0 ? freqInputIndex : freqInputDotIndex;
-
-  KEY_Code_t digitKey;
-  for (int i = 0; i < 10; ++i) {
-    if (i < freqInputIndex) {
-      digitKey = freqInputArr[i];
-      freqInputString[i] = digitKey <= KEY_9 ? '0' + digitKey-KEY_0 : '.';
-    } else {
-      freqInputString[i] = '-';
-    }
-  }
-
-  uint32_t base = 100000; // 1MHz in BK units
-  for (int i = dotIndex - 1; i >= 0; --i) {
-    tempFreq += (freqInputArr[i]-KEY_0) * base;
-    base *= 10;
-  }
-
-  base = 10000; // 0.1MHz in BK units
-  if (dotIndex < freqInputIndex) {
-    for (int i = dotIndex + 1; i < freqInputIndex; ++i) {
-      tempFreq += (freqInputArr[i]-KEY_0) * base;
-      base /= 10;
-    }
-  }
-  
+  INPUTBOX_FrequencyUpdate(key);
 }
 
 static void Skip() {
@@ -2774,7 +2721,7 @@ static void OnKeyDownFreqInput(uint8_t key) {
     UpdateFreqInput(key);
     break;
   case KEY_EXIT: //EXIT from freq input
-    if (freqInputIndex == 0) {
+    if (INPUTBOX_FrequencyLength() == 0) {
       SetState(previousState);
       WaitSpectrum = 0;
       break;
@@ -2782,18 +2729,18 @@ static void OnKeyDownFreqInput(uint8_t key) {
     UpdateFreqInput(key);
     break;
   case KEY_MENU: //OnKeyDownFreqInput
-    if (tempFreq > F_MAX) {
+    if (INPUTBOX_FrequencyValue() > F_MAX) {
       break;
     }
     SetState(previousState);
     if (currentState == SPECTRUM) {
-        currentFreq = tempFreq;
+        currentFreq = INPUTBOX_FrequencyValue();
       ResetModifiers();
     }
     if (currentState == PARAMETERS_SELECT && parametersSelectedIndex == PARAM_RANGE_START)
-        RangeStart = tempFreq;
+        RangeStart = INPUTBOX_FrequencyValue();
     if (currentState == PARAMETERS_SELECT && parametersSelectedIndex == PARAM_RANGE_STOP)
-        RangeStop = tempFreq;
+        RangeStop = INPUTBOX_FrequencyValue();
 
     break;
   default:
@@ -2909,7 +2856,7 @@ static void OnKeyDownStill(KEY_Code_t key) {
 
 static void RenderFreqInput() {
   UI_PrintString("ENTER FREQ", 2, 127, 1, 8);  
-  UI_PrintString(freqInputString, 2, 127, 3, 8);
+  UI_PrintString(INPUTBOX_FrequencyGetString(), 2, 127, 3, 8);
 }
 
 static void RenderStatus() {

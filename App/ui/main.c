@@ -512,14 +512,10 @@ void UI_DisplayMain(void)
             }
         }
 
-        if (gInputBoxIndex > 0 && IS_FREQ_CHANNEL(gEeprom.ScreenChannel[vfo_num]) && gEeprom.TX_VFO == vfo_num)
+        if (INPUTBOX_FrequencyIsActive() && IS_FREQ_CHANNEL(gEeprom.ScreenChannel[vfo_num]) && gEeprom.TX_VFO == vfo_num)
         {
-            const char *ascii = INPUTBOX_GetAscii();
-            bool isGigaF = frequency >= _1GHz_in_KHz;
-            sprintf(String, "%.*s.%.3s", 3 + isGigaF, ascii, ascii + 3 + isGigaF);
-            UI_PrintStringSmallNormal(String + 7, 85, 0, 2);
-            String[7] = 0;
-            UI_DisplayFrequency(String, 25, 2, false);
+            const char *ascii = INPUTBOX_FrequencyGetString();
+            UI_DisplayFrequency(ascii, 0, 2, false);
         }
         else
         {

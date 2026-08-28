@@ -27,5 +27,11 @@ extern uint8_t gInputBoxIndex;
 void INPUTBOX_Append(const KEY_Code_t Digit);
 const char* INPUTBOX_GetAscii();
 
-#endif
+void INPUTBOX_FrequencyBegin(void);
+bool INPUTBOX_FrequencyUpdate(KEY_Code_t key);
+bool INPUTBOX_FrequencyIsActive(void);
+uint8_t INPUTBOX_FrequencyLength(void);
+uint32_t INPUTBOX_FrequencyValue(void);
+const char *INPUTBOX_FrequencyGetString(void);
 
+#endif

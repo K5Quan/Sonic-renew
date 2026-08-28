@@ -331,6 +331,10 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     gInputBoxIndex        = 0;
                     gRequestDisplayScreen = DISPLAY_MAIN;
                 }
+                if (INPUTBOX_FrequencyIsActive()) {
+                    INPUTBOX_FrequencyBegin();
+                    gRequestDisplayScreen = DISPLAY_MAIN;
+                }
 
                 HideFKeyIcon();
 
@@ -418,69 +422,23 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
 
     if (!gWasFKeyPressed) {
-        const uint8_t Vfo = gEeprom.TX_VFO;
-        INPUTBOX_Append(Key);
-        gKeyInputCountdown = key_input_timeout_500ms;
-
-        channelMoveSwitch();
         gRequestDisplayScreen = DISPLAY_MAIN;
 
         if (IS_MR_CHANNEL(gTxVfo->CHANNEL_SAVE)) {
+            INPUTBOX_Append(Key);
+            gKeyInputCountdown = key_input_timeout_500ms;
+            channelMoveSwitch();
             gKeyInputCountdown = key_input_timeout_500ms / 4;
             return;
         }
 
         if (IS_FREQ_CHANNEL(gTxVfo->CHANNEL_SAVE)) {
-            uint8_t totalDigits = 6;
-            if (gTxVfo->pRX->Frequency >= _1GHz_in_KHz)
-                totalDigits = 7;
-
-            if (gInputBoxIndex == 0)
-                return;
-
-            gKeyInputCountdown = (gInputBoxIndex >= totalDigits)
-                ? (key_input_timeout_500ms / 16)
-                : (key_input_timeout_500ms / 3);
-
-            if (gInputBoxIndex > totalDigits) {
-                gInputBoxIndex = totalDigits;
-                return;
+            if (!INPUTBOX_FrequencyIsActive()) {
+                gInputBoxIndex = 0;
+                INPUTBOX_FrequencyBegin();
             }
-
-            const char *inputStr  = INPUTBOX_GetAscii();
-            uint8_t     inputLen  = gInputBoxIndex;
-            uint32_t    inputFreq = StrToUL(inputStr);
-            for (uint8_t i = 0; i < (totalDigits - inputLen); i++)
-                inputFreq *= 10;
-
-            uint32_t Frequency = inputFreq * 100;
-
-            if (Frequency < frequencyBandTable[0].lower)
-                Frequency = frequencyBandTable[0].lower;
-            else if (Frequency >= BX4819_band1.upper && Frequency < BX4819_band2.lower) {
-                const uint32_t center = (BX4819_band1.upper + BX4819_band2.lower) / 2;
-                Frequency = (Frequency < center) ? BX4819_band1.upper : BX4819_band2.lower;
-            } else if (Frequency > frequencyBandTable[BAND_N_ELEM - 1].upper)
-                Frequency = frequencyBandTable[BAND_N_ELEM - 1].upper;
-
-            const FREQUENCY_Band_t band = FREQUENCY_GetBand(Frequency);
-            if (gTxVfo->Band != band) {
-                gTxVfo->Band               = band;
-                gEeprom.ScreenChannel[Vfo] = band + FREQ_CHANNEL_FIRST;
-                gEeprom.FreqChannel[Vfo]   = band + FREQ_CHANNEL_FIRST;
-                SETTINGS_SaveVfoIndices();
-                RADIO_ConfigureChannel(Vfo, VFO_CONFIGURE_RELOAD);
-            }
-
-            Frequency = FREQUENCY_RoundToStep(Frequency, gTxVfo->StepFrequency);
-            if (Frequency >= BX4819_band1.upper && Frequency < BX4819_band2.lower) {
-                const uint32_t center = (BX4819_band1.upper + BX4819_band2.lower) / 2;
-                Frequency = (Frequency < center)
-                    ? BX4819_band1.upper - gTxVfo->StepFrequency
-                    : BX4819_band2.lower;
-            }
-            gTxVfo->freq_config_RX.Frequency = Frequency;
-            gRequestSaveChannel = 1;
+            INPUTBOX_FrequencyUpdate(Key);
+            gKeyInputCountdown = key_input_timeout_500ms / 3;
             return;
         }
 
@@ -504,12 +462,19 @@ static void MAIN_Key_EXIT(bool bKeyPressed, bool bKeyHeld)
     if (bKeyHeld) {
         if (bKeyPressed) {
             gInputBoxIndex        = 0;
+            INPUTBOX_FrequencyBegin();
             gRequestDisplayScreen = DISPLAY_MAIN;
         }
         return;
     }
 
     // released
+    if (INPUTBOX_FrequencyIsActive()) {
+        INPUTBOX_FrequencyUpdate(KEY_EXIT);
+        gKeyInputCountdown = key_input_timeout_500ms;
+        gRequestDisplayScreen = DISPLAY_MAIN;
+        return;
+    }
 #ifdef ENABLE_FMRADIO
     if (!gFmRadioMode)
 #endif
@@ -540,6 +505,10 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
                     gInputBoxIndex        = 0;
                     gRequestDisplayScreen = DISPLAY_MAIN;
                 }
+                if (INPUTBOX_FrequencyIsActive()) {
+                    INPUTBOX_FrequencyBegin();
+                    gRequestDisplayScreen = DISPLAY_MAIN;
+                }
                 gUpdateStatus = true;
                 ACTION_Handle(KEY_MENU, bKeyPressed, bKeyHeld);
             }
@@ -548,6 +517,27 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
     }
 
     if (!bKeyPressed) {
+        if (INPUTBOX_FrequencyIsActive()) {
+            const uint32_t frequency = INPUTBOX_FrequencyValue();
+            if (frequency <= frequencyBandTable[BAND_N_ELEM - 1].upper) {
+                const uint8_t Vfo = gEeprom.TX_VFO;
+                const FREQUENCY_Band_t band = FREQUENCY_GetBand(frequency);
+                if (gTxVfo->Band != band) {
+                    gTxVfo->Band = band;
+                    gEeprom.ScreenChannel[Vfo] = band + FREQ_CHANNEL_FIRST;
+                    gEeprom.FreqChannel[Vfo] = band + FREQ_CHANNEL_FIRST;
+                    SETTINGS_SaveVfoIndices();
+                    RADIO_ConfigureChannel(Vfo, VFO_CONFIGURE_RELOAD);
+                }
+                gTxVfo->freq_config_RX.Frequency =
+                    FREQUENCY_RoundToStep(frequency, gTxVfo->StepFrequency);
+                gRequestSaveChannel = 1;
+            }
+            INPUTBOX_FrequencyBegin();
+            gInputBoxIndex = 0;
+            gRequestDisplayScreen = DISPLAY_MAIN;
+            return;
+        }
         gKeyInputCountdown = 1;
         channelMoveSwitch();
         const bool bFlag = !gInputBoxIndex;
@@ -652,6 +642,9 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             MAIN_Key_EXIT(bKeyPressed, bKeyHeld);
             break;
         case KEY_STAR:
+            if (IS_FREQ_CHANNEL(gTxVfo->CHANNEL_SAVE) &&
+                INPUTBOX_FrequencyIsActive() && !bKeyPressed && !bKeyHeld)
+                INPUTBOX_FrequencyUpdate(KEY_STAR);
             break;
         case KEY_F:
             GENERIC_Key_F(bKeyPressed, bKeyHeld);
