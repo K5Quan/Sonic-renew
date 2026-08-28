@@ -88,12 +88,14 @@ static uint32_t RangeStop = 11000000;
 static uint16_t SpectrumSleepMs = 0;  
 static uint8_t  Noislvl_OFF = NoisLvl;
 static uint8_t  Noislvl_ON = NoisLvl - NoiseHysteresis;
-static uint16_t osdPopupSetting = 200;      
+static uint16_t osdPopupSetting = 500;      
 static uint16_t UOO_trigger = 15;
 static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
 static bool     SoundBoost = 0;             
 static uint8_t  PttEmission = 0;            
 static bool     gMonitorScan = true;       
+static uint16_t stringCodeTimer = 0;
+#define STRINGCODE_TIMEOUT_MS 2 //( x 5s)
 
 // Parameter menu index configuration
 #define PARAM_PTT_EMISSION      0
@@ -119,7 +121,7 @@ uint16_t GetMaxVisualRows(void) {return PARAM_RESET_DEFAULT+1;}
 
 static bool     Backlight_On = 1;
 uint8_t osdPopupIndex = 1;
-static const int osdPopupTimes[] = {0, 200, 500, 1000, 3000, 5000};
+static const int osdPopupTimes[] = {0, 500, 1000, 3000, 5000, 10000};
 #ifdef ENABLE_BENCH
     static uint32_t benchTickMs = 0;      
     static uint16_t benchStepsThisSec = 0;
@@ -1081,21 +1083,25 @@ static uint16_t CountValidHistoryItems() {
 
 static void UpdateCssDetection(void) {
     static uint8_t LCode = 0;
+    static uint8_t lastCode = 0xFE; // Conserve le dernier code affiché (0xFE = état initial invalide)
+    
     if (settings.modulationType != MODULATION_FM) {
         code = 0xFF;
+        lastCode = 0xFF;
+        StringCode[0] = '\0';
+        stringCodeTimer = 0;
         return;
     }
-    //BK4819_SetFilterBandwidth(BK4819_FILTER_BW_WIDE, false); 
     
     BK4819_WriteRegister(BK4819_REG_51,
-    BK4819_REG_51_DISABLE_CxCSS         |
-    BK4819_REG_51_GPIO6_PIN2_NORMAL     |
-    BK4819_REG_51_TX_CDCSS_POSITIVE     |
-    BK4819_REG_51_MODE_CDCSS            |
-    BK4819_REG_51_CDCSS_23_BIT          |
-    BK4819_REG_51_1050HZ_NO_DETECTION   |
-    BK4819_REG_51_AUTO_CDCSS_BW_DISABLE |
-    BK4819_REG_51_AUTO_CTCSS_BW_DISABLE);
+        BK4819_REG_51_DISABLE_CxCSS         |
+        BK4819_REG_51_GPIO6_PIN2_NORMAL     |
+        BK4819_REG_51_TX_CDCSS_POSITIVE     |
+        BK4819_REG_51_MODE_CDCSS            |
+        BK4819_REG_51_CDCSS_23_BIT          |
+        BK4819_REG_51_1050HZ_NO_DETECTION   |
+        BK4819_REG_51_AUTO_CDCSS_BW_DISABLE |
+        BK4819_REG_51_AUTO_CTCSS_BW_DISABLE);
     
     BK4819_CssScanResult_t scanResult = BK4819_GetCxCSSScanResult(&cdcssFreq, &ctcssFreq);
 
@@ -1105,9 +1111,17 @@ static void UpdateCssDetection(void) {
             CodeFreq = peak.f;
             snprintf(StringCode, sizeof(StringCode), "D%03oN", DCS_Options[LCode]);
             code = LCode + 100;
-            if (PttEmission == 2) { //Use received code to respond
+            stringCodeTimer = STRINGCODE_TIMEOUT_MS; // Rebooste le timer à 10s
+            
+            if (PttEmission == 2) { // Use received code to respond
                 gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_DIGITAL;
                 gCurrentVfo->freq_config_TX.Code     = LCode;
+            }
+
+            // Déclenche le popup SEULEMENT si le code a changé
+            if (code != lastCode) {
+                ShowOSDPopup(StringCode);
+                lastCode = code;
             }
             return;
         }
@@ -1116,16 +1130,25 @@ static void UpdateCssDetection(void) {
         if (LCode != 0xFF) {
             CodeFreq = peak.f;
             snprintf(StringCode, sizeof(StringCode), "%u.%u", CTCSS_Options[LCode] / 10, CTCSS_Options[LCode] % 10);
-            
             code = LCode;
-            if (PttEmission == 2) { //Use received code to respond
+            stringCodeTimer = STRINGCODE_TIMEOUT_MS; // Rebooste le timer à 10s
+            
+            if (PttEmission == 2) { // Use received code to respond
                 gCurrentVfo->freq_config_TX.CodeType = CODE_TYPE_CONTINUOUS_TONE;
                 gCurrentVfo->freq_config_TX.Code     = LCode;
             }
-            
+
+            // Déclenche le popup SEULEMENT si le code a changé
+            if (code != lastCode) {
+                ShowOSDPopup(StringCode);
+                lastCode = code;
+            }
+            return;
         }
     }
-    ShowOSDPopup(StringCode);
+
+    // Si aucun code valide n'a été trouvé durant ce cycle
+    lastCode = 0xFF;
 }
 
 static void FillfreqHistory(void)
@@ -3591,7 +3614,12 @@ static void Tick() {
             BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, 1);
             BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, 1);
         } 
+        stringCodeTimer -= 1;
+        if (stringCodeTimer <= 0) {
+                StringCode[0] = '\0'; // Efface la chaîne après 10s d'inactivité
+            }
     }
+    
     if (gNextTimeslice_SCAN_LED_OFF) {
         gNextTimeslice_SCAN_LED_OFF = 0;
         if (!isListening && gEeprom.BACKLIGHT_MAX > 5) {

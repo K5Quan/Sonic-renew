@@ -49,14 +49,15 @@ bool              gFM_ManualMode = false;
 bool              gFM_Mute       = false;
 bool              gFM_No_Rx      = false;
 
-// ── FM six-slot memory ──────────────────────────────────────────────────
+// ── FM nine-slot memory ──────────────────────────────────────────────────
 // 0 = empty; otherwise, frequency (875..1080)
-// EEPROM: 0xA070 (slots 0-3) and 0xA078 (slots 4-5)
+// EEPROM: 0xA070 (slots 0-3), 0xA078 (slots 4-7), and 0xA080 (slots 8-9)
 // Stored in the unused part of the FM channels 0xA028..0xA0A7 (eeprom_compat)
 #define FM_MEMORY_EEPROM_ADDR0  0xA070
 #define FM_MEMORY_EEPROM_ADDR1  0xA078
+#define FM_MEMORY_EEPROM_ADDR2  0xA080
 
-uint16_t gFM_Memory[6] = {0, 0, 0, 0, 0, 0};
+uint16_t gFM_Memory[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void FM_Memory_Load(void)
 {
@@ -71,9 +72,15 @@ void FM_Memory_Load(void)
     }
 
     EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR1, buf, 8);
-    for (uint8_t i = 0; i < 2; i++) {
+    for (uint8_t i = 0; i < 4; i++) {
         uint16_t f = buf[i * 2] | ((uint16_t)buf[i * 2 + 1] << 8);
         gFM_Memory[4 + i] = (f >= lo && f <= hi) ? f : 0;
+    }
+
+    EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR2, buf, 8);
+    for (uint8_t i = 0; i < 1; i++) {
+        uint16_t f = buf[i * 2] | ((uint16_t)buf[i * 2 + 1] << 8);
+        gFM_Memory[8 + i] = (f >= lo && f <= hi) ? f : 0;
     }
 }
 
@@ -85,12 +92,17 @@ void FM_Memory_Save(uint8_t slot)
         buf[slot * 2]     = (uint8_t)(gFM_Memory[slot] & 0xFF);
         buf[slot * 2 + 1] = (uint8_t)(gFM_Memory[slot] >> 8);
         EEPROM_WriteBuffer(FM_MEMORY_EEPROM_ADDR0, buf);
-    } else {
+    } else if (slot < 8) {
         uint8_t idx = slot - 4;
         EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR1, buf, 8);
         buf[idx * 2]     = (uint8_t)(gFM_Memory[slot] & 0xFF);
         buf[idx * 2 + 1] = (uint8_t)(gFM_Memory[slot] >> 8);
         EEPROM_WriteBuffer(FM_MEMORY_EEPROM_ADDR1, buf);
+    } else if (slot < 9) {
+        EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR2, buf, 8);
+        buf[0] = (uint8_t)(gFM_Memory[slot] & 0xFF);
+        buf[1] = (uint8_t)(gFM_Memory[slot] >> 8);
+        EEPROM_WriteBuffer(FM_MEMORY_EEPROM_ADDR2, buf);
     }
 }
 
@@ -254,7 +266,7 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
     uint8_t state = bKeyPressed + 2 * bKeyHeld;
 
-    // ── Long press 1-6: save the frequency to a slot ───────────────────
+    // ── Long press 1-9: save the frequency to a slot ───────────────────
     if (bKeyHeld && bKeyPressed) {
         uint8_t slot = 0xFF;
         switch (Key) {
@@ -264,6 +276,9 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             case KEY_4: slot = 3; break;
             case KEY_5: slot = 4; break;
             case KEY_6: slot = 5; break;
+            case KEY_7: slot = 6; break;
+            case KEY_8: slot = 7; break;
+            case KEY_9: slot = 8; break;
             default:    break;
         }
         if (slot != 0xFF) {
@@ -274,7 +289,7 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         }
     }
 
-    // ── Short press 1-6: recall the frequency from a slot ──────────────
+    // ── Short press 1-9: recall the frequency from a slot ──────────────
     if (state == BUTTON_EVENT_SHORT) {
         uint8_t slot = 0xFF;
         switch (Key) {
@@ -284,6 +299,9 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             case KEY_4: slot = 3; break;
             case KEY_5: slot = 4; break;
             case KEY_6: slot = 5; break;
+            case KEY_7: slot = 6; break;
+            case KEY_8: slot = 7; break;
+            case KEY_9: slot = 8; break;
             default:    break;
         }
         if (slot != 0xFF) {

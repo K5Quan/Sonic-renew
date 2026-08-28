@@ -45,12 +45,12 @@ void UI_DisplayFM(void)
     else
         GUI_DisplaySmallestDark("RX ON", 3, 6, false, true);
 
-    // Six frequency memory slots in a 2 x 3 grid.  The normal font polarity
+    // Nine frequency memory slots in a 3 x 3 grid.  The normal font polarity
     // leaves the LCD background clear and avoids separator lines.
-    static const uint8_t memoryX[6] = {2, 44, 88, 2, 44, 88};
-    static const uint8_t memoryPage[6] = {3, 3, 3, 5, 5, 5};
+    static const uint8_t memoryX[9] = {2, 44, 88, 2, 44, 88, 2, 44, 88};
+    static const uint8_t memoryPage[9] = {2, 2, 2, 4, 4, 4, 6, 6, 6};
 
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < 9; i++) {
         uint16_t frequency = gFM_Memory[i];
         if (frequency != 0)
             sprintf(memoryString, "%03d.%d", frequency / 10, frequency % 10);
