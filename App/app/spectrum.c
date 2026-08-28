@@ -2736,7 +2736,7 @@ static void OnKeyDownFreqInput(uint8_t key) {
     if (currentState == PARAMETERS_SELECT && parametersSelectedIndex == PARAM_RANGE_STOP)
         RangeStop = INPUTBOX_FrequencyValue();
 
-    INPUTBOX_ResetFrequency();
+    INPUTBOX_FrequencyBegin();
     break;
   default:
     break;

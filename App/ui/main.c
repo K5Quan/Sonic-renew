@@ -512,7 +512,7 @@ void UI_DisplayMain(void)
             }
         }
 
-        if (INPUTBOX_FrequencyIsActive() && IS_FREQ_CHANNEL(gEeprom.ScreenChannel[vfo_num]) && gEeprom.TX_VFO == vfo_num)
+        if (INPUTBOX_FrequencyIsActive())
         {
             const char *ascii = INPUTBOX_FrequencyGetString();
             UI_DisplayFrequency(ascii, 0, 2, false);
