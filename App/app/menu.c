@@ -113,11 +113,6 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMax = ARRAY_SIZE(gSubMenu_F_LOCK) - 1;
             break;
 
-        case MENU_MDF:
-            //*pMin = 0;
-            *pMax = ARRAY_SIZE(gSubMenu_MDF) - 1;
-            break;
-
         case MENU_SFT_D:
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_SFT_D) - 1;
@@ -431,11 +426,6 @@ void MENU_AcceptSetting(void)
             gEeprom.TX_TIMEOUT_TIMER = gSubMenuSelection;
             break;
 
-
-        case MENU_MDF:
-            gEeprom.CHANNEL_DISPLAY_MODE = gSubMenuSelection;
-            break;
-
         case MENU_AUTOLK:
             gEeprom.AUTO_KEYPAD_LOCK = gSubMenuSelection;
             gKeyLockCountdown        = gEeprom.AUTO_KEYPAD_LOCK * 30; // 15 seconds step
@@ -704,11 +694,6 @@ void MENU_ShowCurrentSetting(void)
 
         case MENU_TOT:
             gSubMenuSelection = gEeprom.TX_TIMEOUT_TIMER;
-            break;
-
-
-        case MENU_MDF:
-            gSubMenuSelection = gEeprom.CHANNEL_DISPLAY_MODE;
             break;
 
         case MENU_AUTOLK:

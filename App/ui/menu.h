@@ -42,7 +42,6 @@ enum
     MENU_MEM_CH,
     MENU_DEL_CH,
     MENU_MEM_NAME,
-    MENU_MDF,
     MENU_SAVE,
     MENU_ABR,
     MENU_ABR_ON_TX_RX,
@@ -98,9 +97,6 @@ extern const char        gSubMenu_W_N[2][7];
 extern const char        gSubMenu_OFF_ON[2][4];
 extern const char        gSubMenu_NA[4];
 extern const char        gSubMenu_TOT[11][7];
-extern const char* const gSubMenu_RXMode[3];
-
-extern const char* const gSubMenu_MDF[4];
 
 #ifdef ENABLE_FEAT_F4HWN
     extern const char    gSubMenu_SET_TOT[4][7];

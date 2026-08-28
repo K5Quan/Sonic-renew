@@ -44,7 +44,6 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_POWER] = &ACTION_Power,
     [ACTION_OPT_MONITOR] = &ACTION_Monitor,
     [ACTION_OPT_KEYLOCK] = &COMMON_KeypadLockToggle,
-    [ACTION_OPT_A_B] = &COMMON_SwitchVFOs,
     [ACTION_OPT_VFO_MR] = &COMMON_SwitchVFOMode,
     [ACTION_OPT_SWITCH_DEMODUL] = &ACTION_SwitchDemodul,
 
@@ -67,8 +66,6 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_BLMIN_TMP_OFF] = &FUNCTION_NOP,
 
 #ifdef ENABLE_FEAT_F4HWN
-    [ACTION_OPT_RXMODE] = &ACTION_RxMode,
-    [ACTION_OPT_MAINONLY] = &ACTION_MainOnly,
     [ACTION_OPT_PTT] = &ACTION_Ptt,
     [ACTION_OPT_WN] = &ACTION_Wn,
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
@@ -77,8 +74,6 @@ void (*action_opt_table[])(void) = {
     #else
         [ACTION_OPT_RXA] = &FUNCTION_NOP,
     #endif
-#else
-    [ACTION_OPT_RXMODE] = &FUNCTION_NOP,
 #endif
 };
 
@@ -179,12 +174,9 @@ void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         switch (func) {
             case ACTION_OPT_POWER:
             case ACTION_OPT_MONITOR:
-            case ACTION_OPT_A_B:
             case ACTION_OPT_VFO_MR:
             case ACTION_OPT_SWITCH_DEMODUL:
     #ifdef ENABLE_FEAT_F4HWN
-            case ACTION_OPT_RXMODE:
-            case ACTION_OPT_MAINONLY:
             case ACTION_OPT_WN:
         #ifdef ENABLE_FEAT_F4HWN_AUDIO
             case ACTION_OPT_RXA:
@@ -223,17 +215,6 @@ void ACTION_FM(void)
     }
 }
 #endif
-
-#ifdef ENABLE_FEAT_F4HWN
-void ACTION_RxMode(void)
-{
-    // Single VFO mode: No-op
-}
-
-void ACTION_MainOnly(void)
-{
-    // Single VFO mode: No-op
-}
 
 #ifdef ENABLE_FEAT_F4HWN_AUDIO
 void ACTION_RxA(void)
@@ -311,5 +292,4 @@ void ACTION_BackLightOnDemand(void)
     BACKLIGHT_TurnOn();
 }
 
-#endif
 

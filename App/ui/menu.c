@@ -65,7 +65,6 @@ const t_menu_item MenuList[] =
     {"ChSave",      MENU_MEM_CH        },
     {"ChDele",      MENU_DEL_CH        },
     {"ChName",      MENU_MEM_NAME      },
-    {"ChDisp",      MENU_MDF           },
     {"F1Shrt",      MENU_F1SHRT        },
     {"F1Long",      MENU_F1LONG        },
     {"F2Shrt",      MENU_F2SHRT        },
@@ -126,34 +125,6 @@ const char gSubMenu_NA[4] =
 {
     "N/A"
 };
-
-const char* const gSubMenu_RXMode[] =
-{
-    "MAIN\nONLY",       // 0 TX and RX on main only
-    "DUAL RX\nRESPOND", // 1 Watch both, TX switches to active VFO
-    "MAIN TX\nDUAL RX", // 2 Always TX on main, RX on both
-};
-
-
-/*const char* const gSubMenu_RXMode[] =
-{
-    "MAIN\nONLY",       // 0 -> 0   TX and RX on main only
-    "DUAL RX\nMAIN TX"  // 1 -> 3   always TX on main, but RX on both
-    "DUAL RX\nRESPOND", // 2 -> 1   Watch both and respond
-    "CROSS\nBAND",      // 3 -> 2   TX on main, RX on secondary
-};
-*/
-
-
-
-const char* const gSubMenu_MDF[] =
-{
-    "FREQ",
-    "CHANNEL\nNUMBER",
-    "NAME",
-    "NAME\n+\nFREQ"
-};
-
 
 const char gSubMenu_PONMSG[][8] =
 {
@@ -276,12 +247,9 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"FM RADIO",        ACTION_OPT_FM},
 #endif
     {"LOCK\nKEYPAD",    ACTION_OPT_KEYLOCK},
-    {"VFO A\nVFO B",    ACTION_OPT_A_B},
     {"VFO\nMEM",        ACTION_OPT_VFO_MR},
     {"MODE",            ACTION_OPT_SWITCH_DEMODUL},
 #ifdef ENABLE_FEAT_F4HWN
-    {"RX MODE",         ACTION_OPT_RXMODE},
-    {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT TOGGLE",      ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
     {"MUTE",            ACTION_OPT_MUTE},
@@ -635,11 +603,6 @@ void UI_DisplayMenu(void)
             gaugeMin = 5;
             gaugeMax = 179;
             //#endif
-            break;
-
-
-        case MENU_MDF:
-            strcpy(String, gSubMenu_MDF[gSubMenuSelection]);
             break;
 
         case MENU_RP_STE:

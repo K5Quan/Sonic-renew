@@ -81,7 +81,6 @@ void SETTINGS_InitEEPROM(void)
                 PY25Q16_ReadBuffer(0x00A0A8, btnBuf, sizeof(btnBuf));
                 btnBuf[0] = (btnBuf[0] & 0x01) | (ACTION_OPT_FLASHLIGHT << 1);
                 btnBuf[1] = ACTION_OPT_MONITOR;
-                btnBuf[3] = ACTION_OPT_RXMODE;
                 PY25Q16_WriteBuffer(0x00A0A8, btnBuf, sizeof(btnBuf), false);
             }
 
@@ -238,7 +237,7 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
     gEeprom.KEY_M_LONG_PRESS_ACTION      = ((Data[0] >> 1) < ACTION_OPT_LEN) ? (Data[0] >> 1) : ACTION_OPT_FLASHLIGHT;
     gEeprom.KEY_1_SHORT_PRESS_ACTION     = (Data[1] < ACTION_OPT_LEN) ? Data[1] : ACTION_OPT_MONITOR;
     gEeprom.KEY_1_LONG_PRESS_ACTION      = (Data[2] < ACTION_OPT_LEN) ? Data[2] : ACTION_OPT_NONE;
-    gEeprom.KEY_2_SHORT_PRESS_ACTION     = (Data[3] < ACTION_OPT_LEN) ? Data[3] : ACTION_OPT_RXMODE;
+    gEeprom.KEY_2_SHORT_PRESS_ACTION     = (Data[3] < ACTION_OPT_LEN) ? Data[3] : ACTION_OPT_NONE;
     gEeprom.KEY_2_LONG_PRESS_ACTION      = (Data[4] < ACTION_OPT_LEN) ? Data[4] : ACTION_OPT_NONE;
     gEeprom.SCAN_RESUME_MODE             = (Data[5] < 105)            ? Data[5] : 14;
     gEeprom.AUTO_KEYPAD_LOCK             = (Data[6] < 41)             ? Data[6] : 0;

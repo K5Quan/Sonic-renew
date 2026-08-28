@@ -24,39 +24,40 @@
 void UI_DisplayFM(void)
 {
     char String[16];
+    char memoryString[8];
 
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
 
-    // Frequency in a large digital font
+    // Frequency in a large digital font, centered in the top area.
     memset(String, 0, sizeof(String));
     sprintf(String, "%3d.%d",
             gEeprom.FM_FrequencyPlaying / 10,
             gEeprom.FM_FrequencyPlaying % 10);
-    UI_DisplayFrequency(String, 66, 2, true);
+    UI_DisplayFrequency(String, 35, 0, true);
 
+    // Keep the current scan and receiver states visible without borders.
     if (gFM_ManualMode)
-        GUI_DisplaySmallestDark("* MANUAL", 72, 5, false, true);
+        GUI_DisplaySmallestDark("MAN", 102, 6, false, true);
     else
-        GUI_DisplaySmallestDark("* AUTO", 80, 5, false, true);
-    if (!gFM_No_Rx) GUI_DisplaySmallestDark("RX MON", 86, 38, false, true);
-    GUI_DisplaySmallestDark("SONIC", 86, 45, false, true);
+        GUI_DisplaySmallestDark("AUTO", 102, 6, false, true);
+    if (gFM_No_Rx)
+        GUI_DisplaySmallestDark("NO RX", 3, 6, false, true);
+    else
+        GUI_DisplaySmallestDark("RX ON", 3, 6, false, true);
 
-    // ── Six frequency memory slots ──────────────────────────────────────
-    char mb[8];
-    uint16_t f;
+    // Six frequency memory slots in a 2 x 3 grid.  The normal font polarity
+    // leaves the LCD background clear and avoids separator lines.
+    static const uint8_t memoryX[6] = {2, 44, 88, 2, 44, 88};
+    static const uint8_t memoryPage[6] = {3, 3, 3, 5, 5, 5};
 
-    f = gFM_Memory[0]; sprintf(mb, f ? "%03d.%d" : "NO-CH", f / 10, f % 10); GUI_DisplaySmallestDark(mb,  12, 5, false, true);
-    GUI_DisplaySmallestDark("1",  2, 5, false, false);
-    f = gFM_Memory[1]; sprintf(mb, f ? "%03d.%d" : "NO-CH", f / 10, f % 10); GUI_DisplaySmallestDark(mb,  12, 13, false, true);
-    GUI_DisplaySmallestDark("2",  2, 13, false, false);
-    f = gFM_Memory[2]; sprintf(mb, f ? "%03d.%d" : "NO-CH", f / 10, f % 10); GUI_DisplaySmallestDark(mb,  12, 21, false, true);
-    GUI_DisplaySmallestDark("3",  2, 21, false, false);
-    f = gFM_Memory[3]; sprintf(mb, f ? "%03d.%d" : "NO-CH", f / 10, f % 10); GUI_DisplaySmallestDark(mb, 12, 29, false, true);
-    GUI_DisplaySmallestDark("4", 2, 29, false, false);
-    f = gFM_Memory[4]; sprintf(mb, f ? "%03d.%d" : "NO-CH", f / 10, f % 10); GUI_DisplaySmallestDark(mb, 12, 37, false, true);
-    GUI_DisplaySmallestDark("5", 2, 37, false, false);
-    f = gFM_Memory[5]; sprintf(mb, f ? "%03d.%d" : "NO-CH", f / 10, f % 10); GUI_DisplaySmallestDark(mb, 12, 45, false, true);
-    GUI_DisplaySmallestDark("6", 2, 45, false, false);
+    for (uint8_t i = 0; i < 6; i++) {
+        uint16_t frequency = gFM_Memory[i];
+        if (frequency != 0)
+            sprintf(memoryString, "%03d.%d", frequency / 10, frequency % 10);
+        else
+            sprintf(memoryString, "***.*");
+        UI_PrintStringSmallBold(memoryString, memoryX[i], 0, memoryPage[i]);
+    }
 
     ST7565_BlitFullScreen();
 }
