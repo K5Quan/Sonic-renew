@@ -49,7 +49,7 @@ const char* INPUTBOX_GetAscii()
     return inputBoxAscii;
 }
 
-static void INPUTBOX_ResetFrequency(void)
+void INPUTBOX_ResetFrequency(void)
 {
     frequencyInputValue = 0;
     memset(frequencyInputString, '-', sizeof(frequencyInputString) - 1);

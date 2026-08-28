@@ -60,11 +60,11 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     bool          gSetting_set_met = 0;
     bool          gSetting_set_gui = 0;
     #ifdef ENABLE_FEAT_F4HWN_AUDIO
-        uint8_t       gSetting_set_audio_fm = 0;
-        uint8_t       gSetting_set_audio_am = 0;
+        uint8_t   gSetting_set_audio_fm = 0;
+        uint8_t   gSetting_set_audio_am = 1;
     #endif
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
-        bool          gSetting_set_nfm = 0;
+    bool          gSetting_set_nfm = 0;
     #endif
     bool          gSetting_set_tmr = 0;
     bool          gSetting_set_ptt_session;

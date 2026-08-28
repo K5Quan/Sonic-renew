@@ -32,6 +32,7 @@ bool INPUTBOX_FrequencyUpdate(KEY_Code_t key);
 bool INPUTBOX_FrequencyIsActive(void);
 uint8_t INPUTBOX_FrequencyLength(void);
 uint32_t INPUTBOX_FrequencyValue(void);
+void INPUTBOX_ResetFrequency(void);
 const char *INPUTBOX_FrequencyGetString(void);
 
 #endif

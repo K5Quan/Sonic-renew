@@ -1533,18 +1533,10 @@ static void ToggleStepsCount() {
   
 }
 
-static void ResetFreqInput() {
-  INPUTBOX_FrequencyBegin();
-}
-
 static void FreqInput() {
-  ResetFreqInput();
+  INPUTBOX_FrequencyBegin();
   SetState(FREQ_INPUT);
   Key_1_pressed = 1;
-}
-
-static void UpdateFreqInput(KEY_Code_t key) {
-  INPUTBOX_FrequencyUpdate(key);
 }
 
 static void Skip() {
@@ -2668,6 +2660,7 @@ static void HandleKeySpectrum(uint8_t key) {
             SPECTRUM_PAUSED = false;
             StringCode[0] = '\0'; //Erase code
             SetState(SPECTRUM);
+            INPUTBOX_FrequencyBegin();
             break;
         }
         if (WaitSpectrum) WaitSpectrum = 0;
@@ -2718,15 +2711,16 @@ static void OnKeyDownFreqInput(uint8_t key) {
   case KEY_8: //Freq input
   case KEY_9: //Freq input
   case KEY_STAR: //Freq input
-    UpdateFreqInput(key);
+    INPUTBOX_FrequencyUpdate(key);
     break;
   case KEY_EXIT: //EXIT from freq input
     if (INPUTBOX_FrequencyLength() == 0) {
+      INPUTBOX_ResetFrequency();
       SetState(previousState);
       WaitSpectrum = 0;
       break;
     }
-    UpdateFreqInput(key);
+    INPUTBOX_FrequencyUpdate(key);
     break;
   case KEY_MENU: //OnKeyDownFreqInput
     if (INPUTBOX_FrequencyValue() > F_MAX) {
@@ -2742,6 +2736,7 @@ static void OnKeyDownFreqInput(uint8_t key) {
     if (currentState == PARAMETERS_SELECT && parametersSelectedIndex == PARAM_RANGE_STOP)
         RangeStop = INPUTBOX_FrequencyValue();
 
+    INPUTBOX_ResetFrequency();
     break;
   default:
     break;
