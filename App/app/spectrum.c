@@ -165,6 +165,24 @@ static void BuildValidScanListIndices();
 static void RenderHistoryList();
 static void RenderScanListSelect();
 static void RenderParametersSelect();
+static void RenderHistoryMenuSelect(void);
+typedef struct {
+    char left[20];
+    char right[20];
+} ListRow;
+
+typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
+
+static void GetHistoryMenuRow(uint16_t index, ListRow *row);
+static void HandleKeyHistoryMenu(uint8_t key);
+static void ExecuteHistoryMenuAction(uint16_t index);
+static void RenderUnifiedList(const char *title,
+                             bool showSelection,
+                             uint16_t count,
+                             uint16_t selectedIndex,
+                             uint16_t scrollOffset,
+                             bool allowExit,
+                             void (*rowGetter)(uint16_t, ListRow *));
 static void UpdateScan();
 static void UpdateSpectrumMonitorLeds();
 static uint8_t bandListSelectedIndex = 0;
@@ -177,6 +195,9 @@ static uint8_t scanListSelectedIndex = 0;
 static uint8_t scanListScrollOffset = 0;
 static uint8_t parametersSelectedIndex = 0;
 static uint8_t parametersScrollOffset = 0;
+static bool parametersStateInitialized = false;
+static uint8_t historyMenuSelectedIndex = 0;
+static uint8_t historyMenuScrollOffset = 0;
 static uint8_t validScanListCount = 0;
 static KeyboardState kbd = {KEY_INVALID, KEY_INVALID, 0,0};
 struct FrequencyBandInfo {
@@ -222,12 +243,7 @@ static void SetState(State state);
 static void Spectrum_Prepare_Tx(void);
 static void Skip();
 
-typedef struct {
-    char left[20];
-    char right[20];
-} ListRow;
 
-typedef void (*GetListRowFn)(uint16_t index, ListRow *row);
 
 /***************************BIG RAM******************************************/
 #define HISTORY_SIZE 200
@@ -583,9 +599,6 @@ uint16_t statuslineUpdateTimer = 0;
 static void RelaunchScan();
 static void ResetInterrupts();
 static char StringCode[10] = "";
-
-static bool parametersStateInitialized = false;
-
 static uint32_t stillFreq = 0;
 static uint32_t GetInitialStillFreq(void) {
     uint32_t f = 0;
@@ -2252,6 +2265,72 @@ static void HandleKeyScanList(uint8_t key) {
     }
 }
 
+static void ExecuteHistoryMenuAction(uint16_t index) {
+    switch (index) {
+        case 0:
+            ClearHistory(0);
+            ShowOSDPopup("HISTORY CLEARED");
+            break;
+        case 1:
+            ClearHistory(2);
+            ShowOSDPopup("BLACKLIST CLEARED");
+            break;
+        case 2:
+            ClearHistory(1);
+            ShowOSDPopup("NON-BL CLEARED");
+            break;
+        case 3:
+            SaveHistory();
+            ShowOSDPopup("HISTORY SAVED");
+            break;
+        case 4:
+            SaveAllHistoryToFreeChannels();
+            ShowOSDPopup("HISTORY COPIED");
+            break;
+        default:
+            break;
+    }
+    SetState(SPECTRUM);
+}
+
+static void HandleKeyHistoryMenu(uint8_t key) {
+    uint16_t maxRows = 5;
+    switch (key) {
+        case KEY_UP:
+            historyMenuSelectedIndex = (historyMenuSelectedIndex == 0) ? (maxRows - 1) : (historyMenuSelectedIndex - 1);
+            break;
+        case KEY_DOWN:
+            historyMenuSelectedIndex = (historyMenuSelectedIndex + 1) % maxRows;
+            break;
+        case KEY_1:
+            ExecuteHistoryMenuAction(historyMenuSelectedIndex);
+            break;
+        case KEY_EXIT:
+            SetState(SPECTRUM);
+            break;
+        default:
+            break;
+    }
+}
+
+static void GetHistoryMenuRow(uint16_t index, ListRow *row) {
+    row->left[0] = '\0';
+    row->right[0] = '\0';
+    switch (index) {
+        case 0: snprintf(row->left, sizeof(row->left), "Clear history"); break;
+        case 1: snprintf(row->left, sizeof(row->left), "Clear blacklist"); break;
+        case 2: snprintf(row->left, sizeof(row->left), "Clear non blacklist"); break;
+        case 3: snprintf(row->left, sizeof(row->left), "Save history"); break;
+        case 4: snprintf(row->left, sizeof(row->left), "Save hist to ch"); break;
+        default: row->left[0] = '\0'; break;
+    }
+}
+
+static void RenderHistoryMenuSelect() {
+    RenderUnifiedList("HISTORY:", false, 5, historyMenuSelectedIndex,
+                      historyMenuScrollOffset, true, GetHistoryMenuRow);
+}
+
 /* --- PARAMETERS_SELECT: navigate settings, edit values --- */
 static void HandleKeyParameters(uint8_t key) {
     uint16_t maxRows = GetMaxVisualRows();
@@ -2380,22 +2459,22 @@ static void HandleKeySpectrum(uint8_t key) {
 
     switch (key) {
         case KEY_5: {
-        if (historyListActive) {
-            gHistoryScan = !gHistoryScan;
-            ShowOSDPopup(gHistoryScan ? "SCAN HISTORY ON" : "SCAN HISTORY OFF");
-            if (gHistoryScan) { gIsPeak = false; SpectrumMonitor = 0; }
-        } else {
-            SetState(PARAMETERS_SELECT);
-            if (!parametersStateInitialized) {
-                parametersSelectedIndex = 0;
-                parametersScrollOffset = 0;
-                parametersStateInitialized = true;
-            }
+            if (historyListActive) {
+                historyMenuSelectedIndex = 0;
+                historyMenuScrollOffset = 0;
+                SetState(HISTORY_MENU_SELECT);
+            } else {
+                SetState(PARAMETERS_SELECT);
+                if (!parametersStateInitialized) {
+                    parametersSelectedIndex = 0;
+                    parametersScrollOffset = 0;
+                    parametersStateInitialized = true;
+                }
             }
             break;
         }
         case KEY_STAR: {
-            if (historyListActive) {SaveAllHistoryToFreeChannels();break;}
+            if (historyListActive) {break;}
             int step = (settings.rssiTriggerLevelUp >= 20) ? 5 : 1;
             settings.rssiTriggerLevelUp =
                     (settings.rssiTriggerLevelUp >= 50 ? 0 : settings.rssiTriggerLevelUp + step);
@@ -2429,31 +2508,34 @@ static void HandleKeySpectrum(uint8_t key) {
             break;
         }
         case KEY_1:
-            if (historyListActive) {ClearHistory(0);SpectrumMonitor = 0;}   //clear everything
-            else {
+            if (historyListActive) {
+                gHistoryScan = !gHistoryScan;
+                ShowOSDPopup(gHistoryScan ? "SCAN HISTORY ON" : "SCAN HISTORY OFF");
+                if (gHistoryScan) { gIsPeak = false; SpectrumMonitor = 0; }
+            } else {
                 Skip();
                 ShowOSDPopup("SKIPPED");
             }
             break;
         case KEY_4:
-            if (historyListActive) {ClearHistory(2);return;}                // Clear BL
-            if (appMode == SCAN_BAND_MODE) {
-                SetState(BAND_LIST_SELECT);
-                bandListSelectedIndex = 0;
-                bandListScrollOffset  = 0;
-                return;
+            if (!historyListActive) {
+                if (appMode == SCAN_BAND_MODE) {
+                    SetState(BAND_LIST_SELECT);
+                    bandListSelectedIndex = 0;
+                    bandListScrollOffset  = 0;
+                    return;
+                }
+                if (appMode == CHANNEL_MODE) {
+                    SetState(SCANLIST_SELECT);
+                    scanListSelectedIndex = 0;
+                    scanListScrollOffset  = 0;
+                    return;
+                }
+                if (appMode != SCAN_RANGE_MODE) ToggleStepsCount();
             }
-            if (appMode == CHANNEL_MODE) {
-                SetState(SCANLIST_SELECT);
-                scanListSelectedIndex = 0;
-                scanListScrollOffset  = 0;
-                return;
-            }
-            if (appMode != SCAN_RANGE_MODE) ToggleStepsCount();
             break;
         case KEY_7:
-            if (historyListActive) {ClearHistory(1);}                       // Clear NBL
-            else {SaveSettings();}
+            if (!historyListActive) {SaveSettings();}
             break;
         case KEY_2:
             if (historyListActive) SaveHistoryToFreeChannel();
@@ -2464,8 +2546,7 @@ static void HandleKeySpectrum(uint8_t key) {
             }
             break;
         case KEY_8: //Save history or spectrum type
-            if (historyListActive) {SaveHistory();
-            } else {
+            if (!historyListActive) {
                 ShowLines++;
                 if (ShowLines > 3 || ShowLines < 1) ShowLines = 1;
                 const char *viewName           = "SPECTRUM";
@@ -2721,10 +2802,11 @@ static void OnKeyDown(uint8_t key) {
 
     /* Dispatch to the handler for the currently active state */
     switch (currentState) {
-        case BAND_LIST_SELECT:  HandleKeyBandList(key);         break;
-        case SCANLIST_SELECT:   HandleKeyScanList(key);         break;
-        case PARAMETERS_SELECT: HandleKeyParameters(key);       break;
-        default:                HandleKeySpectrum(key);         break;
+        case BAND_LIST_SELECT:   HandleKeyBandList(key);         break;
+        case SCANLIST_SELECT:    HandleKeyScanList(key);         break;
+        case PARAMETERS_SELECT:  HandleKeyParameters(key);       break;
+        case HISTORY_MENU_SELECT: HandleKeyHistoryMenu(key);      break;
+        default:                 HandleKeySpectrum(key);         break;
     }
 }
 
@@ -3281,13 +3363,14 @@ static void RenderStill() {
 
 static void Render() {
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
-    if(historyListActive) {
-        if(gNextTimeslice_history) RenderHistoryList();
-        gNextTimeslice_history = 0;
-        return;
-    }
+
     switch (currentState) {
         case SPECTRUM:
+            if(historyListActive) {
+                if(gNextTimeslice_history) RenderHistoryList();
+            gNextTimeslice_history = 0;
+            return;
+            }
             if(isListening) { DrawF(peak.f);}
             else {
                     if (SpectrumMonitor) DrawF(lastReceivingFreq);
@@ -3319,6 +3402,10 @@ static void Render() {
             return;
         case PARAMETERS_SELECT:
             RenderParametersSelect();
+            ST7565_BlitFullScreen();
+            return;
+        case HISTORY_MENU_SELECT:
+            RenderHistoryMenuSelect();
             ST7565_BlitFullScreen();
             return;
     }
@@ -3383,6 +3470,7 @@ static void HandleUserInput(void) {
             case BAND_LIST_SELECT:
             case SCANLIST_SELECT:
             case PARAMETERS_SELECT:
+            case HISTORY_MENU_SELECT:
                 OnKeyDown(key_to_process);
                 break;
             case FREQ_INPUT:

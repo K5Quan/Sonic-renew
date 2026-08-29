@@ -121,6 +121,7 @@ typedef enum State {
   BAND_LIST_SELECT,
   SCANLIST_SELECT,
   PARAMETERS_SELECT,
+  HISTORY_MENU_SELECT,
 } State;
 
 
