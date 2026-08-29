@@ -445,11 +445,7 @@ uint8_t MB_BootResolveProfile(void)
     if (ms == MB_MARK_VALID)
     {
         if (MB_InternalMatchesProfile(&mark))
-        #ifdef ENABLE_USB
-            return mb_remember_running_slot(mark.index+1); /* slot named by the marker */
-        #else
-            return mb_remember_running_slot(mark.index); /* slot named by the marker */
-        #endif
+        return mb_remember_running_slot(mark.index); /* slot named by the marker */
         /* Marker read fine but internal no longer carries its identity -> the
          * firmware was replaced outside multiboot (a plain Flash-Firmware). Adopt
          * it as Main. Deliberately NOT a content scan here: a build that merely

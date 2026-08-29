@@ -112,8 +112,9 @@ static uint16_t stringCodeTimer = 0;
 #define PARAM_OSD_POPUP         11
 #define PARAM_RECORD_TRIGGER    12
 #define PARAM_SOUND_BOOST       13
-#define PARAM_MONITOR_SCAN      14
-#define PARAM_RESET_DEFAULT     15
+#define PARAM_AUDIO_AM          14
+#define PARAM_MONITOR_SCAN      15
+#define PARAM_RESET_DEFAULT     16
 
 uint16_t GetMaxVisualRows(void) {return PARAM_RESET_DEFAULT+1;}
 
@@ -2348,6 +2349,12 @@ static void HandleKeyParameters(uint8_t key) {
                 case PARAM_MONITOR_SCAN:
                     gMonitorScan = !gMonitorScan; 
                     break;
+                case PARAM_AUDIO_AM:
+                      gSetting_set_audio_am = isKey3 ?
+                            (gSetting_set_audio_am >= 2 ? 0 : gSetting_set_audio_am + 1) :
+                            (gSetting_set_audio_am == 0 ? 2 : gSetting_set_audio_am - 1);
+                      RADIO_SetModulation(gRxVfo->Modulation);
+                      break;
                 case PARAM_RESET_DEFAULT:
                       if (isKey3) ClearSettings();
                       break;
@@ -3289,6 +3296,9 @@ static void Render() {
 
             if (spectrumElapsedCount < 500 + osdPopupTimer) {
                 RenderSpectrum();
+#ifdef ENABLE_SPECTRUM_LINES
+                MyDrawFrameLines();
+#endif
                 ST7565_BlitFullScreen();
             }
             break;
@@ -3313,7 +3323,7 @@ static void Render() {
             return;
     }
 #ifdef ENABLE_SPECTRUM_LINES
-            MyDrawFrameLines();
+            //MyDrawFrameLines();
 #endif
 BlitFullScreen();
 }
@@ -4361,6 +4371,12 @@ static void GetParametersRow(uint16_t index, ListRow *row) {
             if (gMonitorScan) snprintf(row->right, sizeof(row->right), "ON");
             else snprintf(row->right, sizeof(row->right), "OFF");
             break;
+        case PARAM_AUDIO_AM: {
+            snprintf(row->left, sizeof(row->left), "AM Audio");
+            const char *amProfileNames[] = {"SHARP", "STOCK", "OPEN"};
+            strncpy(row->right, amProfileNames[gSetting_set_audio_am % 3], sizeof(row->right) - 1);
+            break;
+        }
         case PARAM_RESET_DEFAULT:
             snprintf(row->left, sizeof(row->left), "Reset Default");
             strncpy(row->right, ">", sizeof(row->right) - 1);

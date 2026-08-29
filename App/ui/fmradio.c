@@ -27,13 +27,26 @@ void UI_DisplayFM(void)
     char memoryString[8];
 
     memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+    
+    for (uint8_t i = 2; i < FRAME_LINES; i++) 
+    {
+        gFrameBuffer[i][40] = 0xFF; 
+        gFrameBuffer[i][41] = 0xFF; 
+        gFrameBuffer[i][84] = 0xFF; 
+        gFrameBuffer[i][85] = 0xFF; 
+    }
 
+    for (uint8_t x = 0; x < LCD_WIDTH; x++) 
+    {
+        gFrameBuffer[3][x] |= 0x08;
+        gFrameBuffer[5][x] |= 0x08;
+    }
     // Frequency in a large digital font, centered in the top area.
     memset(String, 0, sizeof(String));
     sprintf(String, "%3d.%d",
             gEeprom.FM_FrequencyPlaying / 10,
             gEeprom.FM_FrequencyPlaying % 10);
-    UI_DisplayFrequency(String, 35, 0, true);
+    UI_PrintString(String, 0, 128, 0, 10);
 
     // Keep the current scan and receiver states visible without borders.
     if (gFM_ManualMode)
@@ -55,7 +68,7 @@ void UI_DisplayFM(void)
         if (frequency != 0)
             sprintf(memoryString, "%03d.%d", frequency / 10, frequency % 10);
         else
-            sprintf(memoryString, "***.*");
+            sprintf(memoryString, " M%d",i+1);
         UI_PrintStringSmallBold(memoryString, memoryX[i], 0, memoryPage[i]);
     }
 

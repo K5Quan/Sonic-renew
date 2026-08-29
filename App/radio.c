@@ -39,8 +39,6 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 
 };
 
-#ifdef ENABLE_FEAT_F4HWN_AUDIO
-
     static void AUDIO_ApplyFMProfile(uint8_t profile)
     {   //  | 0x54 || 0x55 |
         static const uint16_t fm_profiles[][2] = {
@@ -88,7 +86,6 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
         BK4819_WriteRegister(0x54, 0x9009);
         BK4819_WriteRegister(0x55, 0x31A9);
     }
-#endif
 
 bool RADIO_CheckValidList(uint8_t scanList)
 {
@@ -774,16 +771,7 @@ void RADIO_SetModulation(ModulationMode_t modulation)
             BK4819_WriteRegister(0x2a, 0x7434);
             BK4819_WriteRegister(0x2B, 0x0400); // FAGCI: HP filter off, LP on, de-emph on
             BK4819_WriteRegister(0x2F, 0x9990); // FAGCI: AM filter
-            //BK4819_WriteRegister(0x28, 0x0B40); // FAGCI: noise gate AM
-            //BK4819_WriteRegister(0x2C, 0x1822); // FAGCI: emph AM
-
-            #ifdef ENABLE_FEAT_F4HWN_AUDIO
-                AUDIO_ApplyAMProfile(gSetting_set_audio_am);
-            #else
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x31a9);
-            #endif
-
+            AUDIO_ApplyAMProfile(gSetting_set_audio_am);
             BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
             break;
         }
@@ -798,13 +786,7 @@ void RADIO_SetModulation(ModulationMode_t modulation)
             BK4819_WriteRegister(0x2f, 0x9890);
             BK4819_WriteRegister(0x28, 0x0B40); // FAGCI: noise gate USB
             BK4819_WriteRegister(0x2C, 0x1822); // FAGCI: emph USB
-
-            #ifdef ENABLE_FEAT_F4HWN_AUDIO
-                AUDIO_ApplyUSBProfile();
-            #else
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x31a9);
-            #endif
+            AUDIO_ApplyUSBProfile();
             break;
         }
 
@@ -820,13 +802,7 @@ void RADIO_SetModulation(ModulationMode_t modulation)
             BK4819_WriteRegister(0x2a, 0x7400);
             BK4819_WriteRegister(0x2b, 0x0000);
             BK4819_WriteRegister(0x2f, 0x9890);
-
-            #ifdef ENABLE_FEAT_F4HWN_AUDIO
-                AUDIO_ApplyFMProfile(gSetting_set_audio_fm);
-            #else
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x31a9);
-            #endif
+            AUDIO_ApplyFMProfile(gSetting_set_audio_fm);
             break;
         }
     }

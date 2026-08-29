@@ -158,10 +158,8 @@ void SETTINGS_InitEEPROM(void)
 
     // 0E70..0E77
     PY25Q16_ReadBuffer(0x00A000, Data, 8);
-    #ifdef ENABLE_FEAT_F4HWN_AUDIO
-        gSetting_set_audio_fm = ((Data[0] & 0x0F) < 5) ? (Data[0] & 0x0F) : 0;
-        gSetting_set_audio_am = (((Data[0] >> 4) & 0x0F) < 3) ? ((Data[0] >> 4) & 0x0F) : 0;
-    #endif
+    gSetting_set_audio_fm = ((Data[0] & 0x0F) < 5) ? (Data[0] & 0x0F) : 0;
+    gSetting_set_audio_am = (((Data[0] >> 4) & 0x0F) < 3) ? ((Data[0] >> 4) & 0x0F) : 0;
     gEeprom.SQUELCH_LEVEL        = (Data[1] > 0 && Data[1] < 10) ? Data[1] : 1;
     gEeprom.TX_TIMEOUT_TIMER     = (Data[2] > 4 && Data[2] < 180) ? Data[2] : 11;
     gEeprom.SCRAMBLING_TYPE      = (Data[3] > 0 && Data[3] < 11) ? Data[3] : 0;
@@ -580,9 +578,7 @@ void SETTINGS_SaveSettings(void)
 
     // 0x0E70
     State = SecBuf;
-    #ifdef ENABLE_FEAT_F4HWN_AUDIO
-        State[0] = (gSetting_set_audio_fm & 0x0F) | ((gSetting_set_audio_am & 0x0F) << 4);
-    #endif
+    State[0] = (gSetting_set_audio_fm & 0x0F) | ((gSetting_set_audio_am & 0x0F) << 4);
     #ifdef ENABLE_FEAT_F4HWN
         if (gSquelchLevelOriginal < 10)
             State[1] = gSquelchLevelOriginal;

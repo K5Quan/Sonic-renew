@@ -138,7 +138,10 @@ void UI_DisplayStatus()
         gStatusLine[POS_LOCK + 5] = 0x7A;
         gStatusLine[POS_LOCK + 6] = 0x7C;
     }
-
+    if (gFmRadioMode) {
+        sprintf(str, "FM");
+        UI_PrintStringSmallBufferBold(str, gStatusLine);
+    }
 
     if (gSetting_battery_text == 0);
     else if (gSetting_battery_text == 1) {

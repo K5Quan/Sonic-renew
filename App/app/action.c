@@ -69,11 +69,7 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_PTT] = &ACTION_Ptt,
     [ACTION_OPT_WN] = &ACTION_Wn,
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
-    #ifdef ENABLE_FEAT_F4HWN_AUDIO
-        [ACTION_OPT_RXA] = &ACTION_RxA,
-    #else
-        [ACTION_OPT_RXA] = &FUNCTION_NOP,
-    #endif
+    [ACTION_OPT_RXA] = &ACTION_RxA,
 #endif
 };
 
@@ -178,9 +174,7 @@ void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             case ACTION_OPT_SWITCH_DEMODUL:
     #ifdef ENABLE_FEAT_F4HWN
             case ACTION_OPT_WN:
-        #ifdef ENABLE_FEAT_F4HWN_AUDIO
             case ACTION_OPT_RXA:
-        #endif
     #endif
                 return;
 
@@ -216,7 +210,6 @@ void ACTION_FM(void)
 }
 #endif
 
-#ifdef ENABLE_FEAT_F4HWN_AUDIO
 void ACTION_RxA(void)
 {
     if(gRxVfo->Modulation == MODULATION_AM)
@@ -226,7 +219,6 @@ void ACTION_RxA(void)
 
     RADIO_SetModulation(gRxVfo->Modulation);
 }
-#endif
 
 void ACTION_Ptt(void)
 {
