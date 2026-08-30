@@ -82,7 +82,6 @@ target_compile_definitions(App INTERFACE SQL_TONE=${SQL_TONE})
 
 target_sources(App INTERFACE 
     driver/crc.c
-    driver/eeprom_compat.c
 )
 
 enable_feature(ENABLE_UART

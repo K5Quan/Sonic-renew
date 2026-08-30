@@ -179,7 +179,7 @@ ul16 NoaaChannel_B;
 // --------------------
 
 #seekto 0x00A070;
-ul16 fmfreq[6];
+ul16 fmfreq[9];
 
 // --------------------
 
@@ -411,7 +411,7 @@ struct {
 
 """
 # SONIC parameter
-FM_CHANNELS_MAX = 6
+FM_CHANNELS_MAX = 9
 MR_CHANNELS_MAX = 1024
 MR_CHANNELS_LIST = 21
 

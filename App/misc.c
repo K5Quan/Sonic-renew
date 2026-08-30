@@ -263,8 +263,6 @@ unsigned long StrToUL(const char * str)
 // Flash address where channel attributes start
 // NOTE: Verify this matches your Flash layout!
 
-#define FLASH_CHANNEL_ATTR_BASE 0x8000
-
 // Each channel takes 2 bytes (ChannelAttributes_t is uint16_t)
 #define FLASH_CHANNEL_ATTR_SIZE 2
 
@@ -342,7 +340,7 @@ void MR_LoadChannelAttributesFromFlash(uint16_t channel_id, ChannelAttributes_t*
     }
     
     // Calculate Flash address
-    uint32_t flash_addr = FLASH_CHANNEL_ATTR_BASE + (channel_id * sizeof(ChannelAttributes_t));
+    uint32_t flash_addr = ADRESS_CHANNELS_ATTRIBUTES + (channel_id * sizeof(ChannelAttributes_t));
     
     // Read 2 bytes from Flash
     PY25Q16_ReadBuffer(flash_addr, attributes, sizeof(ChannelAttributes_t));
@@ -357,7 +355,7 @@ void MR_SaveChannelAttributesToFlash(uint16_t channel_id, const ChannelAttribute
     }
     
     // Calculate Flash address
-    uint16_t flash_addr = FLASH_CHANNEL_ATTR_BASE + (channel_id * FLASH_CHANNEL_ATTR_SIZE);
+    uint16_t flash_addr = ADRESS_CHANNELS_ATTRIBUTES + (channel_id * FLASH_CHANNEL_ATTR_SIZE);
     
     // Write 2 bytes to Flash
     PY25Q16_WriteBuffer(flash_addr, attributes, sizeof(ChannelAttributes_t), false);

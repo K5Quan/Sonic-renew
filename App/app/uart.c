@@ -16,7 +16,7 @@
  */
 
 #include <string.h>
-
+#include "driver/py25q16.h"
 #if !defined(ENABLE_OVERLAY)
     #include "py32f0xx.h"
 #endif
@@ -29,7 +29,6 @@
 #include "driver/backlight.h"
 #include "driver/bk4819.h"
 #include "driver/crc.h"
-#include "driver/eeprom.h"
 #include "driver/gpio.h"
 
 #if defined(ENABLE_UART)
@@ -356,7 +355,7 @@ static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
 
     if (!bLocked)
     {
-        EEPROM_ReadBuffer(pCmd->Offset, Reply.Data.Data, pCmd->Size);
+        PY25Q16_ReadBuffer((uint32_t)pCmd->Offset, Reply.Data.Data, pCmd->Size);
     }
     
     SendReply(Port, &Reply, pCmd->Size + 8);
@@ -404,7 +403,6 @@ static void CMD_051D(uint32_t Port, const uint8_t *pBuffer)
     Reply.Header.ID   = 0x051E;
     Reply.Header.Size = sizeof(Reply.Data);
     Reply.Data.Offset = pCmd->Offset;
-
     bIsLocked = bHasCustomAesKey ? gIsLocked : false;
 
     if (!bIsLocked)
@@ -420,7 +418,7 @@ static void CMD_051D(uint32_t Port, const uint8_t *pBuffer)
 
             if ((Offset < 0x0E98 || Offset >= 0x0EA0) || !bIsInLockScreen || pCmd->bAllowPassword)
             {    
-                EEPROM_WriteBuffer(Offset, &pCmd->Data[i * 8U]);
+                PY25Q16_WriteBuffer((uint32_t)Offset, &pCmd->Data[i * 8U], 8, false);
             }
         }
 

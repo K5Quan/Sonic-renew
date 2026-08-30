@@ -23,7 +23,6 @@
 #include "app/spectrum.h"
 #include "nav_invert.h"
 #include "driver/backlight.h"
-#include "driver/eeprom.h"
 #include "ui/helper.h"
 #include "common.h"
 #include "action.h"
@@ -388,7 +387,7 @@ sLevelAttributes GetSLevelAttributes(const int16_t rssi, const uint32_t frequenc
 
 ChannelInfo_t FetchChannelFrequency(const uint16_t Channel) {
     ChannelInfo_t info;
-    PY25Q16_ReadBuffer(0x0000 + (uint32_t)Channel * 16, &info, sizeof(info));
+    PY25Q16_ReadBuffer(ADRESS_CHANNELS + (uint32_t)Channel * 16, &info, sizeof(info));
     if (info.frequency == 0xFFFFFFFF) {
         ChannelInfo_t empty = {0, 0};
         return empty;
@@ -403,7 +402,7 @@ static uint32_t GetScanFrequency(const uint16_t index)
         if ((scanChannelBitmap[ch >> 3] & (1u << (ch & 7))) != 0) {
             if (position++ == index) {
                 uint32_t frequency;
-                PY25Q16_ReadBuffer((uint32_t)ch * 16, &frequency, sizeof(frequency));
+                PY25Q16_ReadBuffer(ADRESS_CHANNELS + (uint32_t)ch * 16, &frequency, sizeof(frequency));
                 return frequency == 0xFFFFFFFF ? 0 : frequency;
             }
         }
@@ -433,7 +432,7 @@ uint16_t BOARD_gMR_fetchChannel(const uint32_t freq) {
         uint16_t remaining = MR_CHANNEL_LAST - start_ch + 1;
         uint16_t chunk_size = (remaining > BLOCK_SIZE) ? BLOCK_SIZE : remaining;
         
-        uint32_t physical_index = start_ch - MR_CHANNEL_FIRST;
+        uint32_t physical_index = ADRESS_CHANNELS + start_ch - MR_CHANNEL_FIRST;
         uint32_t block_addr = (physical_index * sizeof(FlashChannel_t));
         
         PY25Q16_ReadBuffer(block_addr, (uint8_t*)block, chunk_size * sizeof(FlashChannel_t));
@@ -475,7 +474,7 @@ static void LoadActiveBands(void) {
             BParams[bandCount].Startfrequency = freqs.frequency;
             BParams[bandCount].Stopfrequency  = freqs.offset;
 
-            PY25Q16_ReadBuffer(0x004000 + (targetChannel * 16), BParams[bandCount].BandName, 10);
+            PY25Q16_ReadBuffer(ADRESS_CHANNELS_NAMES + (targetChannel * 16), BParams[bandCount].BandName, 10);
 
             bandCount++;
         }
@@ -515,7 +514,7 @@ static void LoadActiveScanFrequencies(void)
         for (uint16_t ch = MR_CHANNEL_FIRST; ch < MAX_SCAN_CHANNELS; ch++) {
             MR_LoadChannelAttributesFromFlash(ch, &cache);
             uint32_t frequency;
-            PY25Q16_ReadBuffer((uint32_t)ch * 16, &frequency, sizeof(frequency));
+            PY25Q16_ReadBuffer(ADRESS_CHANNELS + (uint32_t)ch * 16, &frequency, sizeof(frequency));
             if (cache.scanlist > 0 && cache.scanlist <= MR_CHANNELS_LIST &&
                 settings.scanListEnabled[cache.scanlist - 1] && frequency != 0xFFFFFFFF && frequency != 0) {
                 scanChannelBitmap[ch >> 3] |= 1u << (ch & 7);
@@ -525,7 +524,7 @@ static void LoadActiveScanFrequencies(void)
         if (!scanChannelsCount) {
             for (uint16_t ch = MR_CHANNEL_FIRST; ch < MAX_SCAN_CHANNELS; ch++) {
                 uint32_t frequency;
-                PY25Q16_ReadBuffer((uint32_t)ch * 16, &frequency, sizeof(frequency));
+                PY25Q16_ReadBuffer(ADRESS_CHANNELS + (uint32_t)ch * 16, &frequency, sizeof(frequency));
                 if (frequency != 0xFFFFFFFF && frequency != 0) {
                     scanChannelBitmap[ch >> 3] |= 1u << (ch & 7);
                     scanChannelsCount++;
@@ -837,7 +836,7 @@ static void SaveHistoryToFreeChannel(void) {
     char str[32];
     for (int i = 0; i < MR_CHANNEL_LAST; i++) {
         uint32_t freqInMem;
-        PY25Q16_ReadBuffer(0x0000 + (i * 16), (uint8_t *)&freqInMem, 4);
+        PY25Q16_ReadBuffer(ADRESS_CHANNELS + (i * 16), (uint8_t *)&freqInMem, 4);
         if (freqInMem != 0xFFFFFFFF && freqInMem == f) {
             sprintf(str, "Exist CH %d", i + 1);
             ShowOSDPopup(str);
@@ -847,7 +846,7 @@ static void SaveHistoryToFreeChannel(void) {
     int freeCh = -1;
     for (int i = 0; i < MR_CHANNEL_LAST; i++) {
         uint8_t checkByte;
-        PY25Q16_ReadBuffer(0x0000 + (i * 16), &checkByte, 1);
+        PY25Q16_ReadBuffer(ADRESS_CHANNELS + (i * 16), &checkByte, 1);
         if (checkByte == 0xFF) { 
             freeCh = i;
             break;
@@ -2018,7 +2017,7 @@ static void DrawF(uint32_t f) {
 static void LookupChannelModulation() {
 	uint8_t tmp;
 	uint8_t data[8];
-	PY25Q16_ReadBuffer(gChannel * 16 + 8, data, sizeof(data));
+	PY25Q16_ReadBuffer(ADRESS_CHANNELS + gChannel * 16 + 8, data, sizeof(data));
 	tmp = data[3] >> 4;
 	if (tmp >= MODULATION_UKNOWN)
 		tmp = MODULATION_FM;

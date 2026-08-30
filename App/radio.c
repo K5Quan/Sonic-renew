@@ -278,7 +278,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 
     uint32_t base;
     if (IS_MR_CHANNEL(channel))
-        base = channel * 16;
+        base = ADRESS_CHANNELS + channel * 16;
     else
         base = 0x009000 + ((channel - FREQ_CHANNEL_FIRST) * 32) + (VFO * 16);
 

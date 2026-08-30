@@ -293,25 +293,6 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         gEeprom.ScreenChannel[1] = gEeprom.MrChannel[1];
     }
 
-    // 0D60..0E27
-    /*
-    PY25Q16_ReadBuffer(0x008000, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
-    uint16_t count = ARRAY_SIZE(gMR_ChannelAttributes);
-
-    for (uint16_t i = 0; i < count; i++) {
-        ChannelAttributes_t *att = MR_GetChannelAttributes(i);
-
-        if (att->__val == 0xFFFF) {
-            att->__val = 0;
-            att->band = 0x7;
-        }
-        else
-        {
-            att->exclude = 0;
-        }
-    }
-    */
-
     // Init list name
     PY25Q16_ReadBuffer(0x008900, gListName, sizeof(gListName));
 
@@ -450,7 +431,7 @@ uint32_t SETTINGS_FetchChannelFrequency(const uint16_t channel)
         uint32_t offset;
     } __attribute__((packed)) info;
 
-    PY25Q16_ReadBuffer(channel * 16, &info, sizeof(info));
+    PY25Q16_ReadBuffer(ADRESS_CHANNELS + channel * 16, &info, sizeof(info));
 
     return info.frequency;
 }
@@ -460,7 +441,7 @@ void SETTINGS_FetchChannelName(char *s, const uint16_t channel)
     if (s == NULL) return;
     s[0] = 0;
     if (!RADIO_CheckValidChannel(channel, false, 0)) return;
-    PY25Q16_ReadBuffer(0x004000 + (channel * 16), s, 10);
+    PY25Q16_ReadBuffer(ADRESS_CHANNELS_NAMES + (channel * 16), s, 10);
     int i;
     for (i = 0; i < 10; i++)
         if (s[i] < 32 || s[i] > 127)
@@ -753,7 +734,7 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
 {
 
     // 0
-    uint16_t OffsetVFO = 0 + Channel * 16;
+    uint16_t OffsetVFO = ADRESS_CHANNELS + Channel * 16;
 
     if (IS_FREQ_CHANNEL(Channel)) { // it's a VFO, not a channel
         // 0x0C80
@@ -818,7 +799,7 @@ void SETTINGS_SaveChannelName(uint16_t channel, const char * name)
     uint8_t buf[16] = {0};
     memcpy(buf, name, MIN(strlen(name), 10u));
     // 0x0F50
-    PY25Q16_WriteBuffer(0x004000 + offset, buf, 0x10, false);
+    PY25Q16_WriteBuffer(ADRESS_CHANNELS_NAMES + offset, buf, 0x10, false);
 }
 
 void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep)

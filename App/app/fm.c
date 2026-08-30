@@ -19,7 +19,6 @@
 #include "app/generic.h"
 #include "driver/bk1080.h"
 #include "driver/bk4819.h"
-#include "driver/eeprom.h"
 #include "driver/py25q16.h"
 #include "driver/system.h"
 #include "driver/gpio.h"
@@ -65,19 +64,19 @@ void FM_Memory_Load(void)
     const uint16_t hi = BK1080_GetFreqHiLimit(FM_BAND);
     uint8_t buf[8];
 
-    EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR0, buf, 8);
+    PY25Q16_ReadBuffer(FM_MEMORY_EEPROM_ADDR0, buf, 8);
     for (uint8_t i = 0; i < 4; i++) {
         uint16_t f = buf[i * 2] | ((uint16_t)buf[i * 2 + 1] << 8);
         gFM_Memory[i] = (f >= lo && f <= hi) ? f : 0;
     }
 
-    EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR1, buf, 8);
+    PY25Q16_ReadBuffer(FM_MEMORY_EEPROM_ADDR1, buf, 8);
     for (uint8_t i = 0; i < 4; i++) {
         uint16_t f = buf[i * 2] | ((uint16_t)buf[i * 2 + 1] << 8);
         gFM_Memory[4 + i] = (f >= lo && f <= hi) ? f : 0;
     }
 
-    EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR2, buf, 8);
+    PY25Q16_ReadBuffer(FM_MEMORY_EEPROM_ADDR2, buf, 8);
     for (uint8_t i = 0; i < 1; i++) {
         uint16_t f = buf[i * 2] | ((uint16_t)buf[i * 2 + 1] << 8);
         gFM_Memory[8 + i] = (f >= lo && f <= hi) ? f : 0;
@@ -88,21 +87,21 @@ void FM_Memory_Save(uint8_t slot)
 {
     uint8_t buf[8];
     if (slot < 4) {
-        EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR0, buf, 8);
+        PY25Q16_ReadBuffer(FM_MEMORY_EEPROM_ADDR0, buf, 8);
         buf[slot * 2]     = (uint8_t)(gFM_Memory[slot] & 0xFF);
         buf[slot * 2 + 1] = (uint8_t)(gFM_Memory[slot] >> 8);
-        EEPROM_WriteBuffer(FM_MEMORY_EEPROM_ADDR0, buf);
+        PY25Q16_WriteBuffer(FM_MEMORY_EEPROM_ADDR0, buf, sizeof(buf), false);
     } else if (slot < 8) {
         uint8_t idx = slot - 4;
-        EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR1, buf, 8);
+        PY25Q16_ReadBuffer(FM_MEMORY_EEPROM_ADDR1, buf, 8);
         buf[idx * 2]     = (uint8_t)(gFM_Memory[slot] & 0xFF);
         buf[idx * 2 + 1] = (uint8_t)(gFM_Memory[slot] >> 8);
-        EEPROM_WriteBuffer(FM_MEMORY_EEPROM_ADDR1, buf);
+        PY25Q16_WriteBuffer(FM_MEMORY_EEPROM_ADDR1, buf, sizeof(buf), false);
     } else if (slot < 9) {
-        EEPROM_ReadBuffer(FM_MEMORY_EEPROM_ADDR2, buf, 8);
+        PY25Q16_ReadBuffer(FM_MEMORY_EEPROM_ADDR2, buf, 8);
         buf[0] = (uint8_t)(gFM_Memory[slot] & 0xFF);
         buf[1] = (uint8_t)(gFM_Memory[slot] >> 8);
-        EEPROM_WriteBuffer(FM_MEMORY_EEPROM_ADDR2, buf);
+        PY25Q16_WriteBuffer(FM_MEMORY_EEPROM_ADDR2, buf, sizeof(buf), false);
     }
 }
 
