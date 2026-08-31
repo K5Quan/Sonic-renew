@@ -23,9 +23,9 @@
 #include "dcs.h"
 #include "frequencies.h"
 
-#define ADRESS_CHANNELS             0x000000
-#define ADRESS_CHANNELS_NAMES       0x004000
-#define ADRESS_CHANNELS_ATTRIBUTES  0x008000
+#define ADRESS_CHANNELS             0x101000
+#define ADRESS_CHANNELS_NAMES       0x109000
+#define ADRESS_CHANNELS_ATTRIBUTES  0x111000
 
 enum {
     RADIO_CHANNEL_UP   = 0x01u,

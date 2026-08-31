@@ -30,7 +30,7 @@ VALEUR_COMPILER = "ENABLE"
 MEM_FORMAT = """
 // --------------------
 
-#seekto 0x000000;
+#seekto 0x101000;
 struct {
   ul32 freq;
   ul32 offset;
@@ -62,25 +62,25 @@ struct {
   u8 step;
   u8 __UNUSED03;
 
-} channel[1024]; //end 0x3FFF
+} channel[2048];
 
 // --------------------
 
-#seekto 0x004000;
+#seekto 0x109000;
 struct {
 char name[16];
-} channelname[1024]; //end 0x7FFF
+} channelname[2048];
 
 
 // --------------------
 
-#seekto 0x008000;
+#seekto 0x111000;
 struct {
   u8 __UNUSED04:3,
      compander:2,
      band:3;
   u8 scanlist;
-} ch_attr[1031]; //end 0x00880D
+} ch_attr[2054];
 
 // --------------------
 
@@ -375,7 +375,7 @@ struct {
 """
 # SONIC parameter
 FM_CHANNELS_MAX = 9
-MR_CHANNELS_MAX = 1024
+MR_CHANNELS_MAX = 2050
 MR_CHANNELS_LIST = 21
 
 # flags1
@@ -550,8 +550,8 @@ ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE =      0x00B190    # size of all memory
-PROG_SIZE =     0x00A171    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
+MEM_SIZE =      0x11200C    # size of all memory
+PROG_SIZE =     0x11200D    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address
 
