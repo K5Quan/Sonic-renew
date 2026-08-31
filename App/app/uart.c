@@ -91,7 +91,7 @@ typedef struct {
 
 typedef struct {
     Header_t Header;
-    uint16_t Offset;
+    uint32_t Offset;
     uint8_t  Size;
     uint8_t  Padding;
     uint32_t Timestamp;
@@ -100,7 +100,7 @@ typedef struct {
 typedef struct {
     Header_t Header;
     struct {
-        uint16_t Offset;
+        uint32_t Offset;
         uint8_t  Size;
         uint8_t  Padding;
         uint8_t  Data[128];
@@ -109,7 +109,7 @@ typedef struct {
 
 typedef struct {
     Header_t Header;
-    uint16_t Offset;
+    uint32_t Offset;
     uint8_t  Size;
     bool     bAllowPassword;
     uint32_t Timestamp;
@@ -352,7 +352,7 @@ static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
 
     memset(&Reply, 0, sizeof(Reply));
     Reply.Header.ID   = 0x051C;
-    Reply.Header.Size = pCmd->Size + 4;
+    Reply.Header.Size = pCmd->Size + 6;
     Reply.Data.Offset = pCmd->Offset;
     Reply.Data.Size   = pCmd->Size;
 
@@ -372,7 +372,7 @@ static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
         PY25Q16_ReadBuffer(addr, Reply.Data.Data, pCmd->Size);
     }
     
-    SendReply(Port, &Reply, pCmd->Size + 8);
+    SendReply(Port, &Reply, pCmd->Size + 10);
 }
 
 // write eeprom
@@ -424,7 +424,7 @@ static void CMD_051D(uint32_t Port, const uint8_t *pBuffer)
         unsigned int i;
         for (i = 0; i < (pCmd->Size / 8); i++)
         {
-            uint16_t Offset = pCmd->Offset + (i * 8U);
+            uint32_t Offset = pCmd->Offset + (i * 8U);
 
             if (Offset >= 0x0F30 && Offset < 0x0F40)
                 if (!gIsLocked)

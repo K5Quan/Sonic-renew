@@ -722,33 +722,39 @@ def _sayhello(serport):
     LOG.info("Found firmware: %s", firmware)
     return firmware
 
-
 def _readmem(serport, offset, length):
-    LOG.debug("Sending readmem offset=0x%4.4x len=0x%4.4x", offset, length)
+    LOG.debug("Sending readmem offset=0x%8.8x len=0x%4.4x", offset, length)
 
-    readmem = b"\x1b\x05\x08\x00" + \
-        struct.pack("<HBB", offset, length, 0) + \
-        b"\x6a\x39\x57\x64"
+    # Layout attendu par CMD_051B_t (avec padding d'alignement) :
+    # [0-1] ID=0x051B  [2-3] Size  [4-7] Offset32  [8] Size  [9] Pad  [10-11] padding  [12-15] Timestamp
+    readmem = b"\x1b\x05\x0c\x00" + \
+        struct.pack("<IBB", offset, length, 0) + \
+        b"\x00\x00" + \
+        b"\x6a\x39\x57\x64"       # Timestamp = 0x6457396a (session ID du hello)
     _send_command(serport, readmem)
     rep = _receive_reply(serport)
     if DEBUG_SHOW_MEMORY_ACTIONS:
         LOG.debug("readmem Received data len=0x%4.4x:\n%s",
                   len(rep), util.hexprint(rep))
-    return rep[8:]
-
+    # Réponse REPLY_051B : Header(4) + Offset(4) + Size(1) + Pad(1) → données à rep[10:]
+    return rep[10:]
 
 def _writemem(serport, data, offset):
-    LOG.debug("Sending writemem offset=0x%4.4x len=0x%4.4x",
+    LOG.debug("Sending writemem offset=0x%8.8x len=0x%4.4x",
               offset, len(data))
 
     if DEBUG_SHOW_MEMORY_ACTIONS:
-        LOG.debug("writemem sent data offset=0x%4.4x len=0x%4.4x:\n%s",
+        LOG.debug("writemem sent data offset=0x%8.8x len=0x%4.4x:\n%s",
                   offset, len(data), util.hexprint(data))
 
     dlen = len(data)
+    # CMD_051D_t : [0-1] ID  [2-3] Size  [4-7] Offset32  [8] Size  [9] AllowPwd
+    #              [10-11] padding  [12-15] Timestamp  [16+] Data
     writemem = b"\x1d\x05" + \
-        struct.pack("<BBHBB", dlen+8, 0, offset, dlen, 1) + \
-        b"\x6a\x39\x57\x64"+data
+        struct.pack("<H", dlen + 12) + \
+        struct.pack("<IBB", offset, dlen, 1) + \
+        b"\x00\x00" + \
+        b"\x6a\x39\x57\x64" + data
 
     _send_command(serport, writemem)
     rep = _receive_reply(serport)
@@ -756,14 +762,15 @@ def _writemem(serport, data, offset):
     LOG.debug("writemem Received data: %s len=%i",
               util.hexprint(rep), len(rep))
 
-    if (rep[0] == 0x1e and
+    # REPLY_051D : Offset est uint16_t dans votre firmware → seulement rep[4] et rep[5]
+    if (len(rep) >= 6 and
+       rep[0] == 0x1e and
        rep[4] == (offset & 0xff) and
-       rep[5] == (offset >> 8) & 0xff):
+       rep[5] == ((offset >> 8) & 0xff)):
         return True
 
     LOG.warning("Bad data from writemem")
     raise errors.RadioError("Bad response to writemem")
-
 
 def _resetradio(serport):
     resetpacket = b"\xdd\x05\x00\x00"
