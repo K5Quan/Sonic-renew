@@ -1436,10 +1436,13 @@ static void Roger2(void) {
 
 // OURO — deep sustained tone ~340 Hz (from OURO.mp3)
 static void roger_beep_OURO(void) {
-play_note(1100, 40);
-    play_note(1300, 40);
-    play_note(1500, 40);
-    play_note(1800, 60);
+
+    play_note(750, 209);
+    play_note(350, 210);
+    play_note(750, 207);
+    play_note(350, 210);
+    play_note(750, 207);
+    play_note(350, 210);
 }
 
 // KLAC — mechanical click burst (from KLAC.mp3)
