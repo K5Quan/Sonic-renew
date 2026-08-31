@@ -308,6 +308,12 @@ static void CMD_0514(uint32_t Port, const uint8_t *pBuffer)
     SendVersion(Port);
 }
 
+
+#define CALIB_EEPROM_START 0x00B000
+#define CALIB_FLASH_START  0x010000
+#define CALIB_SIZE         0x000200
+
+
 // read eeprom
 static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
 {
@@ -355,7 +361,15 @@ static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
 
     if (!bLocked)
     {
-        PY25Q16_ReadBuffer((uint32_t)pCmd->Offset, Reply.Data.Data, pCmd->Size);
+        uint32_t addr = pCmd->Offset;
+
+        // Translation directe pour la plage de calibration
+        if (addr >= CALIB_EEPROM_START && addr < (CALIB_EEPROM_START + CALIB_SIZE))
+        {
+            addr += (CALIB_FLASH_START - CALIB_EEPROM_START);
+        }
+
+        PY25Q16_ReadBuffer(addr, Reply.Data.Data, pCmd->Size);
     }
     
     SendReply(Port, &Reply, pCmd->Size + 8);
@@ -410,7 +424,7 @@ static void CMD_051D(uint32_t Port, const uint8_t *pBuffer)
         unsigned int i;
         for (i = 0; i < (pCmd->Size / 8); i++)
         {
-            const uint16_t Offset = pCmd->Offset + (i * 8U);
+            uint16_t Offset = pCmd->Offset + (i * 8U);
 
             if (Offset >= 0x0F30 && Offset < 0x0F40)
                 if (!gIsLocked)
@@ -418,7 +432,15 @@ static void CMD_051D(uint32_t Port, const uint8_t *pBuffer)
 
             if ((Offset < 0x0E98 || Offset >= 0x0EA0) || !bIsInLockScreen || pCmd->bAllowPassword)
             {    
-                PY25Q16_WriteBuffer((uint32_t)Offset, &pCmd->Data[i * 8U], 8, false);
+                uint32_t addr = Offset;
+
+                // Translation directe pour la plage de calibration
+                if (addr >= CALIB_EEPROM_START && addr < (CALIB_EEPROM_START + CALIB_SIZE))
+                {
+                    addr += (CALIB_FLASH_START - CALIB_EEPROM_START);
+                }
+
+                PY25Q16_WriteBuffer(addr, &pCmd->Data[i * 8U], 8, false);
             }
         }
 

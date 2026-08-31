@@ -23,10 +23,7 @@ DEBUG_SHOW_OBFUSCATED_COMMANDS = False
 # might be useful for someone debugging some obscure memory issue
 DEBUG_SHOW_MEMORY_ACTIONS = False
 
-# TODO: remove the driver version when it's in mainline chirp 
 DRIVER_VERSION = "Quansheng UV-K1 driver ver: 2026/03/06 (c) SONIC"
-FIRMWARE_VERSION_UPDATE = "https://github.com/armel/uv-k1-k5v3-firmware-custom/releases"
-CHIRP_DRIVER_VERSION_UPDATE = "https://github.com/armel/uv-k1-k5v3-chirp-driver/releases"
 
 VALEUR_COMPILER = "ENABLE"
 
@@ -59,9 +56,7 @@ struct {
   freq_reverse:1;
 
   // 0x0D
-  u8 __UNUSED02:4,
-  dtmf_pttid:3,
-  dtmf_decode:1;
+  u8 __UNUSED02:8;
 
   // 0x0E
   u8 step;
@@ -122,9 +117,7 @@ struct {
   freq_reverse:1;
 
   // 0x0D
-  u8 __UNUSED06:4,
-  dtmf_pttid:3,
-  dtmf_decode:1;
+  u8 __UNUSED06:8;
 
   // 0x0E
   u8 step;
@@ -144,8 +137,8 @@ u8 __UNUSED09:1,
    set_key:4,
    set_menu_lock:1,
    key_lock:1;
-u8 vox_switch;
-u8 vox_level;
+u8 __UNUSED_VOX1;
+u8 __UNUSED_VOX2;
 u8 mic_gain;
 
 // --------------------
@@ -219,43 +212,14 @@ char logo_line2[16];
 
 // --------------------
 
-#seekto 0x00A0E8;
-struct {
-    u8 side_tone;
-    char separate_code;
-    char group_call_code;
-    u8 decode_response;
-    u8 auto_reset_time;
-    u8 preload_time;
-    u8 first_code_persist_time;
-    u8 hash_persist_time;
-    u8 code_persist_time;
-    u8 code_interval_time;
-    u8 permit_remote_kill;
-
-    #seekto 0x00A0F8;
-    char local_code[3];
-    #seek 5;
-    char kill_code[5];
-    #seek 3;
-    char revive_code[5];
-    #seek 3;
-    char up_code[16];
-    char down_code[16];
-} dtmf;
-
-// --------------------
-
 #seekto 0x00A130;
 
 struct {
-    u8 slPriorEnab:1,
-       slDef:7;
-        
-    ul16 slPriorCh1;
-    ul16 slPriorCh2;
-    ul16 call_channel;
-
+    u8 unused:1,
+       unused:7;
+    ul16 unused;
+    ul16 unused;
+    ul16 unused;
     u8 __UNUSED11;
 } sl;
 
@@ -274,8 +238,7 @@ u8  backlight_on_TX_RX:2,
     AM_fix:1,
     mic_bar:1,
     battery_text:2,
-    live_DTMF_decoder:1,
-    __UNUSED12:1;
+    __UNUSED12:2;
 
 // --------------------
 
@@ -437,12 +400,6 @@ SET_OFF_ON_LIST = ["OFF", "ON"]
 # SET_lck SONIC
 SET_LCK_LIST = ["KEYS", "KEYS+PTT"]
 
-# SET_MET SET_GUI SONIC
-SET_MET_LIST = ["TINY", "CLASSIC"]
-
-# dtmf_flags
-PTTID_LIST = ["OFF", "UP CODE", "DOWN CODE", "UP+DOWN CODE", "APOLLO QUINDAR"]
-
 # power          
 UVK5_POWER_LEVELS = [chirp_common.PowerLevel("LOW"),
                      chirp_common.PowerLevel("MID"),
@@ -451,12 +408,6 @@ UVK5_POWER_LEVELS = [chirp_common.PowerLevel("LOW"),
 
 # compander
 COMPANDER_LIST = ["OFF", "TX", "RX", "TX/RX"]
-
-# rx mode
-RXMODE_LIST = ["MAIN ONLY", "DUAL RX RESPOND", "CROSS BAND", "MAIN TX DUAL RX"]
-
-# channel display mode
-CHANNELDISP_LIST = ["Frequency (FREQ)", "CHANNEL NUMBER", "NAME", "Name + Frequency (NAME + FREQ)"]
 
 # TalkTime
 TALK_TIME_LIST = ["N/U", "N/U", "N/U", "N/U", "N/U", "30 sec", "35 sec", "40 sec", "45 sec", "50 sec", "55 sec", 
@@ -598,13 +549,11 @@ ALARMMODE_LIST = ["SITE", "TONE"]
 ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","PIU","SONIC"]
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
-VOX_LIST = ["OFF", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
 MEM_SIZE =      0x00B190    # size of all memory
 PROG_SIZE =     0x00A171    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address
-SONIC_START =   0x00A158    # calibration SONIC memory start address
 
 # fm radio supported frequencies
 FMMIN = 76.0
@@ -629,29 +578,16 @@ SCANLIST_SELECT_LIST = (
     + ["Monitor"]
 )
 
-DTMF_CHARS = "0123456789ABCD*# "
-DTMF_CHARS_ID = "0123456789ABCDabcd"
-DTMF_CHARS_KILL = "0123456789ABCDabcd"
-DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
-DTMF_CODE_CHARS = "ABCD*# "
-DTMF_DECODE_RESPONSE_LIST = ["DO NOTHING", "Local ringing (RING)", "Replay response (REPLY)",
-                             "Local ringing + reply response (BOTH)"]
-
 KEYACTIONS_LIST = ["NONE",
                    "FLASHLIGHT",
                    "POWER",
                    "MONITOR",
-                   "SPECTRUM",
                    "ALARM",
                    "FM RADIO",
-                   "1750Hz",
                    "LOCK KEYPAD",
-                   "VFO A / VFO B",
                    "VFO / MEM",
                    "MODE",
                    "BL_MIN_TMP_OFF",
-                   "RX MODE",
-                   "MAIN ONLY", 
                    "PTT",                  
                    "WIDE / NARROW",
                    "BACKLIGHT",
@@ -1264,15 +1200,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             rs = RadioSetting("frev", "FreqRev", val)
             mem.extra.append(rs)
 
-            val = RadioSettingValueList(PTTID_LIST)
-            rs = RadioSetting("pttid", "PTTID", val)
-            mem.extra.append(rs)
-
-            val = RadioSettingValueBoolean(False)
-            rs = RadioSetting("dtmfdecode", "DTMF decode", val)
-#            if self._memobj.BUILD_OPTIONS.ENABLE_DTMF_CALLING:
-#                mem.extra.append(rs)
-
             val = RadioSettingValueList(COMPANDER_LIST)
             rs = RadioSetting("compander", "Compander", val)
             mem.extra.append(rs)
@@ -1280,11 +1207,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             val = RadioSettingValueList(SCANLIST_LIST)
             rs = RadioSetting("scanlists", "Scanlists", val)
             mem.extra.append(rs)
-
-            # actually the step and duplex are overwritten by chirp based on
-            # bandplan. they are here to document sane defaults for IARU r1
-            # mem.tuning_step = 25.0
-            # mem.duplex = "off"
 
             return mem
 
@@ -1372,25 +1294,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         rs.set_doc('R: Is this needs to be reversed?')
         mem.extra.append(rs)
 
-        # PTTID
-        pttid = list_def(_mem.dtmf_pttid, PTTID_LIST, 0)
-        val = RadioSettingValueList(PTTID_LIST, None, pttid)
-        rs = RadioSetting("pttid", "PTT ID (PTT ID)", val)
-        rs.set_doc('PTT ID:  How do you want the ID to be sent\n' + \
-                   '* NONE : Nothing sent\n' + \
-                   '* UP CODE : Send UPCODE when TX.\n' + \
-                   '* DOWW CODE : Send DWCODE when back to RX\n' + \
-                   '* UP+DOWN Code : Send UPCODE and DWCODE\n' + \
-                   '* APOLLO QUINDAR : Send beep at start and end of TX')
-
-        mem.extra.append(rs)
-
-        # DTMF DECODE
-        val = RadioSettingValueBoolean(_mem.dtmf_decode)
-        rs = RadioSetting("dtmfdecode", "DTMF decode (D Decd)", val)
-#        if self._memobj.BUILD_OPTIONS.ENABLE_DTMF_CALLING:
-#            mem.extra.append(rs)
-
         # Compander
         val = RadioSettingValueList(COMPANDER_LIST, None, tmp_comp)
         rs = RadioSetting("compander", "Compander (Compnd)", val)
@@ -1439,10 +1342,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             elif elname == "TX_VFO":
                 _mem.TX_VFO = int(element.value)
 
-            # call channel
-            elif elname == "call_channel":
-                _mem.sl.call_channel = int(element.value)
-
             # squelch
             elif elname == "squelch":
                 _mem.squelch = int(element.value)
@@ -1455,12 +1354,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             elif elname == "noaa_autoscan":
                 _mem.noaa_autoscan = int(element.value)
 
-            # VOX
-            elif elname == "vox":
-                voxvalue = int(element.value)
-                _mem.vox_switch = voxvalue > 0
-                _mem.vox_level = (voxvalue - 1) if _mem.vox_switch else 0
-
             # mic gain
             elif elname == "mic_gain":
                 _mem.mic_gain = int(element.value)
@@ -1468,13 +1361,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             # Channel display mode
             elif elname == "channel_display_mode":
                 _mem.channel_display_mode = int(element.value)
-
-            # RX Mode
-            elif elname == "rx_mode":
-                tmptxmode = int(element.value)
-                tmpmainvfo = _mem.TX_VFO + 1
-                _mem.crossband = tmpmainvfo * bool(tmptxmode & 0b10)
-                _mem.dual_watch = tmpmainvfo * bool(tmptxmode & 0b01)
 
             # Battery Save
             elif elname == "battery_save":
@@ -1511,14 +1397,9 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             elif elname == "ste":
                 _mem.ste = int(element.value)
 
-            # VFO Open
-            #elif elname == "freq_mode_allowed":
-            #    _mem.freq_mode_allowed = int(element.value)
-
             # Current State
             elif elname == "current_state":
                 _mem.current_state = int(element.value)
-
 
             # Beep control
             elif elname == "button_beep":
@@ -1553,12 +1434,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                 if self.upload_advanced:
                     i = int(elname.split("_")[-1])
                     _mem.dbm_corr[i] = int(element.value)
-
-#            elif elname == "password":
-#                if element.value.get_value() is None or element.value == "":
-#                    _mem.password = 0xFFFFFFFF
-#                else:
-#                    _mem.password = int(element.value)
 
             # Alarm mode
             elif elname == "alarm_mode":
@@ -1672,70 +1547,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
                     if val2 < FMMIN*10 or val2 > FMMAX*10:
                         val2 = 0xffff
-#                        raise errors.InvalidValueError(
-#                                "FM radio frequency should be a value "
-#                                "in the range %.1f - %.1f" % (FMMIN , FMMAX))
                     _mem.fmfreq[i-1] = val2
-
-            # dtmf settings
-            if elname == "dtmf_side_tone":
-                _mem.dtmf.side_tone = int(element.value)
-
-            elif elname == "dtmf_separate_code":
-                _mem.dtmf.separate_code = str(element.value)
-
-            elif elname == "dtmf_group_call_code":
-                _mem.dtmf.group_call_code = element.value
-
-            elif elname == "dtmf_decode_response":
-                _mem.dtmf.decode_response = int(element.value)
-
-            elif elname == "dtmf_auto_reset_time":
-                _mem.dtmf.auto_reset_time = int(element.value)
-
-            elif elname == "dtmf_preload_time":
-                _mem.dtmf.preload_time = int(int(element.value)/10)
-
-            elif elname == "dtmf_first_code_persist_time":
-                _mem.dtmf.first_code_persist_time = int(int(element.value)/10)
-
-            elif elname == "dtmf_hash_persist_time":
-                _mem.dtmf.hash_persist_time = int(int(element.value)/10)
-
-            elif elname == "dtmf_code_persist_time":
-                _mem.dtmf.code_persist_time = \
-                        int(int(element.value)/10)
-
-            elif elname == "dtmf_code_interval_time":
-                _mem.dtmf.code_interval_time = \
-                        int(int(element.value)/10)
-
-            elif elname == "dtmf_permit_remote_kill":
-                _mem.dtmf.permit_remote_kill = \
-                        int(element.value)
-
-            elif elname == "dtmf_dtmf_local_code":
-                k = str(element.value).rstrip("\x20\xff\x00") + "\x00"*3
-                _mem.dtmf.local_code = k[0:3]
-
-            elif elname == "dtmf_dtmf_up_code":
-                k = str(element.value).strip("\x20\xff\x00") + "\x00"*16
-                _mem.dtmf.up_code = k[0:16]
-
-            elif elname == "dtmf_dtmf_down_code":
-                k = str(element.value).rstrip("\x20\xff\x00") + "\x00"*16
-                _mem.dtmf.down_code = k[0:16]
-
-            elif elname == "dtmf_kill_code":
-                k = str(element.value).strip("\x20\xff\x00") + "\x00"*5
-                _mem.dtmf.kill_code = k[0:5]
-
-            elif elname == "dtmf_revive_code":
-                k = str(element.value).strip("\x20\xff\x00") + "\x00"*5
-                _mem.dtmf.revive_code = k[0:5]
-
-            elif elname == "live_DTMF_decoder":
-                _mem.live_DTMF_decoder = int(element.value)
 
             # scanlist stuff
             if elname.startswith("listname"):
@@ -1778,69 +1590,33 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
     def get_settings(self):
         _mem = self._memobj
 
-# add menu firmware with version and option display if version 3.0 and up
         ValFirm = "Firmware : " + self.FIRMWARE_VERSION 
-        Compair1 = "SONIC v6.17"  
 
         if self.FIRMWARE_VERSION == "":
             ValFirm = "Firmware : Only when read from the radio "
-      
         else:
-            FIRMWARE_VERSION_RADIO = self.FIRMWARE_VERSION
             ValFirm = ValFirm + " Fusion Edition"
   
         radio_firmware = RadioSettingGroup("radio_firmwarebasic", ValFirm)
-# add link for mise a jour information
 
-        val = RadioSettingValueBoolean(False)
-        def validate_Go_Web_Firmware(value):
-            if value :
-                msg = "To see information for the update of the Firmware SONIC \n"
-                ret = wx.MessageBox(msg, "Warning", wx.OK | wx.CANCEL |
-                                    wx.CANCEL_DEFAULT | wx.ICON_WARNING)
-                if ret == wx.OK :
-                    webbrowser.open(FIRMWARE_VERSION_UPDATE)
-                value = False
-                    
-            return value
-
-        val.set_validate_callback(validate_Go_Web_Firmware)
-        rs = RadioSetting("Update_Firmware_mise_a_jour","To see information for the update of the Firmware SONIC , select this box ->", val)
-        rs.set_doc('To see information for the update of the Firmware SONIC !')
-        radio_firmware.append(rs)
-
-# end add link for mise a jour information
-
-# end add menu firmware with version and option display
-        
         basic = RadioSettingGroup("basic", "Basic Settings")
         advanced = RadioSettingGroup("advanced", "Advanced Settings")
         keya = RadioSettingGroup("keya", "Programmable Keys")
-        dtmf = RadioSettingGroup("dtmf", "DTMF Settings")
-#        dtmfc = RadioSettingGroup("dtmfc", "DTMF Contacts")
         scanl = RadioSettingGroup("scn", "Scan Lists")
         unlock = RadioSettingGroup("unlock", "Unlock Settings")
         fmradio = RadioSettingGroup("fmradio", "FM Broadcast Receiver")
         calibration = RadioSettingGroup("calibration", "Calibration")
-        help_user = RadioSettingGroup("help_user", "Help For User")
         
-        roinfo = RadioSettingGroup("roinfo", "Driver Information + Link WEB")
         top = RadioSettings()
         top.append(radio_firmware)
         top.append(basic)
         top.append(advanced)
         top.append(keya)
-        top.append(dtmf)
-#        if _mem.BUILD_OPTIONS.ENABLE_DTMF_CALLING:
-#            top.append(dtmfc)
         top.append(scanl)
         top.append(unlock)
         if _mem.BUILD_OPTIONS.ENABLE_FMRADIO:
             top.append(fmradio)
-        top.append(roinfo)
-        top.append(calibration)
-        top.append(help_user)
-        
+        top.append(calibration)        
         # helper function
         def append_label(radio_setting, label, descr=""):
             if not hasattr(append_label, 'idx'):
@@ -1915,168 +1691,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                    'LONG time, M key is located below the screen on the left')
         keya.append(rs)
 
-        # ----------------- DTMF settings
-
-        tmpval = str(_mem.dtmf.separate_code)
-        if tmpval not in DTMF_CODE_CHARS:
-            tmpval = '*'
-        val = RadioSettingValueString(1, 1, tmpval)
-        val.set_charset(DTMF_CODE_CHARS)
-        sep_code_setting = RadioSetting("dtmf_separate_code",
-                                        "Separate Code", val)
-        sep_code_setting.set_doc('Separate Code: ')
-
-        tmpval = str(_mem.dtmf.group_call_code)
-        if tmpval not in DTMF_CODE_CHARS:
-            tmpval = '#'
-        val = RadioSettingValueString(1, 1, tmpval)
-        val.set_charset(DTMF_CODE_CHARS)
-        group_code_setting = RadioSetting("dtmf_group_call_code",
-                                          "Group Call Code", val)
-        group_code_setting.set_doc('Group Call Code: ')
-
-        tmpval = min_max_def(_mem.dtmf.first_code_persist_time * 10,
-                             30, 1000, 300)
-        val = RadioSettingValueInteger(30, 1000, tmpval, 10)
-        first_code_per_setting = \
-            RadioSetting("dtmf_first_code_persist_time",
-                         "First Code Persist Time (ms)", val)
-        first_code_per_setting.set_doc('First code persist time: How long to you want the first DTMF ' + \
-                                       'will be sent (in milliseconds)')
-
-        tmpval = min_max_def(_mem.dtmf.hash_persist_time * 10, 30, 1000, 300)
-        val = RadioSettingValueInteger(30, 1000, tmpval, 10)
-        spec_per_setting = RadioSetting("dtmf_hash_persist_time",
-                                        "Persist Time (ms)", val)
-        spec_per_setting.set_doc('#/* persist time: How long this code # or / or * will be sent (in milliseconds)')
-        
-        tmpval = min_max_def(_mem.dtmf.code_persist_time * 10, 30, 1000, 300)
-        val = RadioSettingValueInteger(30, 1000, tmpval, 10)
-        code_per_setting = RadioSetting("dtmf_code_persist_time",
-                                        "Code Persist Time (ms)", val)
-        code_per_setting.set_doc('Code persist time: How long the code will be sent (in milliseconds)')
-
-        tmpval = min_max_def(_mem.dtmf.code_interval_time * 10, 30, 1000, 300)
-        val = RadioSettingValueInteger(30, 1000, tmpval, 10)
-        code_int_setting = RadioSetting("dtmf_code_interval_time",
-                                        "Code Interval Time (ms)", val)
-        code_int_setting.set_doc('Code interval time: How long to wait between each code sent (in milliseconds)')
-
-        tmpval = str(_mem.dtmf.local_code).upper().strip(
-                "\x00\xff\x20")
-        for i in tmpval:
-            if i in DTMF_CHARS_ID:
-                continue
-            tmpval = "103"
-            break
-        val = RadioSettingValueString(3, 3, tmpval)
-        val.set_charset(DTMF_CHARS_ID)
-        ani_id_setting = \
-            RadioSetting("dtmf_dtmf_local_code",
-                         "Local Code (3 chars 0-9 ABCD) (ANI ID)", val)
-        ani_id_setting.set_doc('ANI ID: DTMF communication radio ID')
-
-        tmpval = str(_mem.dtmf.up_code).upper().strip(
-                "\x00\xff\x20")
-        for i in tmpval:
-            if i in DTMF_CHARS_UPDOWN or i == "":
-                continue
-            else:
-                tmpval = "123"
-                break
-        val = RadioSettingValueString(1, 16, tmpval)
-        val.set_charset(DTMF_CHARS_UPDOWN)
-        up_code_setting = \
-            RadioSetting("dtmf_dtmf_up_code",
-                         "Up Code (1-16 chars 0-9 ABCD*#) (UPCode)", val)
-        up_code_setting.set_doc('UPCode: DTMF code sent at the beginning of transmission')
-
-        tmpval = str(_mem.dtmf.down_code).upper().strip(
-                "\x00\xff\x20")
-        for i in tmpval:
-            if i in DTMF_CHARS_UPDOWN:
-                continue
-            else:
-                tmpval = "456"
-                break
-        val = RadioSettingValueString(1, 16, tmpval)
-        val.set_charset(DTMF_CHARS_UPDOWN)
-        dw_code_setting = \
-            RadioSetting("dtmf_dtmf_down_code",
-                         "Down Code (1-16 chars 0-9 ABCD*#) (DWCode)", val)
-        dw_code_setting.set_doc('DWCode: DTMF code sent at the end of a transmission')
-
-        val = RadioSettingValueBoolean(_mem.dtmf.side_tone)
-        dtmf_side_tone_setting = \
-            RadioSetting("dtmf_side_tone",
-                         "DTMF Sidetone On Speaker When Sent (D ST)", val)
-        dtmf_side_tone_setting.set_doc('D ST: DTMF side tone switch, lets you hear transmitted ' + \
-                                       'tones in the radio speaker')
-
-        tmpval = list_def(_mem.dtmf.decode_response,
-                          DTMF_DECODE_RESPONSE_LIST, 0)
-        val = RadioSettingValueList(DTMF_DECODE_RESPONSE_LIST, None, tmpval)
-        dtmf_resp_setting = RadioSetting("dtmf_decode_response",
-                                         "Decode Response (D Resp)", val)
-        dtmf_resp_setting.set_doc('D Resp: DTMF decoding response')
-
-        tmpval = min_max_def(_mem.dtmf.auto_reset_time, 5, 60, 10)
-        val = RadioSettingValueInteger(5, 60, tmpval)
-        d_hold_setting = RadioSetting("dtmf_auto_reset_time",
-                                      "Auto Reset Time (s) (D Hold)", val)
-        d_hold_setting.set_doc('D Hold: DTMF auto reset time')
-
-        # D Prel
-        tmpval = min_max_def(_mem.dtmf.preload_time * 10, 30, 990, 300)
-        val = RadioSettingValueInteger(30, 990, tmpval, 10)
-        d_prel_setting = RadioSetting("dtmf_preload_time",
-                                      "Pre-Load Time (ms) (D Prel)", val)
-        d_prel_setting.set_doc('D Prel: DTMF pre-load time')
-        
-        # D LIVE
-        val = RadioSettingValueBoolean(_mem.live_DTMF_decoder)
-        d_live_setting = \
-            RadioSetting("live_DTMF_decoder", "Displays DTMF codes"
-                         " received in the middle of the screen (D Live)", val)
-        d_live_setting.set_doc('D Live: Displays DTMF codes received by radio in the middle of the screen')
-        
-        val = RadioSettingValueBoolean(_mem.dtmf.permit_remote_kill)
-        perm_kill_setting = RadioSetting("dtmf_permit_remote_kill",
-                                         "Permit Remote Kill", val)
-
-        tmpval = str(_mem.dtmf.kill_code).upper().strip(
-                "\x00\xff\x20")
-        for i in tmpval:
-            if i in DTMF_CHARS_KILL:
-                continue
-            else:
-                tmpval = "77777"
-                break
-        if not len(tmpval) == 5:
-            tmpval = "77777"
-        val = RadioSettingValueString(5, 5, tmpval)
-        val.set_charset(DTMF_CHARS_KILL)
-        kill_code_setting = RadioSetting("dtmf_kill_code",
-                                         "Kill Code (5 chars 0-9 ABCD)", val)
-
-        tmpval = str(_mem.dtmf.revive_code).upper().strip(
-                "\x00\xff\x20")
-        for i in tmpval:
-            if i in DTMF_CHARS_KILL:
-                continue
-            else:
-                tmpval = "88888"
-                break
-        if not len(tmpval) == 5:
-            tmpval = "88888"
-        val = RadioSettingValueString(5, 5, tmpval)
-        val.set_charset(DTMF_CHARS_KILL)
-        rev_code_setting = RadioSetting("dtmf_revive_code",
-                                        "Revive Code (5 chars 0-9 ABCD)", val)
-
-        val = RadioSettingValueBoolean(_mem.int_KILLED)
-        killed_setting = RadioSetting("int_KILLED", "DTMF Kill Lock", val)
-
         # ----------------- Scan Lists
 
         ch_list = []
@@ -2086,23 +1700,16 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
         # List names
         for i in range(MR_CHANNELS_LIST - 1):
-            # Get the character array object from memory
             name_obj = _mem.listname[i].name
             
             valid_bytes = []
-            # Iterate through each element in the character array
             for char_element in name_obj:
-                # Explicitly cast the charDataElement to an integer to avoid TypeError
                 val = int(char_element)
-                
-                # Filter for printable ASCII characters only (32-126)
                 if 32 <= val <= 126:
                     valid_bytes.append(val)
             
-            # Decode the valid bytes to a string and strip whitespace
             listname = bytes(valid_bytes).decode('ascii', errors='ignore').strip()
 
-            # Create the CHIRP setting object
             val = RadioSettingValueString(0, 10, listname)
             listname_setting = RadioSetting(
                 f"listname{i}", 
@@ -2115,8 +1722,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             )
             scanl.append(listname_setting)
 
-    # basic.append(listname_setting)
-
         # ----------------- Basic settings
 
         ch_list = []
@@ -2125,39 +1730,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         for bnd in range(1, 8):
             ch_list.append("Band F" + str(bnd))
 
-        tmpfreq0 = list_def(_mem.ScreenChannel_A, ch_list, 0)
-        val = RadioSettingValueList(ch_list, None, tmpfreq0)
-        freq0_setting = RadioSetting("VFO_A_chn",
-                                     "VFO A Current Channel/Band", val)
-        freq0_setting.set_doc('VFO A current channel/band: To select what is displayed on the VFO A\n' + \
-                              '* CHANNEL number M1-M1024\n' + \
-                              '* BAND F1-F7\n' + \
-                              'look at the correspondence between memory and frequency in the memory tab')
-
-        tmpfreq1 = list_def(_mem.ScreenChannel_B, ch_list, 0)
-        val = RadioSettingValueList(ch_list, None, tmpfreq1)
-        freq1_setting = RadioSetting("VFO_B_chn",
-                                      "VFO B Current Channel/Band", val)
-        freq1_setting.set_doc('VFO B current channel/band: To select what is displayed in the VFO B\n' + \
-                              '* CHANNEL number M1-M1024\n' + \
-                              '* BAND F1-F7\n' + \
-                              'look at the correspondence between memory and frequency in the memory tab')
-
-        tmptxvfo = list_def(_mem.TX_VFO, TX_VFO_LIST, 0)
-        val = RadioSettingValueList(TX_VFO_LIST, None, tmptxvfo)
-        tx_vfo_setting = RadioSetting("TX_VFO", "Main VFO", val)
-        tx_vfo_setting.set_doc('Main VFO: To select which VFO is active, ' + \
-                               '( A at the top, B at the bottom ) ')
-
-                                     
-        # Set_Low_Power SONIC
-        tmpsetpwr = list_def(_mem.set_pwr, SET_LOW_LIST, 0)
-        val = RadioSettingValueList(SET_LOW_LIST, SET_LOW_LIST[tmpsetpwr])
-        SetPwrSetting = RadioSetting("set_pwr", "Define Power Value when User selection is selected in POWER (SetPwr)", val)
-        SetPwrSetting.set_doc('SetPwr: This is the level TX power when (Power) is set to User,.\n' + \
-                              '(see the "Power" column in the memories tab to set the TX level for each channel), ' + \
-                              'if the User level is select, it will use this TX power level ')
-        
         # Set_tot SONIC
         tmpsettot = list_def(_mem.set_tot, SET_TOT_EOT_LIST, 0)
         val = RadioSettingValueList(SET_TOT_EOT_LIST, SET_TOT_EOT_LIST[tmpsettot])
@@ -2197,21 +1769,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         SetLckSetting = RadioSetting("set_lck", "Lock PTT Key When Keypad Is Locked (SetLck)", val)
         SetLckSetting.set_doc('SetLck: When the keypad is locked, lock also the PTT key')
         
-        # Set_met SONIC
-        tmpsetmet = list_def(_mem.set_met, SET_MET_LIST, 0)
-        val = RadioSettingValueList(SET_MET_LIST, SET_MET_LIST[tmpsetmet])
-        SetMetSetting = RadioSetting("set_met", "S-Meter Display Style (SetMet)", val)
-        SetMetSetting.set_doc('SetMet: Change the style of the S-meter display\n' + \
-                              '* CLASSIC : classic display\n' + \
-                              '* TINY : smaller display')
-        # Set_gui SONIC
-        tmpsetgui = list_def(_mem.set_gui, SET_MET_LIST, 0)
-        val = RadioSettingValueList(SET_MET_LIST, SET_MET_LIST[tmpsetgui])
-        SetGuiSetting = RadioSetting("set_gui", "Display Text Style (SetGui)", val)
-        SetGuiSetting.set_doc('SetGui: Change the display text style\n' + \
-                              '* CLASSIC : normal font\n' + \
-                              '* TINY : smaller font')
-
         # Set_tmr SONIC
         tmpsettmr = list_def(_mem.set_tmr, SET_OFF_ON_LIST, 0)
         val = RadioSettingValueList(SET_OFF_ON_LIST, SET_OFF_ON_LIST[tmpsettmr])
@@ -2275,12 +1832,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         for ch in range(1, MR_CHANNELS_MAX + 1):
             ch_list.append("Channel M" + str(ch))
 
-        tmpc = list_def(_mem.sl.call_channel, ch_list, 0)
-        val = RadioSettingValueList(ch_list, None, tmpc)
-        call_channel_setting = RadioSetting("call_channel", "One-Key Call Channel (1 Call)", val)
-        call_channel_setting.set_doc('1 Call: One-key call channel, lets you quickly switch to the ' + \
-                                     'designed channel with the "9 Call" key ')
-
         val = RadioSettingValueBoolean(_mem.key_lock)
         keypad_lock_setting = RadioSetting("key_lock", "Keypad Locked", val)
         keypad_lock_setting.set_doc('Keypad locked: Lock the keypad now')
@@ -2315,43 +1866,8 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         val = RadioSettingValueBoolean(_mem.mic_bar)
         mic_bar_setting = RadioSetting("mic_bar", "Microphone Level Bar Display (MicBar)", val)
         mic_bar_setting.set_doc('MicBar: Display the microphone level bar while transmitting')
-        tmpchdispmode = list_def(_mem.channel_display_mode,
-                                 CHANNELDISP_LIST, 0)
-        val = RadioSettingValueList(CHANNELDISP_LIST, None, tmpchdispmode)
-        ch_disp_setting = RadioSetting("channel_display_mode",
-                                       "Channel Display Mode (ChDisp)", val)
-        ch_disp_setting.set_doc('ChDisp: What to display on screen:\n' + \
-                                '* NAME\n' + \
-                                '* CHANNEL NUMBER\n' + \
-                                '* FREQ\n' + \
-                                '* NAME + FREQ')
         tmpdispmode = list_def(_mem.power_on_dispmode, WELCOME_LIST, 0)
         val = RadioSettingValueList(WELCOME_LIST, None, tmpdispmode)
-        p_on_msg_setting = RadioSetting("welcome_mode", "Power On Display Message (POnMsg)", val)
-        p_on_msg_setting.set_doc('POnMsg: When powering up the radio, what to display:\n' + \
-                                 '* ALL : message line 1 + voltage + sound\n' + \
-                                 '* SOUND : beep beep 2 only\n' + \
-                                 '* MESSAGE : message lines 1 and 2 only\n' + \
-                                 '* VOLTAGE : battery voltage only\n' + \
-                                 '* NONE : nothing')
-
-
-
-        logo1 = str(_mem.logo_line1).strip("\x20\x00\xff") + "\x00"
-        logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 12)
-        val = RadioSettingValueString(0, 12, logo1)
-        logo1_setting = RadioSetting("logo1", "Message Line 1 (12 characters max)", val)
-        logo1_setting.set_doc('Message line 1: The first message line,\n' + \
-                              'with a maximum of 12 characters\n' + \
-                              'See option (POnMsg) to display it')
-                               
-        logo2 = str(_mem.logo_line2).strip("\x20\x00\xff") + "\x00"
-        logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 12)
-        val = RadioSettingValueString(0, 12, logo2)
-        logo2_setting = RadioSetting("logo2", "Message Line 2 (12 characters max)", val)
-        logo2_setting.set_doc('Message line 2: the second message line,\n' + \
-                              'with a maximum of 12 characters\n' + \
-                              'See option (POnMsg) to display it')
 
         tmpbattxt = list_def(_mem.battery_text, BAT_TXT_LIST, 2)
         val = RadioSettingValueList(BAT_TXT_LIST, None, tmpbattxt)
@@ -2390,12 +1906,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                                 '* RX : ON when RX only\n' + \
                                 '* TX/RX : ON when TX and RX')
 
-        
-        val = RadioSettingValueBoolean(_mem.button_beep)
-        beep_setting = RadioSetting("button_beep", "Keypad Beep (Beep)", val)
-        beep_setting.set_doc('Beep: Beep sound when a key is pressed')
-
-
         tmpalarmmode = list_def(_mem.roger_beep, ROGER_LIST, 0)
         val = RadioSettingValueList(ROGER_LIST, None, tmpalarmmode)
         roger_setting = RadioSetting("roger_beep", "End Of Transmission Beep (Roger)", val)
@@ -2411,48 +1921,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         rp_ste_setting = RadioSetting("rp_ste", "Repeater Squelch Tail Elimination (RP STE)", val)
         rp_ste_setting.set_doc('RP STE: Repeater squelch tail eliminator')
 
-        val = RadioSettingValueBoolean(_mem.AM_fix)
-        am_fix_setting = RadioSetting("AM_fix", "AM Reception Fix (AM Fix) ** Has no effect with firmware 3.0 or higher **", val)
-        am_fix_setting.set_doc('AM Fix: Activates autogain in AM reception ** Has no effect with firmware 3.0 or higher **')
-
-        tmpvox = min_max_def((_mem.vox_level + 1) * _mem.vox_switch, 0, 10, 0)
-        val = RadioSettingValueList(VOX_LIST, None, tmpvox)
-        vox_setting = RadioSetting("vox", "Voice-Operated Switch (VOX)", val)
-        vox_setting.set_doc('VOX: Voice TX activation sensitivity level')
         
-        tmprxmode = list_def((bool(_mem.crossband) << 1)
-                             + bool(_mem.dual_watch),
-                             RXMODE_LIST, 0)
-        val = RadioSettingValueList(RXMODE_LIST, None, tmprxmode)
-        rx_mode_setting = RadioSetting("rx_mode", "RX Mode (RX MODE)", val)
-        rx_mode_setting.set_doc('RX MODE:\n' + \
-                                '* MAIN ONLY : Transmits and listens on the main frequency\n' + \
-                                '* DUAL RX RESPOND : Listens both frequencies, if signal received on the secondary frequency, it locks to \n' + \
-                                'it for a couple of seconds so you can respond to the call (DWR)\n' + \
-                                '* CROSS BAND : Always transmits on the primary and listens on the secondary frequency (XB)\n' + \
-                                '* MAIN TX DUAL RX : Always transmits on the primary, listens to both (DW)')
-
-        #val = RadioSettingValueBoolean(_mem.freq_mode_allowed)
-        #freq_mode_allowed_setting = RadioSetting("freq_mode_allowed", "Frequency Mode Allowed", val)
-        #freq_mode_allowed_setting.set_doc('Frequency mode allowed')
-
-
-        tmpscanres = list_def(_mem.scan_resume_mode, SCANRESUME_LIST, 0)
-        val = RadioSettingValueList(SCANRESUME_LIST, None, tmpscanres)
-        scn_rev_setting = RadioSetting("scan_resume_mode", "Scan Resume Mode (ScnRev)", val)
-        scn_rev_setting.set_doc('ScnRev: Scan Resume Mode\n' + \
-                                '* CARRIER : Listen X seconds after signal disappears and resume\n' + \
-                                '* STOP : After receiving a signal, stop the scan\n' + \
-                                '* TIMEOUT : Resume scan after X seconds pause')
-        
-        tmpvoice = list_def(_mem.voice, VOICE_LIST, 0)
-        val = RadioSettingValueList(VOICE_LIST, None, tmpvoice)
-        voice_setting = RadioSetting("voice", "Voice", val)
-        voice_setting.set_doc('Voice: Voice announcement\n' + \
-                                '* NONE : No voice\n' + \
-                                '* CHINA : Chinese voice\n' + \
-                                '* ENGLISH : English voice')
-
         tmpalarmmode = list_def(_mem.alarm_mode, ALARMMODE_LIST, 0)
         val = RadioSettingValueList(ALARMMODE_LIST, None, tmpalarmmode)
         alarm_setting = RadioSetting("alarm_mode", "Alarm Mode", val)
@@ -2504,23 +1973,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                        f'Inject -93 dBm and adjust until display reads -93 dBm.')
             advanced.append(rs)
 
-
-        # Power on password
-#        def validate_password(value):
-#            value = value.strip(" ")
-#            if value.isdigit():
-#                return value.zfill(6)
-#            if value != "":
-#                raise InvalidValueError("Power on password "
-#                                        "can only have digits")
-#            return ""
-
-#        pswd_str = str(int(_mem.password)).zfill(6) \
-#            if _mem.password < 1000000 else ""
-#        val = RadioSettingValueString(0, 6, pswd_str)
-#        val.set_validate_callback(validate_password)
-#        pswd_setting = RadioSetting("password", "Power on password", val)
-
         # ----------------- FM radio
 
         append_label(fmradio, "Channel Memory Radio (MR)", "Frequency (MHz)")
@@ -2561,72 +2013,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         else:
             firmware = self.FIRMWARE_VERSION
 
-        append_label(roinfo,
-                     "=" * 6 + " Firmware SONIC " + "=" * 300, "=" * 300)
-
-        append_label(roinfo, "Firmware Version", firmware)
-
-#       message box to the web page link (firmware)
-
-        val = RadioSettingValueBoolean(False)
-        def validate_Go_Web_Page0(value):
-            if value :
-                msg = "Go to the web Page of the Firmware SONIC \n" \
-                      + FIRMWARE_VERSION_UPDATE
-                ret = wx.MessageBox(msg, "Warning", wx.OK | wx.CANCEL |
-                                    wx.CANCEL_DEFAULT | wx.ICON_WARNING)
-                if ret == wx.OK :
-                    webbrowser.open(FIRMWARE_VERSION_UPDATE)
-                value = False
-                    
-            return value
-
-        val.set_validate_callback(validate_Go_Web_Page0)
-        rs = RadioSetting("Update_Firmware_0","Go to the web page of Latest Firmware SONIC select this Box ->", val)
-        rs.set_doc('Be sure you have the latest firmware available!')
-        roinfo.append(rs)
-        
-        val = RadioSettingValueString(0,75,FIRMWARE_VERSION_UPDATE)
-        rs = RadioSetting("Update_Firmware_1","Or copy this link (CTRL-C), paste (CTRL-V) to your browser -> ", val)
-        rs.set_doc('Be sure you have the latest firmware available!')
-        roinfo.append(rs)
-        append_label(roinfo, "The Firmware is done by SONIC","")
-        append_label(roinfo,"","")
-                
-        append_label(roinfo,
-                     "=" * 6 + " Chirp Driver SONIC " + "=" * 300, "=" * 300)
-                     
-        append_label(roinfo, "Driver Chirp Version         ", DRIVER_VERSION)
-        
-#       message box to the web page link (chirp)
-
-        val = RadioSettingValueBoolean(False)
-        def validate_Go_Web_Page(value):
-            if value :
-                msg = "Go to the web Page of the Chirp Driver SONIC \n" \
-                      + CHIRP_DRIVER_VERSION_UPDATE
-                ret = wx.MessageBox(msg, "Warning", wx.OK | wx.CANCEL |
-                                    wx.CANCEL_DEFAULT | wx.ICON_WARNING)
-                if ret == wx.OK :
-                    webbrowser.open(CHIRP_DRIVER_VERSION_UPDATE)
-                value = False
-                    
-            return value
-
-        val.set_validate_callback(validate_Go_Web_Page)
-        rs = RadioSetting("Update_Driver_Chirp_0","Go to the web page of Latest chirp Driver SONIC select this Box ->", val)
-        rs.set_doc('Be sure you have the latest CHIRP driver available!')
-        roinfo.append(rs)
-
-        val = RadioSettingValueString(0,75,CHIRP_DRIVER_VERSION_UPDATE)
-        rs = RadioSetting("Update_Driver_Chirp_1","Or copy this link (CTRL-C), paste (CTRL-V) to your browser -> ", val)
-        rs.set_doc('Be sure you have the latest CHIRP driver available!')
-        roinfo.append(rs)
-        
-        append_label(roinfo, "The driver module is done by VE2ZJM & SONIC")
-        append_label(roinfo,"","" )
-        
-        # ----------------- Calibration
+ # ----------------- Calibration
 
         val = RadioSettingValueBoolean(False)
 
@@ -2801,211 +2188,22 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         val = RadioSettingValueInteger(0, 15, temp_val)
         radio_setting = RadioSetting(name, "DAC Gain", val)
         radio_setting_group.append(radio_setting)
-
-
-
-        # ----------------- Help User
-
-        help_group = RadioSettingGroup("Explain_Display_HELP",
-                                                "Documentation Display")
-        help_user.append(help_group)
-
-        append_label(help_group, "=" * 6 + " Documentation Display " + "=" * 50, "=" * 6  + " Location on display " + "=" * 50)
-                         
-        append_label(help_group,"Status Line", "First line on the display, on the top of the display" )
-        append_label(help_group,"(PS) = Power Save", "Status line" )
-        append_label(help_group,"(S) = Scan active", "Status line" )
-        append_label(help_group,"(0) = Scan memories that are not on any scan list", "On the right side of the VFO" )
-        append_label(help_group,"(1) = Scan memories on list 1", "On the right side of the VFO" )
-        append_label(help_group,"(2) = Scan memories on list 2", "On the right side of the VFO" )
-        append_label(help_group,"(3) = Scan memories on list 3", "On the right side of the VFO" )
-        append_label(help_group,"(1 2 3) = Scan ALL memories", "On the right side of the VFO"  )
-     
-        append_label(help_group,"(MO) = Main only, display only one VFO", "Status line" )
-        append_label(help_group,"(DWR) = Dual RX respond", "Status line" )
-        append_label(help_group,"(DW) = Main TX dual RX", "Status line" )
-        append_label(help_group,"(XD) = Cross Band", "Status line" )
-        append_label(help_group,"(VX) = VOX active", "Status line" )
-        append_label(help_group,"(CL) = PTT classic mode" , "Status line" )
-        append_label(help_group,"(OP) = PTT one push mode" , "Status line" )
-        append_label(help_group,"(F) = Activates the second function of a key" , "Status line" )
-
-        append_label(help_group,"" , "" )
-
-        append_label(help_group,"(Dark Arrow) = Active VFO" , "On the left side of the VFO" )
-        append_label(help_group,"(Mxxx) = Memory number M1-M200", "On the left side of the VFO" )
-        append_label(help_group,"(Fx) =  Band number F1-F7 " , "On the left side of the VFO" )
-        append_label(help_group,"(TX) = VFO used when TX" , "On the left side of the VFO" )
-        append_label(help_group,"(RX) = Radio receiving" , "On the left side of the VFO" )
-
-        append_label(help_group,"" , "" )
-        append_label(help_group, "=" * 6 + " if (SetGui) is set on CLASSIC " + "=" * 50, "=" * 6  + "=" * 100)
-        append_label(help_group,"(FM,USB,AM) = Reception mode" , "Under each VFO" )
-        append_label(help_group,"(DC) = RX DCS active" , "Under each VFO" )
-        append_label(help_group,"(CT) = RX CTCSS active" , "Under each VFO" )
-        append_label(help_group,"(H) = High TX power" , "Under each VFO" )
-        append_label(help_group,"(M) = Medium TX power" , "Under each VFO" )
-        append_label(help_group,"(Lx) = Low TX power, with x = level 1 to 5" , "Under each VFO" )
-        append_label(help_group,"(W) = Wide BF filter: 12.5kHz (WIDE)" , "Under each VFO" )
-        append_label(help_group,"(N) = Narrow BF filter: 6.25kHz (NARROW)" , "Under each VFO" )
-
-        append_label(help_group,"" , "" )
-
-        append_label(help_group, "=" * 6 + " If (SetGui) is set on TINY " + "=" * 50, "=" * 6  + "=" * 100)
-
-        append_label(help_group,"(FM,USB,AM) = Reception Mode" , "Under each VFO" )
-        append_label(help_group,"(HIGH) = High TX power" , "Under each VFO" )
-        append_label(help_group,"(MID) = Medium TX power" , "Under each VFO" )
-        append_label(help_group,"(LOWx) = Low TX power, with x = level 1 to 5" , "Under each VFO" )
-        append_label(help_group,"(CT x) = RX CTCSS active, with x = value" , "Under each VFO" )
-        append_label(help_group,"(DC x) = RX CTCSS active, with x = value" , "Under each VFO" )
-        append_label(help_group,"(x.xxK) = no incrementation of the frequency" , "Under each VFO" )
-        append_label(help_group,"(WIDE) = Wide BF filter: 12.5kHz" , "Under each VFO" )
-        append_label(help_group,"(NAR) = Narrow BF filter: 6.25kHz" , "Under each VFO" )
-               
-        append_label(help_group,"" , "" )
-
-        append_label(help_group, "=" * 6 + "=" * 100, "=" * 6  + "=" * 100)
-       
-        append_label(help_group,"(SQLx) = Squelch level, with x = value from 1 to 9" , "Displayed below each VFO" )
-        append_label(help_group,"(MONI) = RX monitoring (squelch disabled)" , "Displayed below each VFO" )
-       
-        help_group = RadioSettingGroup("Explain_Keyboard_HELP", "Keypad documentation" )
-        help_user.append(help_group)
-        append_label(help_group, "=" * 6 + " Keypad and buttons' function " + "=" * 50, "=" * 6  + " When pressing (F #) before the key " + "=" * 50)
-                                                   
-        append_label(help_group,"(1 BAND) = long press: change the active frequency band (F1 to F7)  " , "Same as long press  " )
-        append_label(help_group,"(1 BAND) = short press: digit 1  "," " )
-        append_label(help_group,"","" )
-
-        append_label(help_group,"(2 A/B) = long press: change the active VFO, A(top) / B(bottom) " , "Same as long press " )
-        append_label(help_group,"(2 A/B) = short press: digit 2  "," " )
-
-        append_label(help_group,"","" )
+      
         
-        append_label(help_group,"(3 VFO MEM) = long press: toggle between VFO and memory " , "Same as long press  " )
-        append_label(help_group,"(3 VFO MEM) = short press: digit 3  "," " )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(* SCAN) = long press: if in VFO mode, start a scan ", "Make a scan list from the active channel" )
-        append_label(help_group,"(* SCAN) = long press, if in memory mode: = switch scan list (1,2, ALL) ", "Make a scan list from the active channel" )
-        append_label(help_group,"(* SCAN) = short press:  DTMF input mode (S) ", "Start CTCSS listening on the current frequency" )
-
-        append_label(help_group,"","" )
-        append_label(help_group,"(4 FC) = long press: start the CTCSS & frequency scan " , "Same as long press " )
-        append_label(help_group,"(4 FC) = short press: digit 4  "," " )
-
-
-        append_label(help_group,"","" ) 
-        
-        append_label(help_group,"(5 NOAA) = long press: if in VFO mode: display ScnRnG " , "Display fagci spectrum analyze " )
-        append_label(help_group,"(5 NOAA) = long press: if in memory mode,  change the scan list " , " ")
-        append_label(help_group,"(5 NOAA) = short press: digit 5  "," " )
-
-        append_label(help_group,"","" )
-                
-        append_label(help_group,"(6 H/M/L) = long press: change the TX power level (High/Medium/Low) of the active VFO " , "Same as long press " )
-        append_label(help_group,"(6 H/M/L) = short press: digit 6  "," " )
-
-        append_label(help_group,"","" )
-                
-        append_label(help_group,"(0 FM) = long press: FM Broadcast listening ", "Same as long press " )
-        append_label(help_group,"(0 FM) = short press: digit 0  "," " )
-
-        append_label(help_group,"","")
-        
-        append_label(help_group,"(7 VOX) = long press: change voice Activation (VX) " , "Same as long press " )
-        append_label(help_group,"(7 VOX) = short press: digit 7  "," " )
-
-        append_label(help_group,"","" )
-                
-        append_label(help_group,"(8 R) = long press: reverse (if using a shift) (R) " , "Same as long press ")
-        append_label(help_group,"(8 R) = short press: digit 8  ","Force backlight on/off " )
-        append_label(help_group,"","Disable backlight timeout (BLTime)")
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(9 CALL) = long press: switch current channel to 1-Call channel" , "Same as long press")
-        append_label(help_group,"(9 CALL) = short press: digit 9","Enable backlight timeout (BLTime)" )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(F #) = long, press: keypad lock/unlock", )
-        append_label(help_group,"(F #) = short press: activates the secondary button function", )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(M A) = long press: user programmable button","" )
-        append_label(help_group,"(M A) = short press: Menu access","" )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(Arrow UP B) = long press: scroll VFO/MEM upwards","" )
-        append_label(help_group,"(Arrow UP B) = short press: increase VFO/MEM value ","increase squelch value" )
-
-        append_label(help_group,"","" )
-        append_label(help_group,"(Arrow DOWN C) = long press: scroll VFO/MEM downwards","" )
-        append_label(help_group,"(Arrow DOWN C) = short press: decrease VFO/MEM value","decrease squelch value" )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group, "=" * 6 + " side button" + "=" * 50, "=" * 6  + "" + "=" * 50)
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(PTT)  = long press: transmit on active TX","" )
-        append_label(help_group,"(PTT)  = short press: transmit on active TX","" )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"(.)  = long press: user programmable button","" )
-        append_label(help_group,"(.)  = short press, user programmable button","" )
-
-        append_label(help_group,"","" )
-        append_label(help_group,"(..)  = long press, user programmable button","" )
-        append_label(help_group,"(..)  = short press, user programmable button","" )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group, "=" * 6 + " special function " + "=" * 50, "=" * 6  + "" + "=" * 50)
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"To put the radio in programming MODE firmware","Hold PTT key then switch on the radio, the flashlight will light up" )
-
-        append_label(help_group,"","" )
-        
-        append_label(help_group,"To activate the hidden menu","Hold the PTT key and the button just below it then turn on the radio" )
-        append_label(help_group,"", "The hidden items are at the end of the regular menu" )
 
         
-        help_group = RadioSettingGroup("Chirp_Language_HELP",
-                                       "How to change CHIRP language")
-        help_user.append(help_group)
-        
-        append_label(help_group,"It's now possible to change the language directly in CHIRP ", )
-        append_label(help_group,"Go on the View tab, then Language... You will need to restart chirp to get the new language ", )
-
         # -------- LAYOUT
         append_label(basic,
                      "=" * 6 + " Start of SONIC Settings." + "=" * 300, "=" * 300)
-        basic.append(SetPwrSetting)
         basic.append(SetTotSetting)
         basic.append(SetEotSetting)
         basic.append(contrastSetting)
         basic.append(SetInvSetting)
         basic.append(SetLckSetting)
-        basic.append(SetMetSetting)
-        basic.append(SetGuiSetting)
         basic.append(SetTmrSetting)
         basic.append(SetOffSetting)
         basic.append(SetNFMSetting)
         basic.append(SetRxASetting)
-        if _mem.BUILD_OPTIONS.ENABLE_FEAT_F4HWN_RESCUE_OPS:
-            basic.append(SetKEYSetting)
-        if _mem.BUILD_OPTIONS.ENABLE_FEAT_F4HWN_RESCUE_OPS:
-            basic.append(SetMenuLockSetting)
         basic.append(SetMenuNavSetting)
 
         append_label(basic,
@@ -3015,25 +2213,16 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                      "=" * 6 + " General settings " + "=" * 300, "=" * 300)
 
         basic.append(squelch_setting)
-        basic.append(rx_mode_setting)
-        basic.append(call_channel_setting)
         basic.append(auto_keypad_lock_setting)
         basic.append(tx_t_out_setting)
         basic.append(bat_save_setting)
-        basic.append(scn_rev_setting)
-        if _mem.BUILD_OPTIONS.ENABLE_AM_FIX:
-            basic.append(am_fix_setting)
-
+        
         append_label(basic,
                      "=" * 6 + " Display settings " + "=" * 300, "=" * 300)
 
         basic.append(bat_txt_setting)
         basic.append(mic_bar_setting)
-        basic.append(ch_disp_setting)
-        basic.append(p_on_msg_setting)
-        basic.append(logo1_setting)
-        basic.append(logo2_setting)
-
+        
         append_label(basic, "=" * 6 + " Backlight settings "
                      + "=" * 300, "=" * 300)
 
@@ -3046,7 +2235,6 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                      + "=" * 300, "=" * 300)
 
         basic.append(mic_gain_setting)
-        basic.append(beep_setting)
         basic.append(roger_setting)
         basic.append(ste_setting)
         basic.append(rp_ste_setting)
@@ -3055,38 +2243,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
         append_label(basic, "=" * 6 + " Radio state " + "=" * 300, "=" * 300)
 
-        basic.append(freq0_setting)
-        basic.append(freq1_setting)
-        basic.append(tx_vfo_setting)
         basic.append(keypad_lock_setting)
-
-#        advanced.append(freq_mode_allowed_setting)
-#        if _mem.BUILD_OPTIONS.ENABLE_PWRON_PASSWORD:
-#            advanced.append(pswd_setting)
-
-#        if _mem.BUILD_OPTIONS.ENABLE_DTMF_CALLING:
-#            dtmf.append(sep_code_setting)
-#            dtmf.append(group_code_setting)
-        dtmf.append(first_code_per_setting)
-        dtmf.append(spec_per_setting)
-        dtmf.append(code_per_setting)
-        dtmf.append(code_int_setting)
-#        if _mem.BUILD_OPTIONS.ENABLE_DTMF_CALLING:
-#            dtmf.append(ani_id_setting)
-        dtmf.append(up_code_setting)
-        dtmf.append(dw_code_setting)
-        dtmf.append(d_prel_setting)
-        dtmf.append(dtmf_side_tone_setting)
-        dtmf.append(d_live_setting)
-        
-#        if _mem.BUILD_OPTIONS.ENABLE_DTMF_CALLING:
-#            dtmf.append(dtmf_resp_setting)
-#            dtmf.append(d_hold_setting)
-#            dtmf.append(perm_kill_setting)
-#            dtmf.append(kill_code_setting)
-#            dtmf.append(rev_code_setting)
-#            dtmf.append(killed_setting)
-
         unlock.append(f_lock_setting)
 
         return top
