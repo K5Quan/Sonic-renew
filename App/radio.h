@@ -23,6 +23,7 @@
 #include "dcs.h"
 #include "frequencies.h"
 
+// CHANNEL_LOCATION
 #define ADRESS_CHANNELS             0x101000
 #define ADRESS_CHANNELS_NAMES       0x109000
 #define ADRESS_CHANNELS_ATTRIBUTES  0x111000

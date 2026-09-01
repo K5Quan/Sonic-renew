@@ -28,7 +28,8 @@ DRIVER_VERSION = "Quansheng UV-K1 driver ver: 2026/03/06 (c) SONIC"
 VALEUR_COMPILER = "ENABLE"
 
 MEM_FORMAT = """
-// --------------------
+
+// -------------------- CHANNEL_LOCATION
 
 #seekto 0x101000;
 struct {
@@ -373,8 +374,8 @@ struct {
 } cal;
 
 """
-# SONIC parameter
-FM_CHANNELS_MAX = 9
+
+FM_CHANNELS_MAX = 9 # CHANNEL_LOCATION
 MR_CHANNELS_MAX = 2050
 MR_CHANNELS_LIST = 21
 
@@ -550,7 +551,7 @@ ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE =      0x11200C    # size of all memory
+MEM_SIZE =      0x11200C    # size of all memory CHANNEL_LOCATION
 PROG_SIZE =     0x11200D    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address

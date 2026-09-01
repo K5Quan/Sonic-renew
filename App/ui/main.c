@@ -494,7 +494,7 @@ void UI_DisplayMain(void)
             if (!inputting)
                 sprintf(String, "M%u", gEeprom.ScreenChannel[vfo_num] + 1);
             else
-                sprintf(String, "M%.3s", INPUTBOX_GetAscii());
+                sprintf(String, "M%.4s", INPUTBOX_GetAscii());
             UI_PrintStringSmallBold(String, 0, 0, 2);
 
             const ChannelAttributes_t* att = MR_GetChannelAttributes(gEeprom.ScreenChannel[vfo_num]);
@@ -508,7 +508,7 @@ void UI_DisplayMain(void)
                 SETTINGS_FetchChannelName(dispName, gEeprom.ScreenChannel[vfo_num]);
                 if (dispName[0] == 0)
                     sprintf(dispName, "%u.%05u", frequency / 100000, frequency % 100000);
-                UI_PrintString(dispName, 35, 0, 1, 8);
+                UI_PrintString(dispName, 40, 0, 1, 8);
             }
         }
 
