@@ -28,10 +28,9 @@ DRIVER_VERSION = "Quansheng UV-K1 driver ver: 2026/03/06 (c) SONIC"
 VALEUR_COMPILER = "ENABLE"
 
 MEM_FORMAT = """
-
 // -------------------- CHANNEL_LOCATION
 
-#seekto 0x101000;
+#seekto 0x000000;
 struct {
   ul32 freq;
   ul32 offset;
@@ -63,25 +62,25 @@ struct {
   u8 step;
   u8 __UNUSED03;
 
-} channel[4096];
+} channel[1024]; //end 0x3FFF
 
 // --------------------
 
-#seekto 0x111000;
+#seekto 0x004000;
 struct {
 char name[16];
-} channelname[4096];
+} channelname[1024]; //end 0x7FFF
 
 
 // --------------------
 
-#seekto 0x121000;
+#seekto 0x008000;
 struct {
   u8 __UNUSED04:3,
      compander:2,
      band:3;
   u8 scanlist;
-} ch_attr[4102];
+} ch_attr[1031]; //end 0x00880D
 
 // --------------------
 
@@ -212,6 +211,31 @@ char logo_line1[16];
 char logo_line2[16];
 
 // --------------------
+
+#seekto 0x00A0E8;
+struct {
+    u8 unused;
+    char unused;
+    char unused;
+    u8 unused;
+    u8 unused;
+    u8 unused;
+    u8 unused;
+    u8 unused;
+    u8 unused;
+    u8 unused;
+    u8 unused;
+
+    #seekto 0x00A0F8;
+    char unused[3];
+    #seek 5;
+    char unused[5];
+    #seek 3;
+    char unused[5];
+    #seek 3;
+    char unused[16];
+    char unused[16];
+} unused;
 
 #seekto 0x00A130;
 
@@ -374,9 +398,8 @@ struct {
 } cal;
 
 """
-
-FM_CHANNELS_MAX = 9 # CHANNEL_LOCATION
-MR_CHANNELS_MAX = 4096
+FM_CHANNELS_MAX = 9  # CHANNEL_LOCATION
+MR_CHANNELS_MAX = 1024
 MR_CHANNELS_LIST = 21
 
 # flags1
@@ -551,8 +574,8 @@ ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE =      0x12300C    # size of all memory CHANNEL_LOCATION
-PROG_SIZE =     0x12300D    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
+MEM_SIZE =      0x00B190    # size of all memory CHANNEL_LOCATION
+PROG_SIZE =     0x00A171    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address
 
