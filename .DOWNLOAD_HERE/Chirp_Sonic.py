@@ -63,25 +63,25 @@ struct {
   u8 step;
   u8 __UNUSED03;
 
-} channel[2048];
-
-// --------------------
-
-#seekto 0x109000;
-struct {
-char name[16];
-} channelname[2048];
-
+} channel[4096];
 
 // --------------------
 
 #seekto 0x111000;
 struct {
+char name[16];
+} channelname[4096];
+
+
+// --------------------
+
+#seekto 0x121000;
+struct {
   u8 __UNUSED04:3,
      compander:2,
      band:3;
   u8 scanlist;
-} ch_attr[2054];
+} ch_attr[4102];
 
 // --------------------
 
@@ -376,7 +376,7 @@ struct {
 """
 
 FM_CHANNELS_MAX = 9 # CHANNEL_LOCATION
-MR_CHANNELS_MAX = 2050
+MR_CHANNELS_MAX = 4096
 MR_CHANNELS_LIST = 21
 
 # flags1
@@ -551,8 +551,8 @@ ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE =      0x11200C    # size of all memory CHANNEL_LOCATION
-PROG_SIZE =     0x11200D    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
+MEM_SIZE =      0x12300C    # size of all memory CHANNEL_LOCATION
+PROG_SIZE =     0x12300D    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address
 
