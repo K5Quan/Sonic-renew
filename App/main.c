@@ -88,7 +88,7 @@ void Main(void)
 
     // Read the button IMMEDIATELY at startup, before lengthy initialization
 
-    boot_counter_10ms = 75;
+    boot_counter_10ms = 150;
 
 #ifdef ENABLE_UART
     UART_Init();

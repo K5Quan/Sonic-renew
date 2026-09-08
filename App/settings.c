@@ -458,7 +458,10 @@ void SETTINGS_FactoryReset(bool bIsAll)
 
     if (bIsAll)
     {
-        for (uint32_t addr = 0x000000; addr < 0x00E000; addr += 0x1000) { //0x020000
+        for (uint32_t addr = 0x000000; addr < 0x00E000; addr += 0x1000) {
+            PY25Q16_SectorErase(addr);
+        }
+        for (uint32_t addr = 0x101000; addr < 0x146000; addr += 0x1000) {
             PY25Q16_SectorErase(addr);
         }
 #ifndef ENABLE_FEAT_F4HWN_MULTIBOOT
