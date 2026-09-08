@@ -30,7 +30,7 @@ VALEUR_COMPILER = "ENABLE"
 MEM_FORMAT = """
 // -------------------- CHANNEL_LOCATION
 
-#seekto 0x000000;
+#seekto 0x101000;
 struct {
   ul32 freq;
   ul32 offset;
@@ -64,25 +64,25 @@ struct {
   u8 step;
   u8 __UNUSED03;
 
-} channel[1024]; //end 0x3FFF
+} channel[8192];
 
 // --------------------
 
-#seekto 0x004000;
+#seekto 0x121000;
 struct {
 char name[16];
-} channelname[1024]; //end 0x7FFF
+} channelname[8192];
 
 
 // --------------------
 
-#seekto 0x008000;
+#seekto 0x141000;
 struct {
   u8 __UNUSED04:3,
      compander:2,
      band:3;
   u8 scanlist;
-} ch_attr[1031]; //end 0x00880D
+} ch_attr[8199];
 
 // --------------------
 
@@ -403,7 +403,7 @@ struct {
 
 """
 FM_CHANNELS_MAX = 9
-MR_CHANNELS_MAX = 1024 # CHANNEL_LOCATION
+MR_CHANNELS_MAX = 8192 # CHANNEL_LOCATION
 MR_CHANNELS_LIST = 21
 
 # flags1
@@ -578,8 +578,8 @@ ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE =      0x00B190    # size of all memory CHANNEL_LOCATION
-PROG_SIZE =     0x00A171    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
+MEM_SIZE =      0x14500E    # size of all memory CHANNEL_LOCATION
+PROG_SIZE =     0x14500F    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address
 
@@ -1031,6 +1031,14 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
     # Convert the raw byte array into a memory object structure
     def process_mmap(self):
+        mmap_bytes = self._mmap.get_packed()
+        if len(self._mmap.get_packed()) < PROG_SIZE:
+            raise errors.RadioError(
+                "Image is too small for this driver "
+                f"(got 0x{len(self._mmap.get_packed()):X} bytes, "
+                f"need 0x{PROG_SIZE:X}). Legacy images from older drivers are "
+                "not compatible — re-download from the radio."
+            )
         self._memobj = bitwise.parse(MEM_FORMAT, self._mmap)
 
     # Return a raw representation of the memory object, which

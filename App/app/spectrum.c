@@ -247,7 +247,12 @@ static void Skip();
 /***************************BIG RAM******************************************/
 #define HISTORY_SIZE 200
 // CHANNEL_LOCATION
-#define MAX_SCAN_CHANNELS 975
+#ifdef ENABLE_8192
+    #define MAX_SCAN_CHANNELS 8143
+#else 
+    #define MAX_SCAN_CHANNELS 975
+#endif
+
 #define SCAN_CHANNEL_BITMAP_BYTES ((MAX_SCAN_CHANNELS + 7) / 8)
 static bandparameters BParams[MAX_BANDS];
 static uint8_t scanChannelBitmap[SCAN_CHANNEL_BITMAP_BYTES];

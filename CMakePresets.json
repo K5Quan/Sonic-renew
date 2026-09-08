@@ -13,6 +13,7 @@
         "ENABLE_FMRADIO": true,
         "ENABLE_UART": false,
         "ENABLE_USB": false,
+        "ENABLE_8192": false,
         "ENABLE_SAVE_REGISTERS": false,
         "ENABLE_ADVANCED_SPECTRUM": false,
         "ENABLE_PERSIST": false,
@@ -86,7 +87,8 @@
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
-        "ENABLE_UART": true,
+        "ENABLE_UART": false,
+        "ENABLE_8192": true,
         "EDITION_STRING": "Sonic"
       }
     }

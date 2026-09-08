@@ -39,7 +39,11 @@
 #define FM_CHANNELS_MAX 48
 
 // CHANNEL_LOCATION
-#define MR_CHANNELS_MAX 1024
+#ifdef ENABLE_8192
+    #define MR_CHANNELS_MAX 8192
+#else 
+    #define MR_CHANNELS_MAX 1024
+#endif
 
 #define MR_CHANNELS_LIST 20
 #define MENU_ITEMS 69
