@@ -1,5 +1,7 @@
 <img width="640" height="640" alt="image" src="https://github.com/user-attachments/assets/608f4c74-5488-417a-97d9-f7d6c90b1abd" />
-<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/38cd8ea2-d5f6-4127-a4f6-636a93768d92" />
+
+<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/d79029c7-3865-4983-b287-29654b9885f4" />
+
 
 
 # [◀️  Join the SonicFw Telegram](https://t.me/SonicFw)
