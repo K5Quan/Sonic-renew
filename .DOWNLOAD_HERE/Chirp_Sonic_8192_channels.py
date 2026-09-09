@@ -578,8 +578,8 @@ ROGER_LIST = ["OFF", "MARIO", "BLAST", "R2D2", "ROGER", "AMBUL", "OURO","KLAC","
 RTE_LIST = ["OFF", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms", "1000ms"]
 
-MEM_SIZE =      0x14500E    # size of all memory CHANNEL_LOCATION
-PROG_SIZE =     0x14500F    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
+MEM_SIZE =      0x14500F    # size of all memory CHANNEL_LOCATION
+PROG_SIZE =     0x145010    # size of the memory that we will write (LAST ADDRESS + 1 !!!)
 MEM_BLOCK =     0x80        # largest block of memory that we can reliably write
 CAL_START =     0x00B000    # calibration memory start address
 
@@ -806,110 +806,105 @@ def _resetradio(serport):
 
 
 def do_download(radio):
-    """download eeprom from radio"""
+    """download only necessary blocks from radio eeprom"""
     serport = radio.pipe
     serport.timeout = 4.0
     status = chirp_common.Status()
-    status.cur = 0
-    status.max = MEM_SIZE
     status.msg = "Downloading from radio"
-    radio.status_fn(status)
 
-    eeprom = b""
+    # Alloue exactement la taille attendue définie par MEM_SIZE
+    eeprom = bytearray(b"\xFF" * radio.MEM_SIZE)
+
     f = _sayhello(serport)
     if f:
         radio.FIRMWARE_VERSION = f
     else:
         raise errors.RadioError("Failed to initialize radio")
 
-    addr = 0
-    while addr < MEM_SIZE:
-        data = _readmem(serport, addr, MEM_BLOCK)
-        status.cur = addr
-        radio.status_fn(status)
+    # Plages de mémoire à lire CHANNEL_LOCATION
+    blocks_to_read = [
+        (0x008900, 0x00A170),
+        (0x00B000, 0x00B200),
+        (0x101000, 0x101000 + (MR_CHANNELS_MAX * 16)),
+        (0x121000, 0x121000 + (MR_CHANNELS_MAX * 16)),
+        (0x141000, 0x141000 + (MR_CHANNELS_MAX * 2)),
+    ]
 
-        if data and len(data) == MEM_BLOCK:
-            eeprom += data
-            addr += MEM_BLOCK
-        else:
-            raise errors.RadioError("Memory download incomplete")
+    total_bytes = sum(stop - start for start, stop in blocks_to_read)
+    status.max = total_bytes
+    bytes_read = 0
 
-    return memmap.MemoryMapBytes(eeprom)
+    for start_addr, stop_addr in blocks_to_read:
+        addr = start_addr
+        while addr < stop_addr:
+            chunk = min(MEM_BLOCK, stop_addr - addr)
+            data = _readmem(serport, addr, chunk)
+
+            if data and len(data) == chunk:
+                eeprom[addr:addr + chunk] = data
+                addr += chunk
+                bytes_read += chunk
+                status.cur = bytes_read
+                radio.status_fn(status)
+            else:
+                raise errors.RadioError(f"Memory download incomplete at 0x{addr:06X}")
+
+    return memmap.MemoryMapBytes(bytes(eeprom))
 
 
 def do_upload(radio):
-    """upload configuration to radio eeprom"""
-
+    """upload configuration to radio eeprom skipping unused ranges"""
     serport = radio.pipe
     serport.timeout = 4.0
 
     status = chirp_common.Status()
-    status.cur = 0
     status.msg = "Uploading to radio"
-
-    # Step 0: always write program/config region
-    # Step 1: optionally write calibration region
-    step = 0
-
     radio.status_fn(status)
 
     f = _sayhello(serport)
-    if f:
-        radio.FIRMWARE_VERSION = f
-    else:
+    if not f:
         return False
+    radio.FIRMWARE_VERSION = f
 
-    while True:
-        if step == 0:
-            # Always write the "normal" area
-            start_addr = 0x000000
-            stop_addr  = PROG_SIZE
-            status.max = stop_addr - start_addr
-            status.cur = 0
-            status.msg = "Uploading to radio"
-            radio.status_fn(status)
+    # Plages de mémoire à écrire en mode standard CHANNEL_LOCATION
+    blocks_to_write = [
+        (0x008900, 0x00A170),  # Configs & VFOs
+        (0x101000, 0x101000 + (MR_CHANNELS_MAX * 16)),  # Canaux
+        (0x121000, 0x121000 + (MR_CHANNELS_MAX * 16)),  # Noms
+        (0x141000, 0x141000 + (MR_CHANNELS_MAX * 2)),   # Attributs
+    ]
 
-        elif step == 1 and radio.upload_calibration:
-            # Then write calibration area (separate region)
-            start_addr = CAL_START
-            stop_addr  = MEM_SIZE
-            status.max = stop_addr - start_addr
-            status.cur = 0
-            status.msg = "Uploading calibration"
-            radio.status_fn(status)
+    # Ajout du bloc de calibration si l'option est cochée
+    if radio.upload_calibration:
+        blocks_to_write.append((CAL_START, 0x00B200))
 
-        else:
-            break  # done
+    total_bytes = sum(stop - start for start, stop in blocks_to_write)
+    status.max = total_bytes
+    bytes_written = 0
 
+    mmap = radio.get_mmap()
+
+    for start_addr, stop_addr in blocks_to_write:
         addr = start_addr
         while addr < stop_addr:
-            remaining = stop_addr - addr
-            chunk = MEM_BLOCK if remaining >= MEM_BLOCK else remaining
+            chunk = min(MEM_BLOCK, stop_addr - addr)
+            dat = mmap[addr:addr + chunk]
 
-            dat = radio.get_mmap()[addr:addr + chunk]
-
-            # Critical: detect empty slice (often happens if mmap is shorter than expected)
             if not dat or len(dat) != chunk:
-                raise errors.RadioError(
-                    f"Memory upload incomplete at 0x{addr:06X} "
-                    f"(wanted {chunk} bytes, got {0 if dat is None else len(dat)})"
-                )
+                raise errors.RadioError(f"Memory upload incomplete at 0x{addr:06X}")
 
             _writemem(serport, dat, addr)
 
-            status.cur = addr - start_addr
-            radio.status_fn(status)
-
             addr += chunk
-
-        step += 1
+            bytes_written += chunk
+            status.cur = bytes_written
+            radio.status_fn(status)
 
     status.msg = "Uploaded OK"
     radio.status_fn(status)
 
     _resetradio(serport)
     return True
-
 
 def min_max_def(value, min_val, max_val, default):
     """returns value if in bounds or default otherwise"""
@@ -936,6 +931,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
     BAUD_RATE = 38400
     NEEDS_COMPAT_SERIAL = False
     FIRMWARE_VERSION = ""
+    MEM_SIZE =      0x145010    # size of all memory CHANNEL_LOCATION
 
 # this change to send power level chan in the calibration but under macos it give error
 # bugfix calibration : put in comment next line: upload_calibration = False

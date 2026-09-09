@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    RS232|NOCOM|USB|All)
+    1K|NOCOM|8K|All)
       PRESET="$1"
       shift
       ;;
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # If no preset was detected in the arguments, use the default value
-PRESET=${PRESET:-USB}
+PRESET=${PRESET:-8K}
 
 # ---------------------------------------------
 # Clean up if the option is enabled
@@ -46,9 +46,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(RS232|NOCOM|USB|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(1K|NOCOM|8K|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: RS232 NOCOM USB All"
+  echo "Valid presets are: 1K NOCOM 8K All"
   exit 1
 fi
 
@@ -70,9 +70,9 @@ build_preset() {
 
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
+    1K) target="f4hwn.sonic1K.${VERSION_NO}" ;;
     NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.USB.${VERSION_NO}" ;; # Default value
+    *)     target="f4hwn.sonic.8K.${VERSION_NO}" ;; # Default value
   esac
   echo -e "\n 🚀 Building: ${preset}"
   docker run \
@@ -100,9 +100,9 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    RS232) target="f4hwn.sonic.rs232.${VERSION_NO}" ;;
+    1K) target="f4hwn.sonic.1K.${VERSION_NO}" ;;
     NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.USB.${VERSION_NO}" ;; # Default value
+    *)     target="f4hwn.sonic.8K.${VERSION_NO}" ;; # Default value
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -121,14 +121,14 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(RS232 NOCOM USB)
+  PRESETS=(1K NOCOM 8K)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
   echo ""
   echo "🎉 All presets built successfully!"
-  # If 'All' is compiled, flash only the USB preset
-  flash_preset "USB"
+  # If 'All' is compiled, flash only the 8K preset
+  flash_preset "8K"
 else
   build_preset "$PRESET"
   if [ "$FLASH" = true ]; then

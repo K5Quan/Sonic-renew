@@ -22,7 +22,9 @@
 #include <stdbool.h>
 #include "usb_config.h"
 
-#define VCP_RX_BUF_SIZE 160
+//USB reduced buffer
+//#define VCP_RX_BUF_SIZE 160
+#define VCP_RX_BUF_SIZE 256
 
 extern uint8_t VCP_RxBuf[VCP_RX_BUF_SIZE];
 extern volatile uint32_t VCP_RxBufPointer;

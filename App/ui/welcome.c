@@ -79,9 +79,9 @@ void UI_DisplayWelcome(void)
     }
     // CHANNEL_LOCATION
     #ifdef ENABLE_8192
-        UI_PrintString("SONIC8K", 0, 127, 0,10);
+        UI_PrintString("SONIC 8K", 0, 127, 0,10);
     #else 
-        UI_PrintString("SONIC", 0, 127, 0,10);
+        UI_PrintString("SONIC 1K", 0, 127, 0,10);
     #endif
 
     UI_PrintStringSmallbackground("t.me/SonicFw", 0, 127, 4,1);

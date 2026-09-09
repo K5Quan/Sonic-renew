@@ -72,21 +72,21 @@
       }
     },
     {
-      "name": "RS232",
+      "name": "1K",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_UART": true,
-        "EDITION_STRING": "RS232"
+        "EDITION_STRING": "1K"
       }
     },
     {
-      "name": "USB",
+      "name": "8K",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
         "ENABLE_UART": false,
         "ENABLE_8192": true,
-        "EDITION_STRING": "Sonic"
+        "EDITION_STRING": "8K"
       }
     }
   ],
@@ -96,12 +96,12 @@
       "configurePreset": "NOCOM"
     },
     {
-      "name": "RS232",
-      "configurePreset": "RS232"
+      "name": "1K",
+      "configurePreset": "1K"
     },
     {
-      "name": "USB",
-      "configurePreset": "USB"
+      "name": "8K",
+      "configurePreset": "8K"
     }
   ]
 }
