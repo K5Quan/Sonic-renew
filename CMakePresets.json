@@ -13,6 +13,7 @@
         "ENABLE_FMRADIO": true,
         "ENABLE_UART": false,
         "ENABLE_USB": false,
+        "ENABLE_4096": false,
         "ENABLE_8192": false,
         "ENABLE_SAVE_REGISTERS": false,
         "ENABLE_ADVANCED_SPECTRUM": false,
@@ -57,8 +58,10 @@
         "ENABLE_FEAT_F4HWN_DEBUG": false,
         "ENABLE_FEAT_F4HWN_MEM": false,
         "ENABLE_FEAT_F4HWN_AUDIO_SCOPE": true,
+
         "ENABLE_FEAT_F4HWN_MULTIBOOT": false,
         "ENABLE_FEAT_F4HWN_MULTIBOOT_OVERLAY": false,
+        
         "ENABLE_AGC_SHOW_DATA": false,
         "ENABLE_UART_RW_BK_REGS": false,
         "ENABLE_SWD": false
@@ -76,17 +79,19 @@
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_UART": true,
+        "ENABLE_USB": true,
+        "ENABLE_8192": false,
         "EDITION_STRING": "1K"
       }
     },
     {
-      "name": "8K",
+      "name": "4K",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
-        "ENABLE_UART": false,
-        "ENABLE_8192": true,
-        "EDITION_STRING": "8K"
+        "ENABLE_UART": true,
+        "ENABLE_4096": true,
+        "EDITION_STRING": "4K"
       }
     }
   ],
@@ -100,8 +105,8 @@
       "configurePreset": "1K"
     },
     {
-      "name": "8K",
-      "configurePreset": "8K"
+      "name": "4K",
+      "configurePreset": "4K"
     }
   ]
 }

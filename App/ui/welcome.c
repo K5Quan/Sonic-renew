@@ -78,9 +78,11 @@ void UI_DisplayWelcome(void)
         return;
     }
     // CHANNEL_LOCATION
-    #ifdef ENABLE_8192
+    #if defined(ENABLE_8192)
         UI_PrintString("SONIC 8K", 0, 127, 0,10);
-    #else 
+    #elif defined(ENABLE_4096)
+        UI_PrintString("SONIC 4K", 0, 127, 0,10);
+    #else
         UI_PrintString("SONIC 1K", 0, 127, 0,10);
     #endif
 

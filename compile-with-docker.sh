@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    1K|NOCOM|8K|All)
+    1K|NOCOM|4K|All)
       PRESET="$1"
       shift
       ;;
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # If no preset was detected in the arguments, use the default value
-PRESET=${PRESET:-8K}
+PRESET=${PRESET:-4K}
 
 # ---------------------------------------------
 # Clean up if the option is enabled
@@ -46,9 +46,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(1K|NOCOM|8K|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(1K|NOCOM|4K|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: 1K NOCOM 8K All"
+  echo "Valid presets are: 1K NOCOM 4K All"
   exit 1
 fi
 
@@ -70,9 +70,9 @@ build_preset() {
 
   local target
   case "$preset" in
-    1K) target="f4hwn.sonic1K.${VERSION_NO}" ;;
+    1K) target="f4hwn.sonic.1K.${VERSION_NO}" ;;
     NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.8K.${VERSION_NO}" ;; # Default value
+    *)     target="f4hwn.sonic.4K.${VERSION_NO}" ;; # Default value
   esac
   echo -e "\n 🚀 Building: ${preset}"
   docker run \
@@ -102,7 +102,7 @@ flash_preset() {
   case "$preset" in
     1K) target="f4hwn.sonic.1K.${VERSION_NO}" ;;
     NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.8K.${VERSION_NO}" ;; # Default value
+    *)     target="f4hwn.sonic.4K.${VERSION_NO}" ;; # Default value
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -121,14 +121,14 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(1K NOCOM 8K)
+  PRESETS=(1K NOCOM 4K)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
   echo ""
   echo "🎉 All presets built successfully!"
-  # If 'All' is compiled, flash only the 8K preset
-  flash_preset "8K"
+  # If 'All' is compiled, flash only the 4K preset
+  flash_preset "4K"
 else
   build_preset "$PRESET"
   if [ "$FLASH" = true ]; then

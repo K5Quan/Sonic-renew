@@ -24,11 +24,15 @@
 #include "frequencies.h"
 
 // CHANNEL_LOCATION
-#ifdef ENABLE_8192
+#if defined(ENABLE_8192)
     #define ADRESS_CHANNELS             0x101000
     #define ADRESS_CHANNELS_NAMES       0x121000
     #define ADRESS_CHANNELS_ATTRIBUTES  0x141000
-#else 
+#elif defined(ENABLE_4096)
+    #define ADRESS_CHANNELS             0x122000
+    #define ADRESS_CHANNELS_NAMES       0x132000
+    #define ADRESS_CHANNELS_ATTRIBUTES  0x142000
+#else
     #define ADRESS_CHANNELS             0x000000
     #define ADRESS_CHANNELS_NAMES       0x004000
     #define ADRESS_CHANNELS_ATTRIBUTES  0x008000

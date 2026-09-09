@@ -247,9 +247,11 @@ static void Skip();
 /***************************BIG RAM******************************************/
 #define HISTORY_SIZE 200
 // CHANNEL_LOCATION
-#ifdef ENABLE_8192
+#if defined(ENABLE_8192)
     #define MAX_SCAN_CHANNELS 8143
-#else 
+#elif defined(ENABLE_4096)
+    #define MAX_SCAN_CHANNELS 4047
+#else
     #define MAX_SCAN_CHANNELS 975
 #endif
 
@@ -433,19 +435,17 @@ typedef struct {
 
 uint16_t BOARD_gMR_fetchChannel(const uint32_t freq) {
     static FlashChannel_t block[BLOCK_SIZE]; 
-    
-    for (uint16_t start_ch = MR_CHANNEL_FIRST; start_ch <= MR_CHANNEL_LAST; start_ch += BLOCK_SIZE) {
-        uint16_t remaining = MR_CHANNEL_LAST - start_ch + 1;
-        uint16_t chunk_size = (remaining > BLOCK_SIZE) ? BLOCK_SIZE : remaining;
-        
-        uint32_t physical_index = ADRESS_CHANNELS + start_ch - MR_CHANNEL_FIRST;
-        uint32_t block_addr = (physical_index * sizeof(FlashChannel_t));
+    for (uint32_t start_ch = MR_CHANNEL_FIRST; start_ch <= MR_CHANNEL_LAST; start_ch += BLOCK_SIZE) {
+        uint32_t remaining = MR_CHANNEL_LAST - start_ch + 1;
+        uint16_t chunk_size = (remaining > BLOCK_SIZE) ? BLOCK_SIZE : (uint16_t)remaining;
+        uint32_t channel_offset_index = start_ch - MR_CHANNEL_FIRST;
+        uint32_t block_addr = (uint32_t)ADRESS_CHANNELS + (channel_offset_index * sizeof(FlashChannel_t));
         
         PY25Q16_ReadBuffer(block_addr, (uint8_t*)block, chunk_size * sizeof(FlashChannel_t));
         
         for (uint16_t k = 0; k < chunk_size; k++) {
             if (block[k].freq == freq) {
-                return start_ch + k;
+                return (uint16_t)(start_ch + k);
             }
         }
     }
@@ -2021,20 +2021,26 @@ static void DrawF(uint32_t f) {
 }
 
 static void LookupChannelModulation() {
-	uint8_t tmp;
-	uint8_t data[8];
-	PY25Q16_ReadBuffer(ADRESS_CHANNELS + gChannel * 16 + 8, data, sizeof(data));
-	tmp = data[3] >> 4;
-	if (tmp >= MODULATION_UKNOWN)
-		tmp = MODULATION_FM;
-	channelModulation = tmp;
-	if (data[4] == 0xFF) {channelBandwidth = BK4819_FILTER_BW_WIDE;}
-	else {
-		const uint8_t d4 = data[4];
-		channelBandwidth = !!((d4 >> 1) & 1u);
-		if(channelBandwidth != BK4819_FILTER_BW_WIDE)
-			channelBandwidth = ((d4 >> 5) & 3u) + 1;
-	}	
+    uint8_t tmp;
+    uint8_t data[8];
+    uint32_t address = (uint32_t)ADRESS_CHANNELS + ((uint32_t)gChannel * 16U) + 8U;
+    
+    PY25Q16_ReadBuffer(address, data, sizeof(data));
+    
+    tmp = data[3] >> 4;
+    if (tmp >= MODULATION_UKNOWN)
+        tmp = MODULATION_FM;
+    channelModulation = tmp;
+    
+    if (data[4] == 0xFF) {
+        channelBandwidth = BK4819_FILTER_BW_WIDE;
+    } else {
+        const uint8_t d4 = data[4];
+        channelBandwidth = !!((d4 >> 1) & 1u);
+        if(channelBandwidth != BK4819_FILTER_BW_WIDE)
+            channelBandwidth = ((d4 >> 5) & 3u) + 1;
+    }   
+    
     tmp = data[6];
     if (tmp >= STEP_N_ELEM)
         tmp = STEP_12_5kHz;
