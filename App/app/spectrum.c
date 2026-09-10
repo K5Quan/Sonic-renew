@@ -1020,6 +1020,8 @@ static void Spectrum_TX()
         return;
     }
     
+    Spectrum_Prepare_Tx();
+
     RADIO_SetTxParameters();
     // turn the RED LED on
     BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
@@ -2610,7 +2612,7 @@ static void HandleKeySpectrum(uint8_t key) {
                             TX_Channel = TX_Channel <= 0 ? scanChannelsCount - 1 : TX_Channel - 1;
                             uint16_t ch = BOARD_gMR_fetchChannel(GetScanFrequency(TX_Channel));
                             SETTINGS_FetchChannelName(TxChannelName, ch);
-                            Spectrum_Prepare_Tx();
+                            //Spectrum_Prepare_Tx();
                             return;
                         } 
                         BuildValidScanListIndices();
@@ -2679,7 +2681,7 @@ static void HandleKeySpectrum(uint8_t key) {
                             TX_Channel = TX_Channel >= scanChannelsCount - 1 ? 0 : TX_Channel + 1;
                             uint16_t ch = BOARD_gMR_fetchChannel(GetScanFrequency(TX_Channel));
                             SETTINGS_FetchChannelName(TxChannelName, ch);
-                            Spectrum_Prepare_Tx();
+                            //Spectrum_Prepare_Tx();
                             return;
                         } 
                         BuildValidScanListIndices();
@@ -2983,13 +2985,13 @@ static void RenderStatus() {
     BlitStatusLine();
 }
 #ifdef ENABLE_SPECTRUM_LINES
-
+#define ST 2
 static void MyDrawHLine(uint8_t y, bool white)
 {
     if (y >= 64) return;
     uint8_t byte_idx = y / 8;
     uint8_t bit_mask = 1U << (y % 8);
-    for (uint8_t x = 0; x < 128; x++) {
+    for (uint8_t x = 0; x < 128; x+= ST) {
         if (white) {
             gFrameBuffer[byte_idx][x] &= ~bit_mask;
         } else {
@@ -3005,7 +3007,7 @@ static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t 
     uint8_t byte_idx = y / 8;
     uint8_t bit_mask = 1U << (y % 8);
 
-    for (uint8_t x = x_start; x <= x_end; x++) {
+    for (uint8_t x = x_start; x <= x_end; x+= ST) {
         if (step > 1 && (x % step) != 0) continue;  // dashed
 
         if (white) {
@@ -3019,7 +3021,7 @@ static void MyDrawShortHLine(uint8_t y, uint8_t x_start, uint8_t x_end, uint8_t 
 static void MyDrawVLine(uint8_t x, uint8_t y_start, uint8_t y_end, uint8_t step)
 {
     if (x >= 128) return;
-    for (uint8_t y = y_start; y <= y_end && y < 64; y++) {
+    for (uint8_t y = y_start; y <= y_end && y < 64; y+= ST) {
         if (step > 1 && (y % step) != 0) continue;
         uint8_t byte_idx = y / 8;
         uint8_t bit_mask = 1U << (y % 8);

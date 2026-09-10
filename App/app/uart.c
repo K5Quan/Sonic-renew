@@ -308,11 +308,13 @@ static void CMD_0514(uint32_t Port, const uint8_t *pBuffer)
     SendVersion(Port);
 }
 
+#define CALIB_EEPROM_START  0x00B000
+#define CALIB_SIZE          0x000200
+#define CALIB_FLASH_START   0x010000
 
-#define CALIB_EEPROM_START 0x00B000
-#define CALIB_FLASH_START  0x010000
-#define CALIB_SIZE         0x000200
-
+#define LOGO_EEPROM_START   0x00C000
+#define LOGO_SIZE           0x001000
+#define LOGO_FLASH_START    0x011000
 
 // read eeprom
 static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
@@ -364,9 +366,12 @@ static void CMD_051B(uint32_t Port, const uint8_t *pBuffer)
         uint32_t addr = pCmd->Offset;
 
         // Translation directe pour la plage de calibration
-        if (addr >= CALIB_EEPROM_START && addr < (CALIB_EEPROM_START + CALIB_SIZE))
-        {
+        if (addr >= CALIB_EEPROM_START && addr < (CALIB_EEPROM_START + CALIB_SIZE)) {
             addr += (CALIB_FLASH_START - CALIB_EEPROM_START);
+        }
+        // Translation directe pour la plage de Logo
+        if (addr >= LOGO_EEPROM_START && addr < (LOGO_EEPROM_START + LOGO_SIZE)) {
+            addr += (LOGO_FLASH_START - LOGO_EEPROM_START);
         }
 
         PY25Q16_ReadBuffer(addr, Reply.Data.Data, pCmd->Size);

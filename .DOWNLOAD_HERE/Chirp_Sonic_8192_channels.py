@@ -84,12 +84,13 @@ struct {
   u8 scanlist;
 } ch_attr[8199];
 
-// --------------------
+// MR_CHANNELS_LIST
 
 #seekto 0x008900;
 struct {
     char name[10];
-} listname[20];
+} listname[50];
+
 
 // --------------------
 
@@ -404,7 +405,7 @@ struct {
 """
 FM_CHANNELS_MAX = 9
 MR_CHANNELS_MAX = 8192 # CHANNEL_LOCATION
-MR_CHANNELS_LIST = 21
+MR_CHANNELS_LIST = 51
 
 # flags1
 FLAGS1_OFFSET_NONE = 0b00
