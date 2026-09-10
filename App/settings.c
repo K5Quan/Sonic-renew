@@ -738,9 +738,8 @@ void SETTINGS_SaveSettings(void)
 
 void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode)
 {
-
     // 0
-    uint16_t OffsetVFO = ADRESS_CHANNELS + Channel * 16;
+    uint32_t OffsetVFO = (uint32_t)ADRESS_CHANNELS + ((uint32_t)Channel * 16U);
 
     if (IS_FREQ_CHANNEL(Channel)) { // it's a VFO, not a channel
         // 0x0C80
@@ -801,7 +800,7 @@ void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration)
 
 void SETTINGS_SaveChannelName(uint16_t channel, const char * name)
 {
-    uint16_t offset = channel * 16;
+    uint32_t offset = channel * 16;
     uint8_t buf[16] = {0};
     memcpy(buf, name, MIN(strlen(name), 10u));
     // 0x0F50

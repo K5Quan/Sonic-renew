@@ -58,56 +58,55 @@
         "ENABLE_FEAT_F4HWN_DEBUG": false,
         "ENABLE_FEAT_F4HWN_MEM": false,
         "ENABLE_FEAT_F4HWN_AUDIO_SCOPE": true,
-
         "ENABLE_FEAT_F4HWN_MULTIBOOT": true,
         "ENABLE_FEAT_F4HWN_MULTIBOOT_OVERLAY": true,
-        
         "ENABLE_AGC_SHOW_DATA": false,
         "ENABLE_UART_RW_BK_REGS": false,
-        "ENABLE_SWD": false
+        "ENABLE_SWD": false,
+        "ENABLE_LARGE_HISTORY": false
       }
     },
     {
-      "name": "NOCOM",
+      "name": "NC4K",
       "inherits": "default",
       "cacheVariables": {
-        "EDITION_STRING": "NOCOM"
+        "ENABLE_LARGE_HISTORY":true,
+        "ENABLE_4096": true,
+        "EDITION_STRING": "NC4K"
       }
     },
     {
-      "name": "1K",
+      "name": "S1K",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_UART": true,
         "ENABLE_USB": true,
-        "ENABLE_8192": false,
-        "ENABLE_4096": false,
-        "EDITION_STRING": "1K"
+        "EDITION_STRING": "S1K"
       }
     },
     {
-      "name": "4K",
+      "name": "S4K",
       "inherits": "default",
       "cacheVariables": {
         "ENABLE_USB": true,
         "ENABLE_UART": true,
         "ENABLE_4096": true,
-        "EDITION_STRING": "4K"
+        "EDITION_STRING": "S4K"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "NOCOM",
-      "configurePreset": "NOCOM"
+      "name": "NC4K",
+      "configurePreset": "NC4K"
     },
     {
-      "name": "1K",
-      "configurePreset": "1K"
+      "name": "S1K",
+      "configurePreset": "S1K"
     },
     {
-      "name": "4K",
-      "configurePreset": "4K"
+      "name": "S4K",
+      "configurePreset": "S4K"
     }
   ]
 }

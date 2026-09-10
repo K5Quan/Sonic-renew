@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
       CLEAN_BUILD=true
       shift
       ;;
-    1K|NOCOM|4K|All)
+    S1K|NC4K|S4K|All)
       PRESET="$1"
       shift
       ;;
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # If no preset was detected in the arguments, use the default value
-PRESET=${PRESET:-4K}
+PRESET=${PRESET:-S4K}
 
 # ---------------------------------------------
 # Clean up if the option is enabled
@@ -46,9 +46,9 @@ fi
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(1K|NOCOM|4K|All)$ ]]; then
+if [[ ! "$PRESET" =~ ^(S1K|NC4K|S4K|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: 1K NOCOM 4K All"
+  echo "Valid presets are: S1K NC4K S4K All"
   exit 1
 fi
 
@@ -70,9 +70,9 @@ build_preset() {
 
   local target
   case "$preset" in
-    1K) target="f4hwn.sonic.1K.${VERSION_NO}" ;;
-    NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.4K.${VERSION_NO}" ;; # Default value
+    S1K) target="f4hwn.sonic.S1K.${VERSION_NO}" ;;
+    NC4K) target="f4hwn.sonic.NC4K.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.S4K.${VERSION_NO}" ;; # Default value
   esac
   echo -e "\n 🚀 Building: ${preset}"
   docker run \
@@ -100,9 +100,9 @@ flash_preset() {
   local preset="$1"
   local target
   case "$preset" in
-    1K) target="f4hwn.sonic.1K.${VERSION_NO}" ;;
-    NOCOM) target="f4hwn.sonic.NOCOM.${VERSION_NO}" ;;
-    *)     target="f4hwn.sonic.4K.${VERSION_NO}" ;; # Default value
+    S1K) target="f4hwn.sonic.S1K.${VERSION_NO}" ;;
+    NC4K) target="f4hwn.sonic.NC4K.${VERSION_NO}" ;;
+    *)     target="f4hwn.sonic.S4K.${VERSION_NO}" ;; # Default value
   esac
   local ifile="./build/${preset}/${target}.bin"
 
@@ -121,14 +121,14 @@ flash_preset() {
 # Handle Build & Flash
 # ---------------------------------------------
 if [[ "$PRESET" == "All" ]]; then
-  PRESETS=(1K NOCOM 4K)
+  PRESETS=(S1K NC4K S4K)
   for p in "${PRESETS[@]}"; do
     build_preset "$p"
   done
   echo ""
   echo "🎉 All presets built successfully!"
-  # If 'All' is compiled, flash only the 4K preset
-  flash_preset "4K"
+  # If 'All' is compiled, flash only the S4K preset
+  flash_preset "S4K"
 else
   build_preset "$PRESET"
   if [ "$FLASH" = true ]; then

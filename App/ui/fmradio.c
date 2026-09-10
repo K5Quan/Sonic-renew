@@ -30,13 +30,13 @@ void UI_DisplayFM(void)
     
     for (uint8_t i = 2; i < FRAME_LINES; i++) 
     {
-        gFrameBuffer[i][40] = 0xFF; 
-        gFrameBuffer[i][41] = 0xFF; 
-        gFrameBuffer[i][84] = 0xFF; 
-        gFrameBuffer[i][85] = 0xFF; 
+        gFrameBuffer[i][40] = 0xAA; 
+        gFrameBuffer[i][41] = 0xAA; 
+        gFrameBuffer[i][84] = 0xAA; 
+        gFrameBuffer[i][85] = 0xAA; 
     }
 
-    for (uint8_t x = 0; x < LCD_WIDTH; x++) 
+    for (uint8_t x = 0; x < LCD_WIDTH; x+=2) 
     {
         gFrameBuffer[3][x] |= 0x08;
         gFrameBuffer[5][x] |= 0x08;

@@ -245,7 +245,12 @@ static void Skip();
 
 
 /***************************BIG RAM******************************************/
-#define HISTORY_SIZE 200
+#if defined(ENABLE_LARGE_HISTORY)
+    #define HISTORY_SIZE 500
+#else
+    #define HISTORY_SIZE 200
+#endif
+
 // CHANNEL_LOCATION
 #if defined(ENABLE_8192)
     #define MAX_SCAN_CHANNELS 8143
@@ -838,21 +843,23 @@ static void DeleteHistoryItem(void) {
 
 static void SaveHistoryToFreeChannel(void) {
     uint32_t f = GetHistoryFreq(historyListIndex);
-    if (f < 1000000) return;
+    if (f < 1000000U) return;
     char str[32];
-    for (int i = 0; i < MR_CHANNEL_LAST; i++) {
-        uint32_t freqInMem;
-        PY25Q16_ReadBuffer(ADRESS_CHANNELS + (i * 16), (uint8_t *)&freqInMem, 4);
-        if (freqInMem != 0xFFFFFFFF && freqInMem == f) {
-            sprintf(str, "Exist CH %d", i + 1);
+    for (uint16_t i = 0; i < MR_CHANNEL_LAST; i++) {
+        uint32_t freqInMem = 0;
+        uint32_t memoryAddress = (uint32_t)ADRESS_CHANNELS + ((uint32_t)i * 16U);
+        PY25Q16_ReadBuffer(memoryAddress, (uint32_t *)&freqInMem, sizeof(freqInMem));
+        if (freqInMem != 0xFFFFFFFFU && freqInMem == f) {
+            snprintf(str, sizeof(str), "Exist CH %d", i + 1);
             ShowOSDPopup(str);
             return;
         }
     }
-    int freeCh = -1;
-    for (int i = 0; i < MR_CHANNEL_LAST; i++) {
-        uint8_t checkByte;
-        PY25Q16_ReadBuffer(ADRESS_CHANNELS + (i * 16), &checkByte, 1);
+    uint16_t freeCh = -1;
+    for (uint16_t i = 0; i < MR_CHANNEL_LAST; i++) {
+        uint8_t checkByte = 0;
+        uint32_t memoryAddress = (uint32_t)ADRESS_CHANNELS + ((uint32_t)i * 16U);
+        PY25Q16_ReadBuffer(memoryAddress, &checkByte, sizeof(checkByte));
         if (checkByte == 0xFF) { 
             freeCh = i;
             break;
@@ -871,7 +878,7 @@ static void SaveHistoryToFreeChannel(void) {
         tempVFO.STEP_SETTING = STEP_12_5kHz; 
         SETTINGS_SaveChannel(freeCh, 0, &tempVFO, 2);
         LoadActiveScanFrequencies();
-        sprintf(str, "SAVED TO CH %d", freeCh + 1);
+        snprintf(str, sizeof(str), "SAVED TO CH %d", freeCh + 1);
         ShowOSDPopup(str);
     } else {
         ShowOSDPopup("MEMORY FULL");
