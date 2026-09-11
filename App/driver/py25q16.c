@@ -27,6 +27,10 @@
 #include "external/printf/printf.h"
 #include "misc.h"
 
+/* MBMARK was an on-screen SPI trace used while bringing up multiboot (M1/M2).
+ * The tracer is gone; keep the call sites as no-ops. */
+#define MBMARK(s)
+
 // #define DEBUG
 
 #define SPIx SPI2
@@ -34,7 +38,6 @@
 #define CHANNEL_WR LL_DMA_CHANNEL_5
 
 #define CS_PIN GPIO_MAKE_PIN(GPIOA, LL_GPIO_PIN_3)
-
 
 #define PAGE_SIZE 0x100
 
@@ -52,19 +55,24 @@ static uint8_t BlackHole[4] __attribute__((aligned(4)));
 static volatile bool TC_Flag;
 
 #ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
-static uint32_t ProfileBase = 0;
+/* Active settings-bank base (see py25q16.h). 0 = bank 0 / historical
+ * config region, i.e. an identity mapping. */
+static uint32_t BankBase = 0;
 
-void PY25Q16_SetProfileBase(uint32_t Base)
+void PY25Q16_SetBankBase(uint32_t Base)
 {
-    ProfileBase = Base;
+    BankBase = Base;
 }
 
-static inline uint32_t ProfileMap(uint32_t Address)
+/* Redirect config-region accesses (addr < boundary) into the active bank.
+ * Calibration/logo/slots/marker (addr >= boundary) are returned unchanged.
+ * BankBase is sector-aligned, so alignment done by callers is preserved. */
+static inline uint32_t BankMap(uint32_t Address)
 {
-    return (Address < PY25Q16_PROFILE_SHARED_FROM) ? (Address + ProfileBase) : Address;
+    return (Address < PY25Q16_BANK_SHARED_FROM) ? (Address + BankBase) : Address;
 }
 #else
-static inline uint32_t ProfileMap(uint32_t Address)
+static inline uint32_t BankMap(uint32_t Address)
 {
     return Address;
 }
@@ -255,17 +263,21 @@ void PY25Q16_Init()
 
 static void ReadBufferRaw(uint32_t Address, void *pBuffer, uint32_t Size)
 {
+    MBMARK("RD cmd");          // about to assert CS + send read command
     CS_Assert();
 
     SPI_WriteByte(0x03);      // Send read command
+    MBMARK("RD addr");         // command sent, about to send address
     WriteAddr(Address);        // Send address (3 bytes)
 
+    MBMARK("RD flush");        // address sent, about to flush RX FIFO
     // CRITICAL: Flush RX FIFO before DMA to remove residual data
     while (LL_SPI_RX_FIFO_EMPTY != LL_SPI_GetRxFIFOLevel(SPIx))
     {
         LL_SPI_ReceiveData8(SPIx);  // Read and discard
     }
 
+    MBMARK("RD data");         // FIFO flushed, about to read the data
     if (Size >= 16) {
         SPI_ReadBuf((uint8_t *)pBuffer, Size);
     } else {
@@ -275,17 +287,30 @@ static void ReadBufferRaw(uint32_t Address, void *pBuffer, uint32_t Size)
         }
     }
 
+    MBMARK("RD end");          // data read, about to release CS
     CS_Release();
 }
 
 void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size)
 {
-    ReadBufferRaw(ProfileMap(Address), pBuffer, Size);
+    ReadBufferRaw(BankMap(Address), pBuffer, Size);
+}
+
+// Like PY25Q16_ReadBuffer, but waits for the flash to be idle first (WIP=0),
+// exactly as PY25Q16_WriteBuffer does before its internal reads. A standalone
+// read issued while the chip is still busy from a prior program/erase never
+// returns the expected data.
+void PY25Q16_ReadBufferSafe(uint32_t Address, void *pBuffer, uint32_t Size)
+{
+    MBMARK("SAFE wip");        // about to WaitWIP()
+    WaitWIP();
+    MBMARK("SAFE rb");         // WaitWIP done, about to ReadBuffer
+    PY25Q16_ReadBuffer(Address, pBuffer, Size);
 }
 
 void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, bool Append)
 {
-    Address = ProfileMap(Address);
+    Address = BankMap(Address);   /* map once; internal reads use *Raw below */
 
 #ifdef DEBUG
     printf("spi flash write: %06x %ld %d\n", Address, Size, Append);
@@ -312,7 +337,8 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
 
         if (SecAddr != SectorCacheAddr)
         {
-            /* Address is already mapped; do not apply the profile base twice. */
+            /* SecAddr is already in mapped space (Address was mapped above), so
+             * read raw to avoid mapping a second time. */
             ReadBufferRaw(SecAddr, SectorCache, SECTOR_SIZE);
             SectorCacheAddr = SecAddr;
         }
@@ -320,9 +346,13 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
         if (0 != memcmp(pBuffer, (char *)SectorCache + SecOffset, SecSize))
         {
             bool Erase = false;
+            const uint8_t *oldData = SectorCache + SecOffset;
+            const uint8_t *newData = (const uint8_t *)pBuffer;
+
             for (uint32_t i = 0; i < SecSize; i++)
             {
-                if (0xff != SectorCache[SecOffset + i])
+                // NOR flash programming can only change bits from 1 to 0.
+                if ((oldData[i] & newData[i]) != newData[i])
                 {
                     Erase = true;
                     break;
@@ -369,7 +399,7 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
 
 void PY25Q16_SectorErase(uint32_t Address)
 {
-    Address = ProfileMap(Address);
+    Address = BankMap(Address);
     Address -= (Address % SECTOR_SIZE);
     SectorErase(Address);
     if (SectorCacheAddr == Address)
@@ -380,34 +410,9 @@ void PY25Q16_SectorErase(uint32_t Address)
 
 void PY25Q16_InvalidateCache(void)
 {
+    /* Same "no sector cached" sentinel as the initial value: the next write
+     * re-reads its sector from flash instead of trusting SectorCache. */
     SectorCacheAddr = 0x1000000;
-}
-
-// Remove Block Protect before full erase.
-// Reads Status Register 1, resets the BP0/BP1/BP2/SRWD bits, and writes them back.
-// Without this, SectorErase is silently ignored if protection is enabled by locked firmware.
-void PY25Q16_ClearBlockProtect(void)
-{
-    // Read the current Status Register 1
-    uint8_t sr1 = ReadStatusReg(0);
-
-    // If the protection bits are already cleared, do nothing
-    // BP0=bit 2, BP1=bit 3, BP2=bit 4, SRWD=bit 7
-    if ((sr1 & 0x9C) == 0)
-        return;
-
-    // Clear the protection bits: BP0, BP1, BP2, SRWD → 0
-    uint8_t new_sr1 = sr1 & ~0x9C;
-
-    WriteEnable();
-    WaitWIP();
-
-    CS_Assert();
-    SPI_WriteByte(0x01);      // Write Status Register command
-    SPI_WriteByte(new_sr1);   // SR1 with cleared protection bits
-    CS_Release();
-
-    WaitWIP();
 }
 
 static inline void WriteAddr(uint32_t Addr)

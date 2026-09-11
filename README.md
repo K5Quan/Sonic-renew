@@ -28,5 +28,5 @@ overwritten or erased by these host commands.
 
 Build artifacts follow the shared metadata convention
 `f4hwn.<name>.<variant>.v<version>.bin`: Sonic V52b is emitted as
-`f4hwn.sonic.usb.V52b.bin` or `f4hwn.sonic.rs232.V52b.bin`. UVStudio derives the
+`usb.V52b.bin` or `rs232.V52b.bin`. UVStudio derives the
 slot name from `<name>` and stores `v<version>` in the slot header.

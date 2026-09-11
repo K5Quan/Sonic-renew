@@ -72,7 +72,7 @@
       "cacheVariables": {
         "ENABLE_LARGE_HISTORY":true,
         "ENABLE_4096": true,
-        "EDITION_STRING": "NC4K"
+        "EDITION_STRING": "NC Sonic 4K"
       }
     },
     {
@@ -81,7 +81,7 @@
       "cacheVariables": {
         "ENABLE_UART": true,
         "ENABLE_USB": true,
-        "EDITION_STRING": "S1K"
+        "EDITION_STRING": "Sonic 1K"
       }
     },
     {
@@ -91,7 +91,7 @@
         "ENABLE_USB": true,
         "ENABLE_UART": true,
         "ENABLE_4096": true,
-        "EDITION_STRING": "S4K"
+        "EDITION_STRING": "Sonic 4K"
       }
     }
   ],

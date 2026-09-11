@@ -86,7 +86,7 @@ void UI_DisplayWelcome(void)
         UI_PrintString("SONIC 1K", 0, 127, 0,10);
     #endif
 
-    UI_PrintStringSmallbackground("t.me/SonicFw", 0, 127, 4,1);
+    UI_PrintStringSmallbackground("t.me/SonicFw", 0, 127, 4,0);
     sprintf(WelcomeString, "%u.%02uV %u%%",
                 gBatteryVoltageAverage / 100,
                 gBatteryVoltageAverage % 100,
@@ -94,15 +94,10 @@ void UI_DisplayWelcome(void)
     UI_PrintString(WelcomeString, 0, 127, 2,10);
 
     ST7565_BlitStatusLine();
-    UI_PrintString(Edition, 0, 64, 5, 10);
-    UI_PrintString(VERSION_STRING_2, 64, 127, 5, 10);
+    UI_PrintString(VERSION_STRING_2, 0, 127, 5, 10);
 
     for (uint8_t i = 0; i <= 127; i += 2) {
         UI_DrawLineBuffer(gFrameBuffer, i, 40, i, 40, 1);
     }
-    for (uint8_t y = 40; y <= 57; y++) {
-        UI_DrawLineBuffer(gFrameBuffer, 64, y, 64, y, 1);
-    }
-    
     ST7565_BlitFullScreen();
 }

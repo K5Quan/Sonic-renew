@@ -711,6 +711,7 @@ void UART_HandleCommand(uint32_t Port)
         // ---- M4 slot management ("Firmware Slots") ------------------------
         case 0x0720: // slot info: read the 64-byte header only (fast, no CRC)
         {
+            if (pUART_Command->Header.Size < 1u) break;   // needs Data[0] (slot)
             gSerialConfigCountDown_500ms = 12; // keep serial mode alive (6 s)
             uint8_t slot = pUART_Command->Data[0];
             mb_slot_header_t hdr;
@@ -733,6 +734,7 @@ void UART_HandleCommand(uint32_t Port)
 
         case 0x0722: // slot erase: wipe the whole 128 KiB slot region
         {
+            if (pUART_Command->Header.Size < 6u) break;   // needs Data[0] slot + Data[2..5] timestamp
             gSerialConfigCountDown_500ms = 12; // keep serial mode alive (6 s)
             uint8_t  slot = pUART_Command->Data[0];
             uint32_t ts   = (uint32_t)pUART_Command->Data[2]
@@ -756,6 +758,8 @@ void UART_HandleCommand(uint32_t Port)
 
         case 0x0724: // slot write: program bytes at slot+offset (slot pre-erased)
         {
+            if (pUART_Command->Header.Size < 12u)
+                break;
             gSerialConfigCountDown_500ms = 12; // keep serial mode alive (6 s)
             uint8_t  slot   = pUART_Command->Data[0];
             uint32_t offset = (uint32_t)pUART_Command->Data[2]
@@ -771,7 +775,7 @@ void UART_HandleCommand(uint32_t Port)
             uint8_t status;
             if (ts != mb_port_timestamp(Port))
                 status = MB_ERR_AUTH;
-            else if (len > 240u)  // 12-byte prefix + data must fit Data[252]
+            else if (len > pUART_Command->Header.Size - 12u)
                 status = MB_ERR_SIZE;
             else
                 status = MB_SlotWrite(slot, offset, &pUART_Command->Data[12], len);
@@ -790,6 +794,7 @@ void UART_HandleCommand(uint32_t Port)
 
         case 0x0726: // slot validate: full image CRC-32, no reflash
         {
+            if (pUART_Command->Header.Size < 1u) break;   // needs Data[0] (slot)
             gSerialConfigCountDown_500ms = 12; // keep serial mode alive (6 s)
             uint8_t  slot = pUART_Command->Data[0];
             uint32_t crc  = 0;
@@ -809,29 +814,31 @@ void UART_HandleCommand(uint32_t Port)
             break;
         }
 
-        case 0x0728: // profile config reset: wipe the 64 KiB config bank of a slot
+        case 0x0728: // config reset: wipe the 64 KiB of a config bank (1..4)
         {
+            if (pUART_Command->Header.Size < 6u) break;   // needs Data[0] bank + Data[2..5] timestamp
             gSerialConfigCountDown_500ms = 12; // keep serial mode alive (6 s)
-            uint8_t  slot = pUART_Command->Data[0];
+            uint8_t  bank = pUART_Command->Data[0];
             uint32_t ts   = (uint32_t)pUART_Command->Data[2]
                           | ((uint32_t)pUART_Command->Data[3] << 8)
                           | ((uint32_t)pUART_Command->Data[4] << 16)
                           | ((uint32_t)pUART_Command->Data[5] << 24);
             uint8_t status = (ts != mb_port_timestamp(Port))
-                           ? MB_ERR_AUTH : MB_ProfileErase(slot);
+                           ? MB_ERR_AUTH : MB_BankErase(bank);
             struct __attribute__((packed)) {
                 Header_t Header;
-                uint8_t  Slot;
+                uint8_t  Bank;   // echoes the erased bank (same wire layout as slot replies)
                 uint8_t  Status;
             } Reply;
             Reply.Header.ID   = 0x0729;
             Reply.Header.Size = 2;
-            Reply.Slot        = slot;
+            Reply.Bank        = bank;
             Reply.Status      = status;
             SendReply(Port, &Reply, sizeof(Reply));
             break;
         }
 #endif
+
 
 #ifdef ENABLE_UART_RW_BK_REGS
         case 0x0601:

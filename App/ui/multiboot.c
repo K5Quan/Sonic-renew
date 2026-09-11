@@ -1,5 +1,17 @@
-/* Copyright 2026 F4HWN
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright 2026 Armel F4HWN
+ * https://github.com/armel
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     Unless required by applicable law or agreed to in writing, software
+ *     distributed under the License is distributed on an "AS IS" BASIS,
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     See the License for the specific language governing permissions and
+ *     limitations under the License.
  */
 
 #include <string.h>
@@ -12,18 +24,37 @@
 #include "driver/system.h"
 #include "ui/helper.h"
 #include "ui/multiboot.h"
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+#include "k5viewer.h"
+#endif
 
-static uint8_t gRunningSlot = MB_SLOT_BACKUP;
+static uint8_t gRunningSlot = 0xFFu;
+static uint8_t gActiveBank  = 0u;
 
-static uint8_t mb_remember_running_slot(uint8_t slot)
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+static void mb_k5viewer_service(void)
+{
+    /* The Multiboot selector is modal and does not return to APP_Update(). */
+    K5VIEWER_ParseInput();
+    K5VIEWER_Update(false);
+}
+#endif
+
+static uint8_t mb_remember_boot_state(uint8_t slot, uint8_t bank)
 {
     gRunningSlot = slot;
-    return slot;
+    gActiveBank  = bank;
+    return bank;
 }
 
 uint8_t MB_GetRunningSlot(void)
 {
     return gRunningSlot;
+}
+
+uint8_t MB_GetActiveBank(void)
+{
+    return gActiveBank;
 }
 
 static const char *mb_error_text(uint8_t err)
@@ -37,7 +68,7 @@ static const char *mb_error_text(uint8_t err)
         case MB_ERR_SIZE:          return "bad size";
         case MB_ERR_CRC:           return "CRC ERROR";
         case MB_ERR_SPI:           return "SPI ERROR";
-        case MB_ERR_SLOT:          return "bad slot";
+        case MB_ERR_SLOT:          return "bad index";
         case MB_ERR_AUTH:          return "auth";
         case MB_ERR_RAM_LOAD:      return "RAM LOAD ERROR";
         default:                   return "error";
@@ -66,6 +97,8 @@ static uint8_t mb_copy_slot_version(char *dst, uint8_t cap, const mb_slot_header
             header->fw_version[i + 1u] >= '0' &&
             header->fw_version[i + 1u] <= '9')
         {
+            if (n + 1u < cap)
+                dst[n++] = 'v';
             i++;
             while (n + 1u < cap && i < MB_VERSION_LEN)
             {
@@ -117,15 +150,21 @@ static void mb_key_hints(const char *act_menu, const char *act_exit)
     GUI_DisplaySmallest(act_exit, (uint8_t)(xe + 16u + sp), 49, false, true);
 }
 
-static void mb_invert_rounded_row(uint8_t line)
+/* Fixed selection capsule around the firmware name.  The slot index stays in
+ * the normal font while the version is plain 3x5 metadata. */
+#define MB_NAME_BOX_START 12u
+#define MB_NAME_BOX_END   96u
+#define MB_NAME_TEXT_X    14u
+
+static void mb_invert_name(uint8_t line)
 {
-    gFrameBuffer[line][0] ^= 0x7Fu;
-    for (uint8_t x = 1u; x < LCD_WIDTH - 1u; x++)
+    gFrameBuffer[line][MB_NAME_BOX_START] ^= 0x7Fu;
+    for (uint8_t x = MB_NAME_BOX_START + 1u; x < MB_NAME_BOX_END; x++)
     {
         gFrameBuffer[line][x] ^= 0xFFu;
         gFrameBuffer[line - 1u][x] ^= 0x80u;
     }
-    gFrameBuffer[line][LCD_WIDTH - 1u] ^= 0x7Fu;
+    gFrameBuffer[line][MB_NAME_BOX_END] ^= 0x7Fu;
 }
 
 static void mb_show_message(const char *line1, const char *line2, const char *line3)
@@ -137,6 +176,9 @@ static void mb_show_message(const char *line1, const char *line2, const char *li
     if (line3) UI_PrintStringSmallNormal(line3, 2, 126, 6);
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    mb_k5viewer_service();
+#endif
 }
 
 static void mb_wait_release(void)
@@ -156,6 +198,9 @@ static KEY_Code_t mb_get_key(void)
 {
     for (;;)
     {
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+        mb_k5viewer_service();
+#endif
         KEY_Code_t key = KEYBOARD_Poll();
         if (key != KEY_INVALID)
         {
@@ -171,6 +216,30 @@ static KEY_Code_t mb_get_key(void)
     }
 }
 
+/* Shown from the normal settings menu (SetCfg), not the boot selector, so it does
+ * NOT paint the "F4HWN MULTIBOOT" status banner - just a plain acknowledged message. */
+void UI_MultibootShowConfigError(uint8_t err)
+{
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    gKeyReading0 = KEY_INVALID;
+    gKeyReading1 = KEY_INVALID;
+#endif
+    UI_DisplayClear();
+    UI_StatusClear();
+    UI_PrintStringSmallNormal("CFG ERROR", 2, 126, 2);
+    UI_PrintStringSmallNormal(mb_error_text(err), 2, 126, 4);
+    UI_PrintStringSmallNormal("Press any key", 2, 126, 6);
+    ST7565_BlitStatusLine();
+    ST7565_BlitFullScreen();
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    mb_k5viewer_service();
+#endif
+    /* The MENU press that confirmed SetCfg may still be down; wait for a clean
+     * release first so it isn't consumed as the acknowledgement immediately. */
+    mb_wait_release();
+    (void)mb_get_key();
+}
+
 static void mb_scan_slots(mb_slot_header_t headers[MB_SLOT_COUNT], uint8_t status[MB_SLOT_COUNT])
 {
     mb_show_message("Scanning slots...", NULL, "Please wait");
@@ -182,8 +251,8 @@ static void mb_render_slots(uint8_t selected,
                             const mb_slot_header_t headers[MB_SLOT_COUNT],
                             const uint8_t status[MB_SLOT_COUNT])
 {
-    char line[19]; /* 18 glyphs max: 18 * 7 px fits from x=2 to x=126. */
-    char version[MB_VERSION_LEN];
+    char name[13];
+    char version[8]; /* v + up to six version digits/dots in the 3x5 column. */
 
     UI_DisplayClear();
     mb_status_bar();
@@ -191,50 +260,40 @@ static void mb_render_slots(uint8_t selected,
     for (uint8_t slot = 0; slot < MB_SLOT_COUNT; slot++)
     {
         const uint8_t fbLine = (uint8_t)(slot + 1u); /* page 1 stays blank */
+        char index[2];
         uint8_t version_len = 0;
         uint8_t version_x = 0;
 
-        memset(line, 0, sizeof(line));
+        memset(name, 0, sizeof(name));
         memset(version, 0, sizeof(version));
         /* Slot 0 is the auto-backed-up main firmware: label it 'M' (Main) so it
          * reads apart from the numbered user slots 1..4. */
-        line[0] = (slot == 0u) ? 'M' : (char)('0' + slot);
-        line[1] = ' ';
-        line[2] = ' ';
+        index[0] = (slot == 0u) ? 'M' : (char)('0' + slot);
+        index[1] = '\0';
 
         if (status[slot] == MB_OK)
         {
-            uint8_t name_cap = sizeof(line) - 3u;
-
             version_len = mb_copy_slot_version(version, sizeof(version), &headers[slot]);
             if (version_len)
-            {
-                const uint8_t name_x = 2u + 3u * 7u;
-                uint8_t available;
-
-                version_x = (uint8_t)(LCD_WIDTH - 2u - version_len * 7u);
-                available = version_x > name_x
-                    ? (uint8_t)((version_x - name_x) / 7u)
-                    : 0u;
-                if (available + 1u < name_cap)
-                    name_cap = available + 1u;
-            }
+                version_x = (uint8_t)(LCD_WIDTH - 2u - version_len * 4u);
 
             if (headers[slot].name[0])
-                mb_copy_label(&line[3], name_cap, headers[slot].name, MB_NAME_LEN);
+                mb_copy_label(name, sizeof(name), headers[slot].name, MB_NAME_LEN);
             else if (!version_len)
-                mb_copy_label(&line[3], name_cap, headers[slot].fw_version, MB_VERSION_LEN);
+                mb_copy_label(name, sizeof(name), headers[slot].fw_version, MB_VERSION_LEN);
         }
         else
-            mb_copy_label(&line[3], sizeof(line) - 3u, mb_error_text(status[slot]), 20u);
+            mb_copy_label(name, sizeof(name), mb_error_text(status[slot]), 20u);
 
-        UI_PrintStringSmallNormal(line, 2, 0, fbLine);
+        UI_PrintStringSmallNormal(index, 2u, 0, fbLine);
+        UI_PrintStringSmallNormal(name, MB_NAME_TEXT_X, 0, fbLine);
         if (version_len)
-            UI_PrintStringSmallNormal(version, version_x, 0, fbLine);
+            GUI_DisplaySmallest(version, version_x,
+                                (uint8_t)(fbLine * 8u + 1u), false, true);
 
-        /* Selected row: full-width rounded inverse capsule. */
+        /* Selected row: fixed rounded inverse capsule around the name only. */
         if (slot == selected)
-            mb_invert_rounded_row(fbLine);
+            mb_invert_name(fbLine);
     }
 
     mb_key_hints("SELECT", "QUIT");
@@ -267,6 +326,9 @@ __attribute__((noinline)) static void mb_prepare_progress_screen(const char *tit
     mb_draw_progress_outline();
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    mb_k5viewer_service();
+#endif
 }
 
 static void mb_prepare_progress(uint8_t slot)
@@ -301,13 +363,13 @@ static void mb_backup_progress(uint32_t done, uint32_t total)
     ST7565_BlitFullScreen();
 }
 
-/* With no trustworthy profile, continuing would let normal boot-time settings
+/* With no trustworthy bank, continuing would let normal boot-time settings
  * writes modify an arbitrary bank. Keep the radio in a read-only error state;
  * a power cycle can recover from a transient SPI fault. */
-__attribute__((noreturn)) static void mb_profile_error_halt(void)
+__attribute__((noreturn)) static void mb_state_error_halt(void)
 {
     BACKLIGHT_TurnOn();
-    mb_show_message("PROFILE ERROR", "Flash state unknown", "Restart radio");
+    mb_show_message("STATE ERROR", "Flash state unknown", "Restart radio");
     for (;;)
         SYSTEM_DelayMs(100);
 }
@@ -332,6 +394,13 @@ void UI_MultibootSelector(void)
     uint8_t status[MB_SLOT_COUNT];
     uint8_t selected = 0;
 
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    /* The selector is entered from a boot key event. Clear that stale key so
+     * K5Viewer is allowed to publish the first selector frame immediately. */
+    gKeyReading0 = KEY_INVALID;
+    gKeyReading1 = KEY_INVALID;
+#endif
+
     /* Clear + blit the LCD BEFORE the backlight comes on, otherwise it reveals
      * the random power-on contents of the display RAM for a moment. */
     mb_show_message("Release keys", NULL, NULL);
@@ -339,10 +408,11 @@ void UI_MultibootSelector(void)
     mb_wait_release();
     mb_scan_slots(headers, status);
 
-    /* Pre-select the firmware currently running (its slot, from the marker), so
-     * the cursor lands on "where you are". If that slot isn't restorable (erased,
-     * bad CRC...), fall back to the first valid slot. */
-    selected = MB_GetActiveProfile();
+    /* Pre-select the exact firmware slot resolved at boot, independently of the
+     * active config bank (SetCfg can point the bank elsewhere), so the cursor
+     * lands on "where you are". An unknown or now-invalid slot falls back to the
+     * first valid slot below. */
+    selected = MB_GetRunningSlot();
     if (selected >= MB_SLOT_COUNT || status[selected] != MB_OK)
     {
         for (uint8_t slot = 0; slot < MB_SLOT_COUNT; slot++)
@@ -394,13 +464,13 @@ void UI_MultibootSelector(void)
         if (key != KEY_MENU)
             continue;
 
-        /* Bind this slot to its own settings profile BEFORE reflashing. The
+        /* Bind this slot to its own settings bank BEFORE reflashing. The
          * write is verified (read-back); if it can't be confirmed we must NOT
-         * reflash - otherwise the next boot could resolve to the wrong profile
+         * reflash - otherwise the next boot could resolve to the wrong bank
          * (e.g. when two slots hold the same firmware image). */
-        if (MB_SetActiveProfile(selected) != MB_OK)
+        if (MB_SetActiveSlot(selected) != MB_OK)
         {
-            mb_show_message("PROFILE ERROR", "Marker not saved", "Press any key");
+            mb_show_message("STATE ERROR", "Marker not saved", "Press any key");
             (void)mb_get_key();
             continue;
         }
@@ -417,25 +487,25 @@ void UI_MultibootSelector(void)
 }
 
 /* Adopt the running internal firmware as Main: back it up into slot 0 and point
- * the marker at profile 0. Reached when the firmware was installed outside
+ * the marker at bank 0. Reached when the firmware was installed outside
  * multiboot (fresh radio, or a plain Flash-Firmware). */
 static uint8_t mb_adopt_internal_as_main(void)
 {
     mb_backup_prepare();
     BACKLIGHT_TurnOn();
     if (MB_BackupInternalToSlot0(mb_backup_progress) == MB_OK)
-        (void)MB_SetActiveProfile(MB_SLOT_BACKUP);
+        (void)MB_SetActiveSlot(MB_SLOT_BACKUP);
     return MB_SLOT_BACKUP;
 }
 
-uint8_t MB_BootResolveProfile(void)
+uint8_t MB_BootResolveState(void)
 {
-    mb_profile_state_t mark;
+    mb_state_t mark;
     mb_mark_status_t ms = MB_MARK_IO;
 
     for (uint8_t retry = 0; retry < 3u && ms == MB_MARK_IO; retry++)
     {
-        ms = MB_ReadActiveProfile(&mark);
+        ms = MB_ReadActiveState(&mark);
         if (ms == MB_MARK_IO)
             SYSTEM_DelayMs(10);
     }
@@ -444,20 +514,37 @@ uint8_t MB_BootResolveProfile(void)
      * identity, so we don't even need the slot header. */
     if (ms == MB_MARK_VALID)
     {
-        if (MB_InternalMatchesProfile(&mark))
-        return mb_remember_running_slot(mark.index); /* slot named by the marker */
+        if (MB_InternalMatchesState(&mark))
+            return mb_remember_boot_state(mark.firmware_slot, mark.config_bank);
+
         /* Marker read fine but internal no longer carries its identity -> the
          * firmware was replaced outside multiboot (a plain Flash-Firmware). Adopt
          * it as Main. Deliberately NOT a content scan here: a build that merely
          * duplicates a user slot (or a marker that already points at such a slot)
          * must still refresh Main. */
-        return mb_remember_running_slot(mb_adopt_internal_as_main());
+        return mb_remember_boot_state(mb_adopt_internal_as_main(), MB_SLOT_BACKUP);
     }
 
     /* Marker unreliable (MISSING / LEGACY / CORRUPT / IO): identify the running
      * firmware by content, and never destroy Main on uncertainty - internal is
      * adopted only when it matches no slot AND every read was clean, so a
      * transient SPI error or a half-written marker can never destroy Main. */
+
+    /* An FMP1 record still names a coupled slot/bank; honour it before the
+     * content scan so a duplicate image in a lower slot cannot hijack the
+     * migration. Falls through to the scan below on mismatch or IO. */
+    if (ms == MB_MARK_LEGACY && mark.firmware_slot < MB_SLOT_COUNT)
+    {
+        mb_fw_match_t m = MB_FW_IO;
+        for (uint8_t retry = 0; retry < 3u && m == MB_FW_IO; retry++)
+            m = MB_InternalMatchesSlot(mark.firmware_slot);
+        if (m == MB_FW_MATCH)
+        {
+            (void)MB_SetActiveSlot(mark.firmware_slot);
+            return mb_remember_boot_state(mark.firmware_slot, mark.config_bank);
+        }
+    }
+
     bool had_io = false;
     for (uint8_t slot = 0; slot < MB_SLOT_COUNT; slot++)
     {
@@ -466,8 +553,8 @@ uint8_t MB_BootResolveProfile(void)
             m = MB_InternalMatchesSlot(slot);
         if (m == MB_FW_MATCH)
         {
-            (void)MB_SetActiveProfile(slot);    /* record/repair the marker */
-            return mb_remember_running_slot(slot);
+            (void)MB_SetActiveSlot(slot);    /* record/repair the marker */
+            return mb_remember_boot_state(slot, slot);
         }
         if (m == MB_FW_IO)
             had_io = true;
@@ -482,8 +569,8 @@ uint8_t MB_BootResolveProfile(void)
         bool main_exists = (main_status != MB_ERR_MAGIC &&
                             main_status != MB_ERR_NOT_COMMITTED);
         if (main_exists)
-            mb_profile_error_halt();
+            mb_state_error_halt();
     }
 
-    return mb_remember_running_slot(mb_adopt_internal_as_main());
+    return mb_remember_boot_state(mb_adopt_internal_as_main(), MB_SLOT_BACKUP);
 }

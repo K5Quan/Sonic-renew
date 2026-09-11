@@ -81,9 +81,11 @@ void Main(void)
     BOARD_Init();
 
 #ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
-    /* Select the profile before the first settings read. If this firmware was
-     * flashed normally, it is first backed up as Main (slot/profile 0). */
-    PY25Q16_SetProfileBase(MB_ProfileBase(MB_BootResolveProfile()));
+    /* Resolve the active settings bank BEFORE any EEPROM/settings access
+     * below. This also adopts a normally-flashed firmware as slot 0 (discreet
+     * self-backup) when the running image isn't the slot the marker points to.
+     * Calibration stays shared regardless of the selected bank. */
+    PY25Q16_SetBankBase(MB_BankBase(MB_BootResolveState()));
 #endif
 
     // Read the button IMMEDIATELY at startup, before lengthy initialization
