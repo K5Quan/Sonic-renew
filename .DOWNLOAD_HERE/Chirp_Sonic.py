@@ -244,12 +244,14 @@ struct {
 #seekto 0x00A130;
 
 struct {
-    u8 unused:1,
-       unused:7;
-    ul16 unused;
-    ul16 unused;
-    ul16 unused;
-    u8 __UNUSED11;
+    u8 slPriorEnab:1,
+       slDef:7;
+        
+    ul16 slPriorCh1;
+    ul16 slPriorCh2;
+    ul16 call_channel;
+
+    u8 __UNUSED10;
 } sl;
 
 // --------------------
@@ -910,7 +912,6 @@ def do_upload(radio):
     _resetradio(serport)
     return True
 
-
 def min_max_def(value, min_val, max_val, default):
     """returns value if in bounds or default otherwise"""
     if min_val is not None and value < min_val:
@@ -955,6 +956,53 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             if rng[0] <= mhz <= rng[1]:
                 return bnd
         return False
+
+    def _get_scanlist_name(self, index):
+        if not hasattr(self, "_memobj") or not 0 <= index < MR_CHANNELS_LIST - 1:
+            return ""
+
+        try:
+            name_obj = self._memobj.listname[index].name
+        except AttributeError:
+            return ""
+
+        chars = []
+        for char_element in name_obj:
+            val = int(char_element)
+            if val in (0x00, 0xFF):
+                break
+            if 32 <= val <= 126:
+                chars.append(val)
+
+        return bytes(chars).decode("ascii", errors="ignore").strip()
+
+    def _get_scanlist_display_list(self):
+        scanlists = ["OFF"]
+
+        for idx in range(MR_CHANNELS_LIST - 1):
+            name = self._get_scanlist_name(idx)
+            if name:
+                scanlists.append(f"{name} [{idx + 1}]")
+            else:
+                scanlists.append(SCANLIST_LIST[idx + 1])
+
+        scanlists.append(SCANLIST_LIST[-1])   # "Monitor"
+        scanlists.append("ALL")
+        return scanlists
+
+    def _get_scanlist_select_display_list(self):
+        scanlists = []
+
+        for idx in range(MR_CHANNELS_LIST - 1):
+            name = self._get_scanlist_name(idx)
+            if name:
+                scanlists.append(f"{name} [{idx + 1}]")
+            else:
+                scanlists.append(SCANLIST_SELECT_LIST[idx])
+
+        scanlists.append(SCANLIST_SELECT_LIST[-1])   # "Monitor"
+        scanlists.append("LIST [ALL]")
+        return scanlists
 
     @classmethod
     def get_prompts(cls):
@@ -1031,6 +1079,14 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
 
     # Convert the raw byte array into a memory object structure
     def process_mmap(self):
+        mmap_bytes = self._mmap.get_packed()
+        if len(self._mmap.get_packed()) < PROG_SIZE:
+            raise errors.RadioError(
+                "Image is too small for this driver "
+                f"(got 0x{len(self._mmap.get_packed()):X} bytes, "
+                f"need 0x{PROG_SIZE:X}). Legacy images from older drivers are "
+                "not compatible — re-download from the radio."
+            )
         self._memobj = bitwise.parse(MEM_FORMAT, self._mmap)
 
     # Return a raw representation of the memory object, which
@@ -1215,7 +1271,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
             rs = RadioSetting("compander", "Compander", val)
             mem.extra.append(rs)
 
-            val = RadioSettingValueList(SCANLIST_LIST)
+            val = RadioSettingValueList(self._get_scanlist_display_list())
             rs = RadioSetting("scanlists", "Scanlists", val)
             mem.extra.append(rs)
 
@@ -1307,7 +1363,7 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         rs.set_doc('Compnd: Do you want to compand on this frequency?')
         mem.extra.append(rs)
 
-        val = RadioSettingValueList(SCANLIST_LIST, None, tmpscn)
+        val = RadioSettingValueList(self._get_scanlist_display_list(), None, tmpscn)
         rs = RadioSetting("scanlists", "Scanlists (SList)", val)
         rs.set_doc('SList: Is this frequency is part of a scan list?')
         mem.extra.append(rs)
@@ -1557,14 +1613,16 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
                     _mem.fmfreq[i-1] = val2
 
             # scanlist stuff
-            if elname.startswith("listname"):
+            if elname == "slDef":
+                _mem.sl.slDef = int(element.value) + 1
+            elif elname.startswith("listname"):
                 idx = int(elname.replace("listname", ""))
                 if 0 <= idx < (MR_CHANNELS_LIST - 1):
-                    val_str = str(element.value).strip()
+                    val_str = str(element.value)  # Plus de strip()
                     
                     if val_str:
                         val_bytes = val_str.encode('ascii', 'ignore')[:10]
-                        val_bytes = val_bytes + b'\xFF' * (10 - len(val_bytes))
+                        val_bytes = val_bytes + b'\x20' * (10 - len(val_bytes))
                     else: 
                         val_bytes = b'\xFF' * 10
                     _mem.listname[idx].name = val_bytes
@@ -1699,6 +1757,20 @@ class UVK5RadioEgzumer(chirp_common.CloneModeRadio):
         keya.append(rs)
 
         # ----------------- Scan Lists
+
+        scanlist_select_list = self._get_scanlist_select_display_list()
+        tmpscanl = list_def(_mem.sl.slDef - 1, scanlist_select_list, 1)
+        val = RadioSettingValueList(scanlist_select_list, None, tmpscanl)
+        rs = RadioSetting("slDef", "Default Scan Lists (SList)", val)
+        rs.set_doc('SList: Selects which lists are used by the memory scan\n' + \
+                    '* LIST [1] to LIST [24]\n' + \
+                    '* ALL : All channels (except OFF)\n')
+        scanl.append(rs)
+
+        val = RadioSettingValueBoolean(_mem.sl.slPriorEnab)
+        rs = RadioSetting("slPriorEnab", "Priority Channel Scan", val)
+        rs.set_doc('Does scan use Priority Channels')
+        scanl.append(rs)
 
         ch_list = []
         for ch in range(1, MR_CHANNELS_MAX + 1):

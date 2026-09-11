@@ -559,7 +559,7 @@ static void LoadMonitorFrequencies(void)
     ChannelAttributes_t cache;
     for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++)
     {   MR_LoadChannelAttributesFromFlash(ch, &cache);
-        if (cache.scanlist == 21) {
+        if (cache.scanlist == 51) { //MR_CHANNELS_LIST for Monitor list
             ChannelInfo_t freqs  = FetchChannelFrequency(ch);
             if (freqs.frequency) {
                 MonitorFreqs[monitorChannelsCount] = freqs.frequency;
@@ -1111,11 +1111,11 @@ static uint16_t CountValidHistoryItems() {
 
 static void UpdateCssDetection(void) {
     static uint8_t LCode = 0;
-    static uint8_t lastCode = 0xFE; // Conserve le dernier code affiché (0xFE = état initial invalide)
+    //static uint8_t lastCode = 0xFE; // Conserve le dernier code affiché (0xFE = état initial invalide)
     
     if (settings.modulationType != MODULATION_FM) {
         code = 0xFF;
-        lastCode = 0xFF;
+        //lastCode = 0xFF;
         StringCode[0] = '\0';
         stringCodeTimer = 0;
         return;
@@ -1147,10 +1147,10 @@ static void UpdateCssDetection(void) {
             }
 
             // Déclenche le popup SEULEMENT si le code a changé
-            if (code != lastCode) {
-                ShowOSDPopup(StringCode);
-                lastCode = code;
-            }
+            //if (code != lastCode) {
+            //    ShowOSDPopup(StringCode);
+            //    lastCode = code;
+            //}
             return;
         }
     } else if (scanResult == BK4819_CSS_RESULT_CTCSS) {
@@ -1167,16 +1167,16 @@ static void UpdateCssDetection(void) {
             }
 
             // Déclenche le popup SEULEMENT si le code a changé
-            if (code != lastCode) {
-                ShowOSDPopup(StringCode);
-                lastCode = code;
-            }
+            //if (code != lastCode) {
+            //    ShowOSDPopup(StringCode);
+            //    lastCode = code;
+            //}
             return;
         }
     }
 
     // Si aucun code valide n'a été trouvé durant ce cycle
-    lastCode = 0xFF;
+    //lastCode = 0xFF;
 }
 
 static void FillfreqHistory(void)
@@ -3856,6 +3856,20 @@ static void ToggleScanList(int scanListNumber, int single )
 // ============================================================
 // SECTION: EEPROM / Settings persistence
 // ============================================================
+static bool gScanListHasChannels[MR_CHANNELS_LIST];
+
+void SCANLISTS_InitUsage(void) {
+    memset(gScanListHasChannels, 0, sizeof(gScanListHasChannels));
+
+    for (uint16_t ch = MR_CHANNEL_FIRST; ch <= MR_CHANNEL_LAST; ch++) {
+        ChannelAttributes_t *att = MR_GetChannelAttributes(ch);
+        if (att->scanlist >= 1 && att->scanlist <= 50) {   // 1..50 = listes numérotées
+            gScanListHasChannels[att->scanlist - 1] = true;
+        }
+        // valeur 51 = Monitor : hors des listes nommées, on l'ignore ici
+    }
+}
+
 
 typedef struct {
     int ShowLines;
@@ -3900,6 +3914,7 @@ typedef struct {
 void LoadSettings()
 {
     if(SettingsLoaded) return;
+    SCANLISTS_InitUsage();
     SettingsEEPROM  eepromData  = {0};
     PY25Q16_ReadBuffer(ADRESS_PARAMS, &eepromData, sizeof(eepromData));
 
@@ -4114,10 +4129,15 @@ void ClearSettings()
 
 static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
     if (scanListIndex >= MR_CHANNELS_LIST) return false;
-    char nameOrFreq[10];
+
+    // Les listes vides ne sont pas affichées
+    if (!gScanListHasChannels[scanListIndex]) return false;
+
+    char nameOrFreq[13];
     memset(nameOrFreq, 0, sizeof(nameOrFreq));
     uint8_t firstChar = (uint8_t)gListName[scanListIndex][0];
     uint8_t i;
+
     if (firstChar != '\0' && firstChar != 0xFF) {
         for (i = 0; i < 10; i++) {
             char c = gListName[scanListIndex][i];
@@ -4127,10 +4147,16 @@ static bool GetScanListLabel(uint8_t scanListIndex, char* bufferOut) {
             nameOrFreq[i] = c;
         }
         nameOrFreq[i] = '\0';
-    } 
-    else {
-        return false;
+
+        while (i > 0 && nameOrFreq[i-1] == ' ') {  // retirer le padding CHIRP
+            nameOrFreq[--i] = '\0';
+        }
     }
+    else {
+        // Liste sans nom : "Scanlist N"
+        sprintf(nameOrFreq, "Scanlist %u", (unsigned)(scanListIndex + 1));
+    }
+
     if (settings.scanListEnabled[scanListIndex]) {
         sprintf(bufferOut, "%d:%s*", scanListIndex + 1, nameOrFreq);
     } else {
